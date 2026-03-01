@@ -219,10 +219,9 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
                 overflow: 'hidden',
                 position: 'relative',
                 aspectRatio: '3/4',
-                // L'ombre s'affiche directement sur le fond sombre de la section
                 boxShadow: isActive
-                  ? '0 28px 60px rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.30)'
-                  : '0 8px 24px rgba(0,0,0,0.25)',
+                  ? '0 10px 28px rgba(0,0,0,0.14), 0 3px 8px rgba(0,0,0,0.08)'
+                  : '0 3px 10px rgba(0,0,0,0.08)',
               }}
             >
               {/* Photo */}
