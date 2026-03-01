@@ -978,8 +978,8 @@ export default function App() {
                     setAlertConfig({ ...alertConfig, show: false });
                   }}
                   className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 ${alertConfig.type === 'success' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
-                      alertConfig.type === 'error' ? 'bg-rose-500 text-white shadow-rose-500/20' :
-                        'bg-stone-900 text-white shadow-stone-900/20'
+                    alertConfig.type === 'error' ? 'bg-rose-500 text-white shadow-rose-500/20' :
+                      'bg-stone-900 text-white shadow-stone-900/20'
                     }`}
                 >
                   {alertConfig.onConfirm ? "Confirmer" : "C'est compris"}
@@ -1518,8 +1518,8 @@ export default function App() {
           sectionRecipes = allRecipes.filter(r => section.recipe_ids?.includes(r.id));
         }
 
-        // Apply limit if specified
-        sectionRecipes = sectionRecipes.slice(0, section.config?.limit || 10);
+        // Apply limit only if explicitly configured — default to 200 to show all selected recipes
+        sectionRecipes = sectionRecipes.slice(0, section.config?.limit || 200);
 
         if (sectionRecipes.length === 0) return null;
 
@@ -2160,7 +2160,8 @@ export default function App() {
               sectionRecipes = allRecipes.filter(r => section.recipe_ids?.includes(r.id));
             }
 
-            sectionRecipes = sectionRecipes.slice(0, section.config?.limit || 10);
+            // Apply limit only if explicitly configured — default to 200 to show all selected recipes
+            sectionRecipes = sectionRecipes.slice(0, section.config?.limit || 200);
 
             if (sectionRecipes.length === 0) return null;
 
