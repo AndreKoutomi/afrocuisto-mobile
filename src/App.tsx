@@ -176,7 +176,7 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
   const next = () => goTo(Math.min(n - 1, active + 1));
 
   return (
-    <div className="relative w-full" style={{ paddingBottom: '44px' }}>
+    <div className="relative w-full">
 
       {/* ── Scrollable track ─────────────────────────────────────────────── */}
       <div
@@ -191,7 +191,7 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
           paddingLeft: '9vw',
           paddingRight: '9vw',
           paddingTop: '20px',
-          paddingBottom: '24px',
+          paddingBottom: '20px',
           msOverflowStyle: 'none',
           scrollbarWidth: 'none',
         }}
@@ -206,9 +206,6 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
               animate={{
                 scale: isActive ? 1 : 0.93,
                 opacity: isActive ? 1 : 0.7,
-                filter: isActive
-                  ? 'drop-shadow(0 22px 40px rgba(0,0,0,0.28)) drop-shadow(0 6px 12px rgba(0,0,0,0.14))'
-                  : 'drop-shadow(0 4px 12px rgba(0,0,0,0.10))',
               }}
               transition={{ type: 'spring', stiffness: 340, damping: 30 }}
               onClick={() => { if (isActive) setSelectedRecipe(recipe); else goTo(i); }}
@@ -222,6 +219,10 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
                 overflow: 'hidden',
                 position: 'relative',
                 aspectRatio: '3/4',
+                // L'ombre s'affiche directement sur le fond sombre de la section
+                boxShadow: isActive
+                  ? '0 28px 60px rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.30)'
+                  : '0 8px 24px rgba(0,0,0,0.25)',
               }}
             >
               {/* Photo */}
@@ -346,15 +347,15 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
           style={{
             position: 'absolute', left: 8, top: '42%', transform: 'translateY(-50%)',
             width: '38px', height: '38px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(0,0,0,0.08)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.14)',
+            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.20)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', zIndex: 20, transition: 'all 0.15s',
           }}
           aria-label="Précédent"
         >
-          <ChevronLeft size={18} style={{ color: '#374151' }} />
+          <ChevronLeft size={18} style={{ color: '#fff' }} />
         </button>
       )}
       {active < n - 1 && (
@@ -363,20 +364,20 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
           style={{
             position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)',
             width: '38px', height: '38px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(0,0,0,0.08)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.14)',
+            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.20)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', zIndex: 20, transition: 'all 0.15s',
           }}
           aria-label="Suivant"
         >
-          <ChevronRight size={18} style={{ color: '#374151' }} />
+          <ChevronRight size={18} style={{ color: '#fff' }} />
         </button>
       )}
 
-      {/* ── Dot indicators ───────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', position: 'absolute', bottom: 4, left: 0, right: 0 }}>
+      {/* ── Dot indicators — sur fond sombre ─────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', paddingBottom: '16px', paddingTop: '4px' }}>
         {recipes.map((_, i) => (
           <button
             key={i}
@@ -385,7 +386,7 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
               width: i === active ? 24 : 7,
               height: 7,
               borderRadius: 4,
-              background: i === active ? '#c0392b' : 'rgba(30,30,30,0.18)',
+              background: i === active ? '#e85d20' : 'rgba(255,255,255,0.30)',
               border: 'none',
               cursor: 'pointer',
               padding: 0,
@@ -1657,11 +1658,18 @@ export default function App() {
 
         if (section.type === 'dynamic_carousel') {
           return (
-            <section key={section.id} className="py-6 mb-2">
-              <div className="px-6 flex justify-between items-end mb-3">
+            <section key={section.id} style={{
+              background: 'linear-gradient(180deg, #1a1a1a 0%, #111 60%, #1a1a1a 100%)',
+              borderRadius: '28px',
+              margin: '0 0 20px',
+              overflow: 'hidden',
+              paddingTop: '20px',
+            }}>
+              {/* Header */}
+              <div className="px-6 flex justify-between items-end mb-1">
                 <div className="flex flex-col">
-                  <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                  {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
+                  <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em' }}>{section.title}</h2>
+                  {section.subtitle && <p style={{ margin: '3px 0 0', fontSize: '10px', color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{section.subtitle}</p>}
                 </div>
               </div>
               <SnapCarousel
@@ -1679,6 +1687,7 @@ export default function App() {
             </section>
           );
         }
+
 
         // ── FEATURED — Mise en avant (Groupées si consécutives) ──
         if (section.type === 'featured') {
