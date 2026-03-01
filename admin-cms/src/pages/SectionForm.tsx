@@ -813,9 +813,62 @@ export function SectionForm() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '24px' }}>
                     <div style={cardStyle}>
                         <div style={{ padding: '20px 20px 0' }}>
-                            <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 800, color: '#111827' }}>Catalogue des Plats</h3>
-                            <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#9ca3af', fontWeight: 500 }}>
-                                {filteredRecipes.length} plat{filteredRecipes.length !== 1 ? 's' : ''} disponible{filteredRecipes.length !== 1 ? 's' : ''}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>Catalogue des Plats</h3>
+                                {formData.type !== 'featured' && (
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                        <button
+                                            type="button"
+                                            title="Tout sélectionner"
+                                            onClick={() => {
+                                                const filteredIds = filteredRecipes.map(r => r.id);
+                                                const newIds = Array.from(new Set([...formData.recipe_ids, ...filteredIds]));
+                                                setFormData(prev => ({ ...prev, recipe_ids: newIds }));
+                                            }}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                                padding: '5px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
+                                                background: '#f0fdf4', color: '#16a34a',
+                                                border: '1.5px solid #bbf7d0', cursor: 'pointer',
+                                                transition: 'all 0.15s',
+                                            }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = '#dcfce7')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = '#f0fdf4')}
+                                        >
+                                            <CheckCircle2 size={12} /> Tout
+                                        </button>
+                                        <button
+                                            type="button"
+                                            title="Tout désélectionner"
+                                            onClick={() => {
+                                                const filteredIds = new Set(filteredRecipes.map(r => r.id));
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    recipe_ids: prev.recipe_ids.filter(id => !filteredIds.has(id))
+                                                }));
+                                            }}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                                padding: '5px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
+                                                background: '#fff5f5', color: '#dc2626',
+                                                border: '1.5px solid #fecaca', cursor: 'pointer',
+                                                transition: 'all 0.15s',
+                                            }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = '#fff5f5')}
+                                        >
+                                            <Trash2 size={12} /> Aucun
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#9ca3af', fontWeight: 500 }}>
+                                {filteredRecipes.length} plat{filteredRecipes.length !== 1 ? 's' : ''} affiché{filteredRecipes.length !== 1 ? 's' : ''}
+                                {formData.recipe_ids.length > 0 && (
+                                    <span style={{ marginLeft: '6px', fontWeight: 700, color: '#16a34a' }}>
+                                        · {formData.recipe_ids.length} sélectionné{formData.recipe_ids.length > 1 ? 's' : ''}
+                                    </span>
+                                )}
                             </p>
                             {formData.type === 'featured' && (
                                 <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1.5px solid #86efac', borderRadius: '10px', padding: '8px 12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
