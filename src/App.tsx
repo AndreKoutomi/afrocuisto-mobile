@@ -176,7 +176,7 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
   const next = () => goTo(Math.min(n - 1, active + 1));
 
   return (
-    <div className="relative w-full" style={{ paddingBottom: '28px' }}>
+    <div className="relative w-full" style={{ paddingBottom: '44px' }}>
 
       {/* ── Scrollable track ─────────────────────────────────────────────── */}
       <div
@@ -186,11 +186,13 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
           display: 'flex',
           gap: '14px',
           overflowX: 'auto',
+          overflowY: 'visible',
           scrollSnapType: 'x mandatory',
           scrollBehavior: 'smooth',
           paddingLeft: '9vw',
           paddingRight: '9vw',
-          paddingBottom: '12px',
+          paddingTop: '16px',
+          paddingBottom: '20px',
           msOverflowStyle: 'none',
           scrollbarWidth: 'none',
         }}
