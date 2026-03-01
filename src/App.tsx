@@ -347,15 +347,15 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
           style={{
             position: 'absolute', left: 8, top: '42%', transform: 'translateY(-50%)',
             width: '38px', height: '38px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.20)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+            background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(0,0,0,0.08)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.14)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', zIndex: 20, transition: 'all 0.15s',
           }}
           aria-label="Précédent"
         >
-          <ChevronLeft size={18} style={{ color: '#fff' }} />
+          <ChevronLeft size={18} style={{ color: '#374151' }} />
         </button>
       )}
       {active < n - 1 && (
@@ -364,15 +364,15 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
           style={{
             position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)',
             width: '38px', height: '38px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.20)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+            background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(0,0,0,0.08)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.14)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', zIndex: 20, transition: 'all 0.15s',
           }}
           aria-label="Suivant"
         >
-          <ChevronRight size={18} style={{ color: '#fff' }} />
+          <ChevronRight size={18} style={{ color: '#374151' }} />
         </button>
       )}
 
@@ -386,7 +386,7 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
               width: i === active ? 24 : 7,
               height: 7,
               borderRadius: 4,
-              background: i === active ? '#e85d20' : 'rgba(255,255,255,0.30)',
+              background: i === active ? '#c0392b' : 'rgba(30,30,30,0.18)',
               border: 'none',
               cursor: 'pointer',
               padding: 0,
@@ -1658,18 +1658,11 @@ export default function App() {
 
         if (section.type === 'dynamic_carousel') {
           return (
-            <section key={section.id} style={{
-              background: 'linear-gradient(180deg, #1a1a1a 0%, #111 60%, #1a1a1a 100%)',
-              borderRadius: '28px',
-              margin: '0 0 20px',
-              overflow: 'hidden',
-              paddingTop: '20px',
-            }}>
-              {/* Header */}
-              <div className="px-6 flex justify-between items-end mb-1">
+            <section key={section.id} className="mb-6">
+              <div className="px-6 flex justify-between items-end mb-2">
                 <div className="flex flex-col">
-                  <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em' }}>{section.title}</h2>
-                  {section.subtitle && <p style={{ margin: '3px 0 0', fontSize: '10px', color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{section.subtitle}</p>}
+                  <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
+                  {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
                 </div>
               </div>
               <SnapCarousel
