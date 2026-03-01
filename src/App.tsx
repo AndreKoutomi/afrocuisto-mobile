@@ -123,41 +123,54 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
   const [active, setActive] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isProgrammaticScroll = useRef(false);
+  const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const n = recipes.length;
   if (!n) return null;
 
-  // ── Scroll to active card ──────────────────────────────────────────────────
+  // ── Scroll to active card (programmatic) ──────────────────────────────────
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const cardWidth = el.offsetWidth * 0.82 + 16; // 82vw + gap
+    isProgrammaticScroll.current = true;
+    const cardWidth = el.offsetWidth * 0.82 + 16;
     el.scrollTo({ left: active * cardWidth, behavior: 'smooth' });
+    // Reset flag after the smooth scroll animation ends (~400ms)
+    const t = setTimeout(() => { isProgrammaticScroll.current = false; }, 450);
+    return () => clearTimeout(t);
   }, [active]);
 
-  // ── Autoplay ──────────────────────────────────────────────────────────────
+  // ── Autoplay — loop infinitely ────────────────────────────────────────────
   useEffect(() => {
     if (!autoplayInterval || isPaused) return;
-    const t = setInterval(() => setActive(i => (i + 1) % n), autoplayInterval);
+    const t = setInterval(() => {
+      setActive(prev => (prev + 1) % n);
+    }, autoplayInterval);
     return () => clearInterval(t);
   }, [autoplayInterval, isPaused, n]);
 
-  // ── Detect active card on native scroll (touch swipe) ────────────────────
+  // ── Detect active card on native touch swipe only ─────────────────────────
   const onScroll = () => {
+    // Ignore scroll events triggered by our own programmatic scrollTo
+    if (isProgrammaticScroll.current) return;
     const el = scrollRef.current;
     if (!el) return;
     const cardWidth = el.offsetWidth * 0.82 + 16;
     const idx = Math.round(el.scrollLeft / cardWidth);
-    if (idx !== active) {
-      setIsPaused(true);
+    if (idx !== active && idx >= 0 && idx < n) {
       setActive(idx);
-      setTimeout(() => setIsPaused(false), 4000);
+      // Pause autoplay while user is manually swiping, then resume
+      setIsPaused(true);
+      if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+      pauseTimerRef.current = setTimeout(() => setIsPaused(false), 4000);
     }
   };
 
   const goTo = (i: number) => {
-    setIsPaused(true);
     setActive(i);
-    setTimeout(() => setIsPaused(false), 4000);
+    setIsPaused(true);
+    if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+    pauseTimerRef.current = setTimeout(() => setIsPaused(false), 4000);
   };
   const prev = () => goTo(Math.max(0, active - 1));
   const next = () => goTo(Math.min(n - 1, active + 1));
