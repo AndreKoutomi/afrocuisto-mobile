@@ -88,13 +88,16 @@ Les clés doivent correspondre EXACTEMENT à ce format :
 
         try {
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: systemPrompt }, { text: prompt }] }],
-                        generationConfig: { temperature: 0.7 },
+                        generationConfig: {
+                            temperature: 0.7,
+                            responseMimeType: "application/json"
+                        },
                     })
                 }
             );
@@ -106,10 +109,15 @@ Les clés doivent correspondre EXACTEMENT à ce format :
 
             const data = await response.json();
             let text = data.candidates[0].content.parts[0].text;
-            if (text.includes('```json')) text = text.split('```json')[1].split('```')[0].trim();
-            else if (text.includes('```')) text = text.split('```')[1].split('```')[0].trim();
-
-            setResult(JSON.parse(text));
+            let parsed: RecipeData;
+            try {
+                parsed = JSON.parse(text);
+            } catch {
+                if (text.includes('```json')) text = text.split('```json')[1].split('```')[0].trim();
+                else if (text.includes('```')) text = text.split('```')[1].split('```')[0].trim();
+                parsed = JSON.parse(text);
+            }
+            setResult(parsed);
         } catch (err: any) {
             alert(`Erreur IA : ${err.message}`);
         } finally {

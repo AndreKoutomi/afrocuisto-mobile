@@ -160,13 +160,17 @@ Renvoie UNIQUEMENT un JSON valide, sans markdown, avec cette structure exacte :
 
         try {
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: systemPrompt }, { text: basePrompt }] }],
-                        generationConfig: { temperature: 0.85, maxOutputTokens: 1024 },
+                        generationConfig: {
+                            temperature: 0.85,
+                            maxOutputTokens: 1024,
+                            responseMimeType: "application/json"
+                        },
                     })
                 }
             );
@@ -176,10 +180,10 @@ Renvoie UNIQUEMENT un JSON valide, sans markdown, avec cette structure exacte :
 
             let parsed: AIGeneratedSection;
             try {
+                parsed = JSON.parse(text);
+            } catch {
                 const jsonMatch = text.match(/\{[\s\S]*\}/);
                 parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
-            } catch {
-                throw new Error('Format JSON invalide reçu de l\'IA.');
             }
 
             // Validate recipe_ids against known recipes
