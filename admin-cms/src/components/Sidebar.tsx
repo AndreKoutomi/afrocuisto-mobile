@@ -41,16 +41,6 @@ export function Sidebar() {
                     <span>Retour client</span>
                     <span className="badge badge-primary text-[10px] ml-auto">NEW</span>
                 </NavLink>
-                <NavLink
-                    to="/ai-generator"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                        <circle cx="12" cy="12" r="4" />
-                    </svg>
-                    <span style={{ background: '-webkit-linear-gradient(45deg, #4318FF, #868CFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 'bold' }}>Générateur IA</span>
-                </NavLink>
             </nav>
 
         </aside>

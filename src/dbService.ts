@@ -99,7 +99,35 @@ export const dbService = {
         const cached = localStorage.getItem(REMOTE_SECTIONS_KEY);
         return cached ? JSON.parse(cached) : [];
     },
-    // User Management
+    // Auth Configuration (Supabase)
+    async signUp(email: string, password: string, name: string) {
+        if (!supabase) throw new Error("Serveur indisponible");
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: name } }
+        });
+        if (error) throw error;
+        return data;
+    },
+
+    async signIn(email: string, password: string) {
+        if (!supabase) throw new Error("Serveur indisponible");
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+        if (error) throw error;
+        return data;
+    },
+
+    async signOut() {
+        if (!supabase) return;
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+    },
+
+    // User Management (Local Sync Fallback for Favorites/Settings)
     getUsers: (): User[] => {
         const data = localStorage.getItem(USERS_KEY);
         return data ? JSON.parse(data) : [];

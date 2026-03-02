@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ImagePlus, X, Clock, Flame, Globe, Tag, BookOpen, Sparkles, ChefHat, Utensils, Leaf } from 'lucide-react';
+import { ArrowLeft, Save, ImagePlus, X, Clock, Flame, Globe, Tag, BookOpen, Sparkles, ChefHat, Leaf, Wand2, Zap } from 'lucide-react';
+import { aiService } from '../lib/ai';
 
 const INITIAL_STATE = {
     name: '',
@@ -22,7 +23,7 @@ const INITIAL_STATE = {
     origine_humaine: ''
 };
 
-const CATEGORIES = [
+export const CATEGORIES = [
     { value: "Pâtes et Céréales (Wɔ̌)", label: "Pâtes et Céréales" },
     { value: "Sauces (Nùsúnnú)", label: "Sauces" },
     { value: "Plats de Résistance & Ragoûts", label: "Plats de Résistance" },
@@ -41,6 +42,7 @@ export function RecipeForm() {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(!!id);
+    const [aiLoading, setAiLoading] = useState(false);
 
     const [aiPrefilled, setAiPrefilled] = useState(false);
 
@@ -86,6 +88,19 @@ export function RecipeForm() {
         }
     };
 
+    const handleAIFill = async () => {
+        if (!formData.name.trim()) { alert("Entrez d'abord le nom du plat."); return; }
+        setAiLoading(true);
+        const { data, error } = await aiService.generateRecipeDetails(formData.name);
+        if (data) {
+            setFormData(prev => ({ ...prev, ...data }));
+            setAiPrefilled(true);
+        } else if (error) {
+            alert(`Erreur IA : ${error}`);
+        }
+        setAiLoading(false);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -126,7 +141,7 @@ export function RecipeForm() {
         display: 'block', fontSize: '11px', fontWeight: 800,
         color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px',
     };
-    const sectionHeader = (icon: React.ReactNode, title: string, subtitle: string, iconBg: string, iconColor: string) => (
+    const sectionHeader = (icon: React.ReactNode, title: string, subtitle: string, iconBg: string) => (
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {icon}
@@ -221,10 +236,31 @@ export function RecipeForm() {
 
                     {/* Panel: Identity */}
                     <div style={cardStyle}>
-                        {sectionHeader(<ChefHat size={18} color="#7c3aed" />, 'Identité du Plat', 'Nom, alias et classification', '#ede9fe', '#7c3aed')}
+                        {sectionHeader(<ChefHat size={18} color="#7c3aed" />, 'Identité du Plat', 'Nom, alias et classification', '#ede9fe')}
                         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
                             <Field label="Nom de la recette *">
-                                <input required name="name" value={formData.name} onChange={handleChange} placeholder="Ex: Amiwo, Gbegiri, Aloko..." style={inputStyle} />
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input required name="name" value={formData.name} onChange={handleChange} placeholder="Ex: Amiwo, Gbegiri, Aloko..." style={{ ...inputStyle, flex: 1 }} />
+                                    <button
+                                        type="button"
+                                        onClick={handleAIFill}
+                                        disabled={aiLoading}
+                                        style={{
+                                            ...inputStyle,
+                                            width: 'auto',
+                                            padding: '0 16px',
+                                            background: aiLoading ? '#f3f4f6' : 'linear-gradient(135deg, #7c3aed, #4318ff)',
+                                            color: aiLoading ? '#9ca3af' : '#fff',
+                                            border: 'none',
+                                            cursor: aiLoading ? 'not-allowed' : 'pointer',
+                                            display: 'flex', alignItems: 'center', gap: '8px',
+                                            boxShadow: aiLoading ? 'none' : '0 4px 12px rgba(124,58,237,0.2)',
+                                        }}
+                                    >
+                                        {aiLoading ? <Zap size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                                        <span style={{ whiteSpace: 'nowrap' }}>{aiLoading ? 'IA en cours...' : 'Remplir par l\'IA'}</span>
+                                    </button>
+                                </div>
                             </Field>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                 <Field label="Alias / Nom local">
@@ -258,7 +294,7 @@ export function RecipeForm() {
 
                     {/* Panel: Description */}
                     <div style={cardStyle}>
-                        {sectionHeader(<BookOpen size={18} color="#0891b2" />, 'Description & Patrimoine', 'Texte de présentation et technique culinaire', '#e0f2fe', '#0891b2')}
+                        {sectionHeader(<BookOpen size={18} color="#4318ff" />, "Détails de la Recette", "Description, technique et bénéfices", "#f4f7fe")}
                         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
                             <Field label="Description / Introduction">
                                 <textarea
@@ -297,7 +333,7 @@ export function RecipeForm() {
 
                     {/* Panel: Image */}
                     <div style={cardStyle}>
-                        {sectionHeader(<ImagePlus size={18} color="#059669" />, 'Photo du Plat', 'Image principale affichée dans l\'app', '#d1fae5', '#059669')}
+                        {sectionHeader(<Globe size={18} color="#059669" />, "Informations Culturelles", "Origine et contexte historique", "#ecfdf5")}
                         <div style={{ padding: '20px' }}>
                             {formData.image ? (
                                 <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', aspectRatio: '4/3', background: '#f3f4f6' }}>
@@ -364,7 +400,7 @@ export function RecipeForm() {
 
                     {/* Panel: Details */}
                     <div style={cardStyle}>
-                        {sectionHeader(<Sparkles size={18} color="#d97706" />, 'Détails de Préparation', 'Niveau de difficulté et temps', '#fef3c7', '#d97706')}
+                        {sectionHeader(<Flame size={18} color="#f97316" />, "Préparation & Cuisson", "Détails de temps et difficulté", "#fff7ed")}
                         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <Field label="Région / Origine">
                                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>

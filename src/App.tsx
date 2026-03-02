@@ -46,7 +46,8 @@ import {
   SearchIcon,
   Sparkles,
   Check,
-  AlertCircle
+  AlertCircle,
+  Loader
 } from 'lucide-react';
 import { recipes } from './data';
 import { Recipe, Difficulty, User, UserSettings, ShoppingItem } from './types';
@@ -1041,6 +1042,45 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authFormData, setAuthFormData] = useState({ name: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Initial Auth Check
+    const initAuth = async () => {
+      if (!dbService.supabase) return;
+      const { data: { session } } = await dbService.supabase.auth.getSession();
+
+      const updateUserObject = (sessionUser: any) => {
+        const existingLocal = dbService.getUsers().find(u => u.email === sessionUser.email) || null;
+        const userObj: User = existingLocal || {
+          id: sessionUser.id,
+          name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || "User",
+          email: sessionUser.email!,
+          favorites: [],
+          shoppingList: [],
+          joinedDate: new Date(sessionUser.created_at || Date.now()).toLocaleDateString(),
+          settings: { darkMode: false, language: 'fr', unitSystem: 'metric' }
+        };
+        setCurrentUser(userObj);
+        dbService.setCurrentUser(userObj);
+      };
+
+      if (session?.user) {
+        updateUserObject(session.user);
+      }
+
+      dbService.supabase.auth.onAuthStateChange((_event, curSession) => {
+        if (curSession?.user) {
+          updateUserObject(curSession.user);
+        } else {
+          setCurrentUser(null);
+          dbService.setCurrentUser(null);
+        }
+      });
+    };
+    initAuth();
+  }, []);
 
   // Cloud Sync & Internet Dependency
   const [allRecipes, setAllRecipes] = useState<Recipe[]>(recipes); // Use static data as first fallback
@@ -1350,41 +1390,44 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await dbService.signOut();
     dbService.setCurrentUser(null);
     setCurrentUser(null);
     setActiveTab('home');
     setHistory(['home']);
     setSelectedRecipe(null);
+    showAlert("Vous êtes maintenant déconnecté", "success");
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const users = dbService.getUsers();
-    const user = users.find(u => u.email === authFormData.email && u.password === authFormData.password);
-    if (user) {
-      dbService.setCurrentUser(user);
-      setCurrentUser(user);
-    } else {
-      alert("Email ou mot de passe incorrect");
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      await dbService.signIn(authFormData.email, authFormData.password);
+      showAlert("Connexion réussie !", "success");
+    } catch (err: any) {
+      setAuthError(err.message || "Email ou mot de passe incorrect");
+      showAlert("Échec de connexion", "error");
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: authFormData.name,
-      email: authFormData.email,
-      password: authFormData.password,
-      favorites: [],
-      shoppingList: [],
-      joinedDate: new Date().toLocaleDateString(),
-      settings: { darkMode: false, language: 'fr', unitSystem: 'metric' }
-    };
-    dbService.saveUser(newUser);
-    dbService.setCurrentUser(newUser);
-    setCurrentUser(newUser);
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      await dbService.signUp(authFormData.email, authFormData.password, authFormData.name);
+      showAlert("Compte créé avec succès ! Bienvenue.", "success");
+    } catch (err: any) {
+      setAuthError(err.message || "Erreur lors de la création du compte.");
+      showAlert("Échec de l'inscription", "error");
+    } finally {
+      setIsAuthLoading(false);
+    }
   };
 
   const toggleFavorite = (recipeId: string) => {
@@ -3143,37 +3186,132 @@ export default function App() {
   };
 
   const renderAuth = () => (
-    <div className="flex-1 flex flex-col bg-white p-8 justify-center h-full">
-      <div className="text-center mb-10">
-        <img src="/images/auth_logo.png" className="w-24 h-24 mx-auto mb-6 object-contain" alt="AfroCuisto Logo" />
-        <h1 className="text-3xl font-black text-stone-800 tracking-tight">AfroCuisto</h1>
+    <div className="flex-1 flex flex-col justify-center min-h-screen relative overflow-hidden bg-[#faf9f6]">
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] bg-[#fb5607]/10 rounded-full blur-3xl mix-blend-multiply opacity-70 animate-blob"></div>
+        <div className="absolute top-[20%] -right-[10%] w-[60vw] h-[60vw] bg-amber-400/10 rounded-full blur-3xl mix-blend-multiply opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-[20%] left-[20%] w-[80vw] h-[80vw] bg-emerald-500/10 rounded-full blur-3xl mix-blend-multiply opacity-70 animate-blob animation-delay-4000"></div>
       </div>
-      <div className="bg-stone-50 p-1 rounded-2xl flex mb-8">
-        <button onClick={() => setAuthMode('login')} className={`flex-1 py-3 rounded-xl font-bold ${authMode === 'login' ? 'bg-white shadow-sm' : 'text-stone-400'}`}>Connexion</button>
-        <button onClick={() => setAuthMode('signup')} className={`flex-1 py-3 rounded-xl font-bold ${authMode === 'signup' ? 'bg-white shadow-sm' : 'text-stone-400'}`}>Inscription</button>
+
+      <div className="relative z-10 px-8 py-10 w-full max-w-md mx-auto flex flex-col h-full justify-center">
+        {/* Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-10"
+        >
+          <div className="w-24 h-24 bg-white/60 p-4 rounded-[32px] mx-auto mb-6 shadow-[0_20px_40px_rgba(0,0,0,0.04)] backdrop-blur-xl border border-white relative">
+            <div className="absolute inset-0 rounded-[32px] border border-stone-200/40 pointer-events-none"></div>
+            <img src="/images/chef_icon.png" className="w-full h-full object-contain" alt="AfroCuisto Logo" />
+          </div>
+          <h1 className="text-[32px] font-black text-stone-900 tracking-tight leading-none mb-3">Afro<span className="text-[#fb5607]">Cuisto</span></h1>
+          <p className="text-[13px] font-medium text-stone-500 border border-stone-200/50 bg-white/50 inline-block px-4 py-1.5 rounded-full shadow-sm backdrop-blur-md">Le Goût de l'Excellence</p>
+        </motion.div>
+
+        {/* Auth Box */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full bg-white/70 backdrop-blur-2xl px-6 py-8 rounded-[40px] shadow-[0_30px_60px_rgba(0,0,0,0.06)] border border-white/80 relative"
+        >
+          {/* Mode Tabs */}
+          <div className="bg-stone-100/80 p-1.5 rounded-[22px] flex mb-8 relative border border-stone-200/30">
+            <motion.div
+              layoutId="auth-tab-pill"
+              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white rounded-[18px] shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-white z-0"
+              initial={false}
+              animate={{ x: authMode === 'login' ? 0 : '100%' }}
+              transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+            />
+            <button onClick={() => { setAuthMode('login'); setAuthError(null); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'login' ? 'text-stone-900' : 'text-stone-400'}`}>Connexion</button>
+            <button onClick={() => { setAuthMode('signup'); setAuthError(null); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'signup' ? 'text-stone-900' : 'text-stone-400'}`}>Inscription</button>
+          </div>
+
+          <form onSubmit={authMode === 'login' ? handleLogin : handleSignup} className="space-y-4 relative">
+            <AnimatePresence mode="popLayout">
+              {authMode === 'signup' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                  exit={{ opacity: 0, height: 0, scale: 0.9 }}
+                  transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
+                >
+                  <div className="relative group">
+                    <UserIcon size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#fb5607] transition-colors" />
+                    <input type="text" placeholder="Nom complet" required minLength={2} value={authFormData.name} onChange={e => setAuthFormData({ ...authFormData, name: e.target.value })} className="w-full bg-white border border-stone-200/60 rounded-[20px] py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm" />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="relative group">
+              <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#fb5607] transition-colors" />
+              <input type="email" placeholder="Adresse email" required value={authFormData.email} onChange={e => setAuthFormData({ ...authFormData, email: e.target.value })} className="w-full bg-white border border-stone-200/60 rounded-[20px] py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm" />
+            </div>
+
+            <div className="relative group">
+              <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#fb5607] transition-colors" />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Mot de passe"
+                required
+                minLength={6}
+                value={authFormData.password}
+                onChange={e => setAuthFormData({ ...authFormData, password: e.target.value })}
+                className="w-full bg-white border border-stone-200/60 rounded-[20px] py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 p-2 hover:text-[#fb5607] transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {authError && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} className="bg-rose-50 border border-rose-100/50 p-3 rounded-[16px] flex items-center gap-3">
+                  <AlertCircle size={16} className="text-rose-500 shrink-0" />
+                  <p className="text-[11px] font-bold text-rose-600 leading-tight">{authError}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {authMode === 'login' && (
+              <div className="flex justify-end pt-1 pb-3">
+                <button type="button" className="text-[11px] font-bold text-stone-500 hover:text-[#fb5607] transition-colors px-2">Mot de passe oublié ?</button>
+              </div>
+            )}
+
+            <button type="submit" disabled={isAuthLoading} className={`w-full bg-[#fb5607] text-white py-4 mt-2 rounded-[22px] font-black text-sm uppercase tracking-widest flex justify-center items-center shadow-[0_15px_30px_rgba(251,86,7,0.25)] transition-all ${isAuthLoading ? 'opacity-80 cursor-wait' : 'hover:bg-[#eb4b05] active:scale-[0.98]'}`}>
+              {isAuthLoading ? <Loader size={20} className="animate-spin" /> : (authMode === 'login' ? 'Se connecter' : "C'est parti !")}
+            </button>
+          </form>
+        </motion.div>
       </div>
-      <form onSubmit={authMode === 'login' ? handleLogin : handleSignup} className="space-y-4">
-        {authMode === 'signup' && <input type="text" placeholder="Nom complet" required value={authFormData.name} onChange={e => setAuthFormData({ ...authFormData, name: e.target.value })} className="w-full bg-stone-50 rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-terracotta/20 font-medium" />}
-        <input type="email" placeholder="Email" required value={authFormData.email} onChange={e => setAuthFormData({ ...authFormData, email: e.target.value })} className="w-full bg-stone-50 rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-terracotta/20 font-medium" />
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Mot de passe"
-            required
-            value={authFormData.password}
-            onChange={e => setAuthFormData({ ...authFormData, password: e.target.value })}
-            className="w-full bg-stone-50 rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-terracotta/20 font-medium"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-6 top-1/2 -translate-y-1/2 text-stone-400 p-2 hover:text-terracotta transition-colors"
-          >
-            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-          </button>
-        </div>
-        <button type="submit" className="w-full bg-terracotta text-white py-4 rounded-2xl font-bold shadow-lg shadow-terracotta/20">{authMode === 'login' ? 'Se connecter' : "C'est parti !"}</button>
-      </form>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+          animation: blob 8s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2.5s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 5s;
+        }
+      `}} />
     </div>
   );
 
