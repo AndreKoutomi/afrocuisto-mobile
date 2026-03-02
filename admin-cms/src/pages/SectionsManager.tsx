@@ -58,10 +58,13 @@ export function SectionsManager() {
     const [showApiKeyInput, setShowApiKeyInput] = useState(false);
     const [apiKeyInput, setApiKeyInput] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [model, setModel] = useState('gemini-1.5-flash');
 
     useEffect(() => {
         const stored = localStorage.getItem('gemini_api_key');
+        const storedModel = localStorage.getItem('gemini_model');
         if (stored) { setApiKey(stored); setApiKeyInput(stored); }
+        if (storedModel) { setModel(storedModel); }
         fetchData();
     }, []);
 
@@ -160,7 +163,7 @@ Renvoie UNIQUEMENT un JSON valide, sans markdown, avec cette structure exacte :
 
         try {
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -531,11 +534,26 @@ Renvoie UNIQUEMENT un JSON valide, sans markdown, avec cette structure exacte :
                                     placeholder="Votre clé API Google Gemini..."
                                     style={{ flex: 1, height: '38px', borderRadius: '10px', border: '1.5px solid #ddd6fe', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                                 />
+                                <select
+                                    value={model}
+                                    onChange={e => setModel(e.target.value)}
+                                    style={{
+                                        height: '38px', borderRadius: '10px',
+                                        border: '1.5px solid #ddd6fe', background: '#fff',
+                                        padding: '0 8px', fontSize: '12px', fontWeight: 700, color: '#7c3aed',
+                                        outline: 'none', cursor: 'pointer'
+                                    }}
+                                >
+                                    <option value="gemini-1.5-flash">1.5 Flash</option>
+                                    <option value="gemini-1.5-pro">1.5 Pro</option>
+                                    <option value="gemini-1.0-pro">1.0 Pro</option>
+                                </select>
                                 <button onClick={() => {
                                     localStorage.setItem('gemini_api_key', apiKeyInput.trim());
+                                    localStorage.setItem('gemini_model', model);
                                     setApiKey(apiKeyInput.trim());
                                     setShowApiKeyInput(false);
-                                }} style={{ height: '38px', padding: '0 16px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+                                }} style={{ height: '38px', padding: '0-16px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', paddingLeft: '16px', paddingRight: '16px' }}>
                                     Sauvegarder
                                 </button>
                             </div>

@@ -2228,7 +2228,7 @@ export default function App() {
   const renderExplorer = () => (
     <div className="flex-1 flex flex-col pb-44">
       {/* Immersive Search Header */}
-      <header className="px-6 pt-14 pb-6 bg-white/90 backdrop-blur-2xl sticky top-0 z-40">
+      <header className="px-6 pt-6 pb-6 bg-white/90 backdrop-blur-2xl sticky top-0 z-40">
         <h1 className="text-3xl font-black text-stone-900 mb-6 drop-shadow-sm">{selectedCategory || 'Explorer'}</h1>
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-terracotta transition-colors" size={20} />
@@ -2301,42 +2301,87 @@ export default function App() {
 
             if (section.type === 'dynamic_carousel') {
               return (
-                <section key={section.id} className="mb-14">
-                  <div className="px-6 flex justify-between items-end mb-2">
-                    <div className="flex flex-col">
-                      <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                      {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
+                <section key={section.id} className="mb-8">
+                  <div className="px-6 flex justify-between items-center mb-4">
+                    <div>
+                      <h2 className="text-xl font-black text-stone-900 tracking-tight">{section.title}</h2>
+                      {section.subtitle && <p className="text-[10px] text-[#fb5607] font-bold uppercase tracking-widest mt-0.5">{section.subtitle}</p>}
                     </div>
-
                   </div>
-                  <div className="flex gap-4 overflow-x-auto px-6 no-scrollbar pb-6 pt-16">
+                  <div className="flex gap-3 overflow-x-auto px-6 no-scrollbar pb-8 pt-4">
                     {sectionRecipes.map((recipe, ridx) => {
-                      const colors = ['bg-[#e8e8e8]', 'bg-[#eeeeee]', 'bg-[#dcdcdc]'];
-                      const bgColor = colors[ridx % colors.length];
-
+                      const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
                       return (
                         <motion.div
                           key={recipe.id}
-                          whileTap={{ scale: 0.95 }}
+                          whileTap={{ scale: 0.96 }}
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: ridx * 0.1 }}
+                          transition={{ delay: ridx * 0.08 }}
                           onClick={() => setSelectedRecipe(recipe)}
-                          className="flex-shrink-0 w-[190px] cursor-pointer group"
+                          className="flex-shrink-0 cursor-pointer group"
+                          style={{ width: '190px' }}
                         >
-                          <div className={`h-[310px] ${bgColor} rounded-[38px] p-4 flex flex-col items-center relative shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] border border-white/40`}>
-                            <div className="absolute -top-[55px] w-[145px] h-[145px] rounded-full shadow-[0_25px_40px_-10px_rgba(0,0,0,0.3)] overflow-hidden border-[5px] border-white/20 z-10 transition-transform group-hover:-translate-y-2">
-                              <img src={recipe.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={recipe.name} />
+                          {/* Card — no border, just shadow */}
+                          <div style={{
+                            background: 'linear-gradient(160deg, #ff6b1a 0%, #fb5607 50%, #e84d00 100%)',
+                            borderRadius: '24px',
+                            overflow: 'hidden',
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.18), 0 3px 8px rgba(0,0,0,0.10)',
+                          }}>
+                            {/* Image top — 4:3 for more height */}
+                            <div style={{ position: 'relative', aspectRatio: '4/3', overflow: 'hidden' }}>
+                              <img
+                                src={recipe.image}
+                                alt={recipe.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }}
+                                className="group-hover:scale-105"
+                              />
                             </div>
-                            <div className="mt-[115px] w-full flex flex-col items-center text-center">
 
-                              <h3 className="text-stone-800 font-bold text-[18px] leading-[1.2] mb-1 opacity-90 line-clamp-2 w-[150px]">{recipe.name}</h3>
-                              <span className="text-stone-500 text-[12px] font-medium leading-tight mb-4">{recipe.category || 'Tasty & Delicious'}</span>
-                              <div className="flex gap-1.5 mb-5 opacity-80">
-                                {[1, 2, 3, 4, 5].map(s => <Star key={s} size={12} className="text-stone-400 fill-stone-400 drop-shadow-sm" />)}
+                            {/* Content — fixed height */}
+                            <div style={{ padding: '12px 14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {/* Title + category */}
+                              <div>
+                                <h3 style={{
+                                  fontSize: '14px', fontWeight: 800, color: '#fff',
+                                  lineHeight: 1.25, margin: '0 0 3px',
+                                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                }}>{recipe.name}</h3>
+                                <p style={{
+                                  fontSize: '11px', color: 'rgba(255,255,255,0.70)', fontWeight: 500, margin: 0,
+                                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                }}>{recipe.category || recipe.region}</p>
                               </div>
-                              <div className="w-[36px] h-[36px] bg-[#d5d5d5] rounded-full flex items-center justify-center mt-auto shadow-md cursor-pointer hover:bg-stone-300 transition-colors border border-white/30">
-                                <Plus size={18} className="text-white stroke-[2.5]" />
+
+                              {/* Rating pill button */}
+                              <div style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                background: 'rgba(255,255,255,0.20)',
+                                backdropFilter: 'blur(8px)',
+                                borderRadius: '20px',
+                                padding: '5px 10px',
+                                alignSelf: 'flex-start',
+                              }}>
+                                <Star size={12} style={{ color: '#fde68a', fill: '#fde68a', flexShrink: 0 }} />
+                                <span style={{ fontSize: '12px', fontWeight: 800, color: '#fff' }}>{ratingNum}</span>
+                              </div>
+
+                              {/* CTA row */}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.90)', letterSpacing: '0.03em' }}>
+                                  Voir la recette
+                                </span>
+                                <div style={{
+                                  width: '28px', height: '28px',
+                                  background: '#fff',
+                                  borderRadius: '50%',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+                                  transition: 'transform 0.2s',
+                                }} className="group-hover:scale-110">
+                                  <ChevronRight size={14} style={{ color: '#fb5607' }} strokeWidth={3} />
+                                </div>
                               </div>
                             </div>
                           </div>

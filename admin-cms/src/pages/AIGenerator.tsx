@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
-    Settings, Sparkles, CheckCircle2, ChefHat, Clock, Flame,
+    Sparkles, CheckCircle2, ChefHat, Clock, Flame,
     Globe, BookOpen, Leaf, Tag, ArrowRight, Key, X, Wand2,
     RefreshCw, Copy, Check
 } from 'lucide-react';
@@ -47,16 +47,20 @@ export function AIGenerator() {
     const [result, setResult] = useState<RecipeData | null>(null);
     const [copiedField, setCopiedField] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [model, setModel] = useState('gemini-1.5-flash');
 
     useEffect(() => {
         const storedKey = localStorage.getItem('gemini_api_key');
+        const storedModel = localStorage.getItem('gemini_model');
         if (storedKey) { setApiKey(storedKey); setApiKeyInput(storedKey); }
-        else setShowSettings(true);
+        if (storedModel) { setModel(storedModel); }
+        if (!storedKey) setShowSettings(true);
     }, []);
 
     const saveApiKey = () => {
         const trimmed = apiKeyInput.trim();
         localStorage.setItem('gemini_api_key', trimmed);
+        localStorage.setItem('gemini_model', model);
         setApiKey(trimmed);
         setShowSettings(false);
     };
@@ -89,7 +93,7 @@ Les clés doivent correspondre EXACTEMENT à ce format :
 
         try {
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -278,6 +282,20 @@ Les clés doivent correspondre EXACTEMENT à ce format :
                                 outline: 'none', fontFamily: 'monospace',
                             }}
                         />
+                        <select
+                            value={model}
+                            onChange={e => setModel(e.target.value)}
+                            style={{
+                                height: '44px', borderRadius: '12px',
+                                border: '1.5px solid #c7d2fe', background: '#fff',
+                                padding: '0 10px', fontSize: '13px', fontWeight: 700, color: '#4338ca',
+                                outline: 'none', cursor: 'pointer'
+                            }}
+                        >
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                            <option value="gemini-1.0-pro">Gemini 1.0 Pro (Legacy)</option>
+                        </select>
                         <button
                             onClick={saveApiKey}
                             style={{
