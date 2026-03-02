@@ -103,9 +103,9 @@ export const dbService = {
     async signUp(email: string, password: string, name: string) {
         if (!supabase) throw new Error("Serveur indisponible");
         const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { full_name: name } }
+            email: email.trim().toLowerCase(),
+            password: password.trim(),
+            options: { data: { full_name: name.trim() } }
         });
         if (error) throw error;
         return data;
@@ -114,8 +114,8 @@ export const dbService = {
     async signIn(email: string, password: string) {
         if (!supabase) throw new Error("Serveur indisponible");
         const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
+            email: email.trim().toLowerCase(),
+            password: password.trim()
         });
         if (error) throw error;
         return data;

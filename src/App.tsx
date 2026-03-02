@@ -1405,11 +1405,16 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      await dbService.signIn(authFormData.email, authFormData.password);
-      showAlert("Connexion réussie !", "success");
+      await dbService.signIn(authFormData.email.trim(), authFormData.password);
     } catch (err: any) {
-      setAuthError(err.message || "Email ou mot de passe incorrect");
-      showAlert("Échec de connexion", "error");
+      let msg = err.message || "Email ou mot de passe incorrect";
+      if (msg.includes("Email not confirmed")) {
+        msg = "Veuillez confirmer votre adresse email avant de vous connecter. Vérifiez vos spams !";
+      } else if (msg.includes("Invalid login credentials")) {
+        msg = "Email ou mot de passe incorrect. Vérifiez vos identifiants.";
+      }
+      setAuthError(msg);
+      showAlert(msg, "error");
     } finally {
       setIsAuthLoading(false);
     }
@@ -1420,8 +1425,16 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      await dbService.signUp(authFormData.email, authFormData.password, authFormData.name);
-      showAlert("Compte créé avec succès ! Bienvenue.", "success");
+      const data = await dbService.signUp(authFormData.email.trim(), authFormData.password, authFormData.name.trim());
+
+      if (data?.session) {
+        showAlert("Compte créé avec succès ! Bienvenue.", "success");
+      } else {
+        showAlert("Compte créé ! Veuillez vérifier votre boîte mail pour confirmer votre inscription.", "info");
+        setAuthMode('login');
+        // On garde l'email mais on vide le mot de passe pour la sécurité
+        setAuthFormData(prev => ({ ...prev, password: '' }));
+      }
     } catch (err: any) {
       setAuthError(err.message || "Erreur lors de la création du compte.");
       showAlert("Échec de l'inscription", "error");
