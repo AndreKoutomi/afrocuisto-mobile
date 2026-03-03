@@ -3445,7 +3445,7 @@ export default function App() {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 100, opacity: 0, scale: 0.92 }}
             transition={{ type: 'spring', damping: 24, stiffness: 360, mass: 0.85 }}
-            className="absolute bottom-2 left-3 right-3 z-[110]"
+            className="absolute bottom-4 left-3 right-3 z-[110]"
           >
             {/* Ambient drop shadow */}
             <div
