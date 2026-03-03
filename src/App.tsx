@@ -1418,6 +1418,9 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    // Persist current dark mode preference before clearing user
+    const currentDarkMode = currentUser?.settings?.darkMode === true;
+    localStorage.setItem('afrocuisto_dark_mode', String(currentDarkMode));
     await dbService.signOut();
     dbService.setCurrentUser(null);
     setCurrentUser(null);
@@ -3413,12 +3416,12 @@ export default function App() {
   };
 
   const renderAuth = () => (
-    <div className="flex-1 flex flex-col justify-center min-h-screen relative overflow-hidden bg-[#faf9f6]">
+    <div className={`flex-1 flex flex-col justify-center min-h-screen relative overflow-hidden ${isDark ? 'bg-[#0f0f11]' : 'bg-[#faf9f6]'}`}>
       {/* Dynamic Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] bg-[#fb5607]/10 rounded-full blur-3xl mix-blend-multiply opacity-70 animate-blob"></div>
-        <div className="absolute top-[20%] -right-[10%] w-[60vw] h-[60vw] bg-amber-400/10 rounded-full blur-3xl mix-blend-multiply opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-[20%] left-[20%] w-[80vw] h-[80vw] bg-emerald-500/10 rounded-full blur-3xl mix-blend-multiply opacity-70 animate-blob animation-delay-4000"></div>
+        <div className={`absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full blur-3xl opacity-70 animate-blob ${isDark ? 'bg-[#fb5607]/5' : 'bg-[#fb5607]/10 mix-blend-multiply'}`}></div>
+        <div className={`absolute top-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full blur-3xl opacity-70 animate-blob animation-delay-2000 ${isDark ? 'bg-amber-400/5' : 'bg-amber-400/10 mix-blend-multiply'}`}></div>
+        <div className={`absolute -bottom-[20%] left-[20%] w-[80vw] h-[80vw] rounded-full blur-3xl opacity-70 animate-blob animation-delay-4000 ${isDark ? 'bg-emerald-500/5' : 'bg-emerald-500/10 mix-blend-multiply'}`}></div>
       </div>
 
       <div className="relative z-10 px-8 py-10 w-full max-w-md mx-auto flex flex-col h-full justify-center">
@@ -3429,12 +3432,12 @@ export default function App() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="text-center mb-10"
         >
-          <div className="w-32 h-32 bg-white/60 p-5 rounded-[40px] mx-auto mb-6 shadow-[0_20px_40px_rgba(0,0,0,0.04)] backdrop-blur-xl border border-white relative">
-            <div className="absolute inset-0 rounded-[40px] border border-stone-200/40 pointer-events-none"></div>
-            <img src="/images/chef_icon_v2.png" className="w-full h-full object-contain" alt="AfroCuisto Logo" />
+          <div className={`w-32 h-32 p-5 rounded-[40px] mx-auto mb-6 backdrop-blur-xl border relative ${isDark ? 'bg-white/5 border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.3)]' : 'bg-white/60 border-white shadow-[0_20px_40px_rgba(0,0,0,0.04)]'}`}>
+            <div className={`absolute inset-0 rounded-[40px] border pointer-events-none ${isDark ? 'border-white/5' : 'border-stone-200/40'}`}></div>
+            <img src="/images/chef_icon_v2.png" className={`w-full h-full object-contain ${isDark ? 'logo-dark-mode' : ''}`} alt="AfroCuisto Logo" />
           </div>
-          <h1 className="text-[32px] font-black text-stone-900 tracking-tight leading-none mb-3">Afro<span className="text-[#fb5607]">Cuisto</span></h1>
-          <p className="text-[13px] font-medium text-stone-500 border border-stone-200/50 bg-white/50 inline-block px-4 py-1.5 rounded-full shadow-sm backdrop-blur-md">Le Goût de l'Excellence</p>
+          <h1 className={`text-[32px] font-black tracking-tight leading-none mb-3 ${isDark ? 'text-white' : 'text-stone-900'}`}>Afro<span className="text-[#fb5607]">Cuisto</span></h1>
+          <p className={`text-[13px] font-medium inline-block px-4 py-1.5 rounded-full shadow-sm backdrop-blur-md border ${isDark ? 'text-white/60 border-white/10 bg-white/5' : 'text-stone-500 border-stone-200/50 bg-white/50'}`}>Le Goût de l'Excellence</p>
         </motion.div>
 
         {/* Auth Box */}
@@ -3442,19 +3445,19 @@ export default function App() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full bg-white/70 backdrop-blur-2xl px-6 py-8 rounded-[40px] shadow-[0_30px_60px_rgba(0,0,0,0.06)] border border-white/80 relative"
+          className={`w-full backdrop-blur-2xl px-6 py-8 rounded-[40px] border relative ${isDark ? 'bg-white/5 border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.4)]' : 'bg-white/70 border-white/80 shadow-[0_30px_60px_rgba(0,0,0,0.06)]'}`}
         >
           {/* Mode Tabs */}
-          <div className="bg-stone-100/80 p-1.5 rounded-[22px] flex mb-8 relative border border-stone-200/30">
+          <div className={`p-1.5 rounded-[22px] flex mb-8 relative border ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-100/80 border-stone-200/30'}`}>
             <motion.div
               layoutId="auth-tab-pill"
-              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white rounded-[18px] shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-white z-0"
+              className={`absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-[18px] z-0 ${isDark ? 'bg-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.2)] border border-white/10' : 'bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-white'}`}
               initial={false}
               animate={{ x: authMode === 'login' ? 0 : '100%' }}
               transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
             />
-            <button onClick={() => { setAuthMode('login'); setAuthError(null); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'login' ? 'text-stone-900' : 'text-stone-400'}`}>Connexion</button>
-            <button onClick={() => { setAuthMode('signup'); setAuthError(null); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'signup' ? 'text-stone-900' : 'text-stone-400'}`}>Inscription</button>
+            <button onClick={() => { setAuthMode('login'); setAuthError(null); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'login' ? (isDark ? 'text-white' : 'text-stone-900') : (isDark ? 'text-white/40' : 'text-stone-400')}`}>Connexion</button>
+            <button onClick={() => { setAuthMode('signup'); setAuthError(null); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'signup' ? (isDark ? 'text-white' : 'text-stone-900') : (isDark ? 'text-white/40' : 'text-stone-400')}`}>Inscription</button>
           </div>
 
           <form onSubmit={authMode === 'login' ? handleLogin : handleSignup} className="space-y-4 relative">
@@ -3467,20 +3470,20 @@ export default function App() {
                   transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
                 >
                   <div className="relative group">
-                    <UserIcon size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#fb5607] transition-colors" />
-                    <input type="text" placeholder="Nom complet" required minLength={2} value={authFormData.name} onChange={e => setAuthFormData({ ...authFormData, name: e.target.value })} className="w-full bg-white border border-stone-200/60 rounded-full py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm" />
+                    <UserIcon size={20} className={`absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#fb5607] transition-colors ${isDark ? 'text-white/30' : 'text-stone-400'}`} />
+                    <input type="text" placeholder="Nom complet" required minLength={2} value={authFormData.name} onChange={e => setAuthFormData({ ...authFormData, name: e.target.value })} className={`w-full border rounded-full py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm transition-all shadow-sm ${isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/25' : 'bg-white border-stone-200/60 text-stone-800 placeholder:text-stone-400'}`} />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
             <div className="relative group">
-              <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#fb5607] transition-colors" />
-              <input type="email" placeholder="Adresse email" required value={authFormData.email} onChange={e => setAuthFormData({ ...authFormData, email: e.target.value })} className="w-full bg-white border border-stone-200/60 rounded-full py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm" />
+              <Mail size={20} className={`absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#fb5607] transition-colors ${isDark ? 'text-white/30' : 'text-stone-400'}`} />
+              <input type="email" placeholder="Adresse email" required value={authFormData.email} onChange={e => setAuthFormData({ ...authFormData, email: e.target.value })} className={`w-full border rounded-full py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm transition-all shadow-sm ${isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/25' : 'bg-white border-stone-200/60 text-stone-800 placeholder:text-stone-400'}`} />
             </div>
 
             <div className="relative group">
-              <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#fb5607] transition-colors" />
+              <Lock size={20} className={`absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#fb5607] transition-colors ${isDark ? 'text-white/30' : 'text-stone-400'}`} />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Mot de passe"
@@ -3488,12 +3491,12 @@ export default function App() {
                 minLength={6}
                 value={authFormData.password}
                 onChange={e => setAuthFormData({ ...authFormData, password: e.target.value })}
-                className="w-full bg-white border border-stone-200/60 rounded-full py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm"
+                className={`w-full border rounded-full py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm transition-all shadow-sm ${isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/25' : 'bg-white border-stone-200/60 text-stone-800 placeholder:text-stone-400'}`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 p-2 hover:text-[#fb5607] transition-colors"
+                className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 transition-colors ${isDark ? 'text-white/30 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'}`}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -3510,7 +3513,7 @@ export default function App() {
 
             {authMode === 'login' && (
               <div className="flex justify-end pt-1 pb-3">
-                <button type="button" className="text-[11px] font-bold text-stone-500 hover:text-[#fb5607] transition-colors px-2">Mot de passe oublié ?</button>
+                <button type="button" className={`text-[11px] font-bold transition-colors px-2 ${isDark ? 'text-white/40 hover:text-[#fb5607]' : 'text-stone-500 hover:text-[#fb5607]'}`}>Mot de passe oublié ?</button>
               </div>
             )}
 
