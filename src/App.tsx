@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+﻿﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ChefHat,
@@ -651,7 +651,7 @@ const NavButton = ({ icon: Icon, isActive, onClick }: NavButtonProps) => {
         <motion.div
           layoutId="nav-white-bubble"
           transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-          className="absolute inset-0 rounded-[20px]"
+          className="absolute inset-0 rounded-full"
           style={{
             background: 'rgba(255,255,255,0.96)',
             boxShadow: '0 2px 12px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,1)',
@@ -902,7 +902,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
           </div>
           <button
             onClick={() => showAlert("Fonctionnalité d'édition bientôt disponible", "info")}
-            className="w-full bg-terracotta text-white py-4 rounded-2xl font-bold font-sm shadow-lg shadow-terracotta/20 active:scale-95 transition-transform"
+            className="w-full bg-terracotta text-white py-4 rounded-full font-bold font-sm shadow-lg shadow-terracotta/20 active:scale-95 transition-transform"
           >
             {t.edit} {t.personalInfo.toLowerCase()}
           </button>
@@ -920,9 +920,29 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
     ),
     'settings': () => (
       <div className="space-y-3">
+        {/* Dark Mode Toggle */}
+        <div className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+              {settings.darkMode ? <Moon size={16} /> : <Sun size={16} />}
+            </div>
+            <span className="font-bold text-stone-700 text-sm">Mode sombre</span>
+          </div>
+          <button
+            onClick={() => updateSettings({ darkMode: !settings.darkMode })}
+            className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${settings.darkMode ? 'bg-indigo-600' : 'bg-stone-200'}`}
+          >
+            <motion.div
+              animate={{ x: settings.darkMode ? 20 : 2 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+            />
+          </button>
+        </div>
+
         <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
               <Globe size={18} />
             </div>
             <span className="font-bold text-stone-700 text-sm">{t.language}</span>
@@ -932,7 +952,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
               <button
                 key={lang}
                 onClick={() => updateSettings({ language: lang })}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all border ${settings.language === lang ? 'bg-terracotta text-white border-terracotta' : 'bg-white text-stone-500 border-stone-100'}`}
+                className={`flex-1 py-2 rounded-full text-xs font-bold transition-all border ${settings.language === lang ? 'bg-terracotta text-white border-terracotta' : 'bg-white text-stone-500 border-stone-100'}`}
               >
                 {lang === 'fr' ? 'FR' : lang === 'en' ? 'EN' : 'ES'}
               </button>
@@ -941,14 +961,14 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
         </div>
         <div className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+            <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
               <Ruler size={18} />
             </div>
             <span className="font-bold text-stone-700 text-sm">{t.units}</span>
           </div>
           <button
             onClick={() => updateSettings({ unitSystem: settings.unitSystem === 'metric' ? 'imperial' : 'metric' })}
-            className="px-3 py-1.5 bg-white border border-stone-100 rounded-xl text-[10px] font-black uppercase text-terracotta font-bold"
+            className="px-3 py-1.5 bg-white border border-stone-100 rounded-full text-[10px] font-black uppercase text-terracotta"
           >
             {settings.unitSystem === 'metric' ? t.metric.split(' ')[0] : t.imperial.split(' ')[0]}
           </button>
@@ -961,7 +981,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
           className="w-full flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 active:bg-stone-100 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
               <ShieldCheck size={18} />
             </div>
             <span className="font-bold text-stone-700 text-sm">{t.security}</span>
@@ -970,7 +990,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
         </button>
         <button
           onClick={handleSaveSettings}
-          className="w-full mt-6 bg-terracotta text-white py-4 rounded-2xl font-bold font-sm shadow-lg shadow-terracotta/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
+          className="w-full mt-6 bg-terracotta text-white py-4 rounded-full font-bold font-sm shadow-lg shadow-terracotta/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
         >
           <CheckCircle2 size={18} />
           {t.save} {t.settings.toLowerCase()}
@@ -1522,7 +1542,7 @@ export default function App() {
             )}
             <button
               onClick={() => setIsSearchExpanded(true)}
-              className="w-10 h-10 bg-stone-100 text-stone-600 rounded-2xl flex items-center justify-center border border-stone-200/50"
+              className="w-10 h-10 bg-stone-100 text-stone-600 rounded-full flex items-center justify-center border border-stone-200/50"
             >
               <Search size={18} />
             </button>
@@ -2245,7 +2265,7 @@ export default function App() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder={t.searchDishRegion}
-            className="w-full bg-white border border-stone-100/80 rounded-[20px] py-4 pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta/30 transition-all font-medium"
+            className="w-full bg-white border border-stone-100/80 rounded-full py-4 pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta/30 transition-all font-medium"
           />
         </div>
       </header>
@@ -2617,7 +2637,7 @@ export default function App() {
         {profileSubView && (
           <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={springTransition} className="absolute inset-0 z-50 bg-white p-6 pt-6 flex flex-col">
             <header className="flex items-center gap-4 mb-8 shrink-0">
-              <button onClick={() => setProfileSubView(null)} className="p-2 bg-stone-50 rounded-xl"><ChevronLeft size={20} /></button>
+              <button onClick={() => setProfileSubView(null)} className="p-2 bg-stone-50 rounded-full"><ChevronLeft size={20} /></button>
               <h2 className="text-xl font-black text-stone-800 tracking-tight">
                 {profileSubView === 'personalInfo' ? t.personalInfo :
                   profileSubView === 'security' ? t.security :
@@ -3399,7 +3419,7 @@ export default function App() {
                 >
                   <div className="relative group">
                     <UserIcon size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#fb5607] transition-colors" />
-                    <input type="text" placeholder="Nom complet" required minLength={2} value={authFormData.name} onChange={e => setAuthFormData({ ...authFormData, name: e.target.value })} className="w-full bg-white border border-stone-200/60 rounded-[20px] py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm" />
+                    <input type="text" placeholder="Nom complet" required minLength={2} value={authFormData.name} onChange={e => setAuthFormData({ ...authFormData, name: e.target.value })} className="w-full bg-white border border-stone-200/60 rounded-full py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm" />
                   </div>
                 </motion.div>
               )}
@@ -3407,7 +3427,7 @@ export default function App() {
 
             <div className="relative group">
               <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#fb5607] transition-colors" />
-              <input type="email" placeholder="Adresse email" required value={authFormData.email} onChange={e => setAuthFormData({ ...authFormData, email: e.target.value })} className="w-full bg-white border border-stone-200/60 rounded-[20px] py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm" />
+              <input type="email" placeholder="Adresse email" required value={authFormData.email} onChange={e => setAuthFormData({ ...authFormData, email: e.target.value })} className="w-full bg-white border border-stone-200/60 rounded-full py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm" />
             </div>
 
             <div className="relative group">
@@ -3419,7 +3439,7 @@ export default function App() {
                 minLength={6}
                 value={authFormData.password}
                 onChange={e => setAuthFormData({ ...authFormData, password: e.target.value })}
-                className="w-full bg-white border border-stone-200/60 rounded-[20px] py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm"
+                className="w-full bg-white border border-stone-200/60 rounded-full py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm text-stone-800 placeholder:text-stone-400 transition-all shadow-sm"
               />
               <button
                 type="button"
@@ -3445,7 +3465,7 @@ export default function App() {
               </div>
             )}
 
-            <button type="submit" disabled={isAuthLoading} className={`w-full bg-[#fb5607] text-white py-4 mt-2 rounded-[22px] font-black text-sm uppercase tracking-widest flex justify-center items-center shadow-[0_15px_30px_rgba(251,86,7,0.25)] transition-all ${isAuthLoading ? 'opacity-80 cursor-wait' : 'hover:bg-[#eb4b05] active:scale-[0.98]'}`}>
+            <button type="submit" disabled={isAuthLoading} className={`w-full bg-[#fb5607] text-white py-4 mt-2 rounded-full font-black text-sm uppercase tracking-widest flex justify-center items-center shadow-[0_15px_30px_rgba(251,86,7,0.25)] transition-all ${isAuthLoading ? 'opacity-80 cursor-wait' : 'hover:bg-[#eb4b05] active:scale-[0.98]'}`}>
               {isAuthLoading ? <Loader size={20} className="animate-spin" /> : (authMode === 'login' ? 'Se connecter' : "C'est parti !")}
             </button>
           </form>
@@ -3475,15 +3495,17 @@ export default function App() {
 
   // --- Return JSX ---
 
+  const isDark = settings.darkMode === true;
+
   if (!currentUser) return (
-    <div className="h-screen bg-stone-50 max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl pt-[env(safe-area-inset-top,4px)]">
+    <div className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl pt-[env(safe-area-inset-top,4px)] transition-colors duration-300 ${isDark ? 'dark bg-[#111113]' : 'bg-stone-50'}`}>
       {renderAuth()}
       <ModernAlert />
     </div>
   );
 
   return (
-    <div className="h-screen bg-stone-50 max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-all pt-[env(safe-area-inset-top,4px)]">
+    <div className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top,4px)] ${isDark ? 'dark bg-[#111113]' : 'bg-stone-50'}`}>
       <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto no-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
           {activeTab === 'home' && <motion.div key="home" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={springTransition} className="h-full">{renderHome()}</motion.div>}
