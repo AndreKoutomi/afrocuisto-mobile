@@ -1,4 +1,4 @@
-﻿﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
+﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ChefHat,
@@ -1554,74 +1554,132 @@ export default function App() {
       <AnimatePresence>
         {isSearchExpanded && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="fixed inset-0 z-[200] bg-white flex flex-col"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[200] flex flex-col"
+            style={{ background: 'rgba(10,10,12,0.96)', backdropFilter: 'blur(20px)' }}
           >
-            <div className="h-[env(safe-area-inset-top,0px)] bg-white sticky top-0 z-10"></div>
-            <header className="px-4 py-3 border-b border-stone-100 flex items-center gap-3 bg-white sticky top-[env(safe-area-inset-top,0px)] z-10 shadow-sm">
+            {/* Search Header */}
+            <div className="px-5 pt-[env(safe-area-inset-top,16px)] pb-4 pt-12 flex items-center gap-3">
               <button
                 onClick={() => { setIsSearchExpanded(false); setSearchQuery(''); }}
-                className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center text-stone-600 shrink-0"
+                className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white shrink-0 border border-white/10"
               >
                 <ChevronLeft size={20} />
               </button>
-              <div className="flex-1 relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#fb5607]" size={18} />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 }}
+                className="flex-1 relative"
+              >
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#fb5607]" size={18} />
                 <input
                   type="text"
                   autoFocus
                   placeholder={t.searchPlaceholder}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-200/40 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/10 font-bold text-[15px] text-stone-900 placeholder:text-stone-400 shadow-sm"
+                  className="w-full bg-white/10 border border-white/10 rounded-full py-3.5 pl-11 pr-5 focus:outline-none focus:border-[#fb5607]/60 focus:bg-white/15 font-bold text-[15px] text-white placeholder:text-white/30 transition-all"
                 />
-              </div>
-            </header>
+              </motion.div>
+            </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar p-5 pb-32">
+            {/* Results area */}
+            <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-20">
               {searchQuery.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-2.5 mt-2">
+                  <p className="text-[10px] font-black uppercase text-white/30 tracking-[0.2em] mb-4">
+                    {allRecipes.filter(r => normalizeString(r.name).includes(normalizeString(searchQuery)) || normalizeString(r.region).includes(normalizeString(searchQuery))).length} résultat(s)
+                  </p>
                   {allRecipes
                     .filter(r => normalizeString(r.name).includes(normalizeString(searchQuery)) || normalizeString(r.region).includes(normalizeString(searchQuery)))
                     .map((recipe, i) => (
                       <motion.div
                         key={recipe.id}
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.05 }}
+                        transition={{ delay: i * 0.04 }}
                         onClick={() => {
                           setSelectedRecipe(recipe);
                           setIsSearchExpanded(false);
                           setSearchQuery('');
                         }}
-                        className="bg-white p-4 rounded-3xl border border-stone-100 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-all"
+                        className="bg-white/8 border border-white/8 rounded-2xl flex items-center gap-4 p-3 active:scale-[0.98] transition-all cursor-pointer overflow-hidden"
+                        style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.07)' }}
                       >
-                        <img src={recipe.image} className="w-16 h-16 rounded-2xl object-cover" alt={recipe.name} />
-                        <div className="flex-1">
-                          <h4 className="font-bold text-stone-900 text-sm leading-tight">{recipe.name}</h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] bg-[#fb5607]/5 text-[#fb5607] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">{recipe.region}</span>
-                            <span className="text-[10px] font-bold text-stone-400 flex items-center gap-1"><Star size={10} className="text-amber-400" /> {recipe.rating}</span>
+                        <img
+                          src={recipe.image}
+                          className="w-14 h-14 rounded-xl object-cover shrink-0"
+                          alt={recipe.name}
+                          onError={e => { (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%23333%22/></svg>'; }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-white text-sm leading-tight truncate">{recipe.name}</h4>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="text-[10px] bg-[#fb5607]/20 text-[#fb5607] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">{recipe.region}</span>
+                            <span className="text-[10px] font-bold text-white/30 flex items-center gap-1">
+                              <Clock size={9} /> {recipe.prepTime}
+                            </span>
                           </div>
                         </div>
-                        <ChevronRight size={16} className="text-stone-300" />
+                        <ChevronRight size={16} className="text-white/25 shrink-0" />
                       </motion.div>
                     ))}
                   {allRecipes.filter(r => normalizeString(r.name).includes(normalizeString(searchQuery)) || normalizeString(r.region).includes(normalizeString(searchQuery))).length === 0 && (
-                    <div className="py-20 text-center text-stone-400 font-bold">Aucun résultat</div>
+                    <div className="py-20 text-center">
+                      <div className="text-5xl mb-4">🔍</div>
+                      <p className="text-white/50 font-bold">Aucun résultat pour</p>
+                      <p className="text-[#fb5607] font-black text-lg mt-1">"{searchQuery}"</p>
+                    </div>
                   )}
                 </div>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-8 mt-4">
+                  {/* Trending tags */}
                   <div>
-                    <h3 className="text-[11px] font-black uppercase text-stone-400 tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <h3 className="text-[11px] font-black uppercase text-white/30 tracking-[0.2em] mb-4 flex items-center gap-2">
                       <span className="w-1.5 h-1.5 bg-[#fb5607] rounded-full"></span> Tendances
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                      {['Sauces', 'Ablo', 'Pôyô', 'Aloko', 'Boissons'].map(tag => (
-                        <button key={tag} onClick={() => setSearchQuery(tag)} className="px-5 py-2.5 bg-white border border-stone-100 rounded-2xl text-[12px] font-bold text-stone-600 shadow-sm active:scale-95 transition-all">{tag}</button>
+                      {['Sauces', 'Ablo', 'Pôyô', 'Aloko', 'Boissons', 'Tchatchanga', 'Piron'].map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setSearchQuery(tag)}
+                          className="px-4 py-2 border border-white/10 rounded-full text-[12px] font-bold text-white/70 active:scale-95 transition-all"
+                          style={{ background: 'rgba(255,255,255,0.07)' }}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recent / Suggested recipes */}
+                  <div>
+                    <h3 className="text-[11px] font-black uppercase text-white/30 tracking-[0.2em] mb-4 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span> Suggestions du chef
+                    </h3>
+                    <div className="space-y-2">
+                      {allRecipes.slice(0, 5).map((recipe, i) => (
+                        <motion.div
+                          key={recipe.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.06 }}
+                          onClick={() => { setSelectedRecipe(recipe); setIsSearchExpanded(false); }}
+                          className="flex items-center gap-3 p-3 rounded-2xl active:scale-[0.97] transition-all cursor-pointer"
+                          style={{ background: 'rgba(255,255,255,0.05)' }}
+                        >
+                          <img src={recipe.image} className="w-10 h-10 rounded-xl object-cover" alt={recipe.name} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-white/80 truncate">{recipe.name}</p>
+                            <p className="text-[10px] text-white/30">{recipe.region}</p>
+                          </div>
+                          <ChevronRight size={14} className="text-white/20 shrink-0" />
+                        </motion.div>
                       ))}
                     </div>
                   </div>
@@ -2768,9 +2826,9 @@ export default function App() {
 
         {/* New Shopping List Menu */}
 
-        <button onClick={() => setProfileSubView('security')} className="w-full flex items-center justify-between p-5 bg-white rounded-[32px] border border-stone-100 shadow-sm active:scale-95 transition-all">
+        <button onClick={() => setProfileSubView('settings')} className="w-full flex items-center justify-between p-5 bg-white rounded-[32px] border border-stone-100 shadow-sm active:scale-95 transition-all">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-2xl bg-stone-50 flex items-center justify-center text-stone-600">
+            <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-600">
               <Settings size={20} />
             </div>
             <span className="font-black text-stone-800 text-sm tracking-tight">{t.settings}</span>
