@@ -1113,10 +1113,10 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
       <div className="space-y-8 text-center py-6">
         <div className="relative mx-auto w-24 h-24 mb-4">
           <div className="absolute inset-0 bg-terracotta/5 dark:bg-terracotta/10 rounded-[32px] animate-pulse" />
-          <div className="relative flex items-center justify-center h-full">
+          <div className="relative flex items-center justify-center h-full bg-white rounded-[28px] shadow-inner-sm overflow-hidden">
             <img
               src="/images/chef_icon_v2.png"
-              className="w-20 h-20 object-contain drop-shadow-xl"
+              className="w-16 h-16 object-contain drop-shadow-md"
               alt="AfroCuisto Logo"
             />
           </div>
