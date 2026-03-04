@@ -3731,7 +3731,7 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {!selectedRecipe && (
+        {!selectedRecipe && !profileSubView && (
           <motion.nav
             initial={{ y: 100, opacity: 0, scale: 0.92 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
