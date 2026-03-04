@@ -834,78 +834,148 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
   }
 };
 
-const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, updateSettings, handleLogout, settings, handleSaveSettings, isSyncing, hasLoadedAtLeastOnce, showAlert }: any) => {
-  const views: Record<string, () => React.JSX.Element> = {
-    'personalInfo': () => {
-      const fileInputRef = useRef<HTMLInputElement>(null);
+const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(currentUser?.name || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-      const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file && currentUser) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64String = reader.result as string;
-            const updatedUser = dbService.updateAvatar(currentUser.id, base64String);
-            if (updatedUser) {
-              setCurrentUser(updatedUser);
-            }
-          };
-          reader.readAsDataURL(file);
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && currentUser) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        const updatedUser = dbService.updateAvatar(currentUser.id, base64String);
+        if (updatedUser) {
+          setCurrentUser({ ...updatedUser });
         }
       };
+      reader.readAsDataURL(file);
+    }
+  };
 
-      return (
-        <div className="space-y-6">
-          <div className="flex flex-col items-center mb-6">
-            <div className="relative group">
-              <div className="w-28 h-28 rounded-full border-4 border-white shadow-xl overflow-hidden bg-stone-100">
-                <img
-                  src={currentUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-2.5 bg-terracotta text-white rounded-full shadow-lg border-2 border-white hover:scale-110 active:scale-95 transition-all"
-              >
-                <Camera size={18} />
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={handleAvatarChange}
-              />
-            </div>
-            <p className="mt-3 text-[10px] font-black text-stone-400 uppercase tracking-widest">{t.changeProfilePhoto}</p>
-          </div>
-          <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
-            <h3 className="text-xs font-black uppercase text-stone-400 mb-4 tracking-widest">{t.identity}</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-stone-400 uppercase">{t.fullName}</label>
-                <p className="font-bold text-stone-800 border-b border-stone-100 pb-2">{currentUser?.name}</p>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-stone-400 uppercase">{t.emailAddr}</label>
-                <p className="font-bold text-stone-800 border-b border-stone-100 pb-2">{currentUser?.email}</p>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-stone-400 uppercase">{t.memberSince}</label>
-                <p className="font-bold text-stone-800">{currentUser?.joinedDate}</p>
-              </div>
-            </div>
+  const handleSave = async () => {
+    if (!currentUser || !name.trim()) return;
+    setIsSaving(true);
+    try {
+      const updatedUser = { ...currentUser, name: name.trim() };
+      setCurrentUser(updatedUser);
+      dbService.setCurrentUser(updatedUser);
+      await dbService.syncUserToCloud(updatedUser);
+      setIsEditing(false);
+      showAlert(t.saveSuccess || "Modifications enregistrées !", "success");
+    } catch (err) {
+      showAlert("Erreur lors de la sauvegarde", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col items-center mb-6">
+        <div className="relative group">
+          <div className="w-28 h-28 rounded-full border-4 border-white shadow-xl overflow-hidden bg-stone-100">
+            <img
+              src={currentUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name}`}
+              className="w-full h-full object-cover"
+              alt="Avatar"
+            />
           </div>
           <button
-            onClick={() => showAlert("Fonctionnalité d'édition bientôt disponible", "info")}
-            className="w-full bg-terracotta text-white py-4 rounded-full font-bold font-sm shadow-lg shadow-terracotta/20 active:scale-95 transition-transform"
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute bottom-0 right-0 p-2.5 bg-terracotta text-white rounded-full shadow-lg border-2 border-white hover:scale-110 active:scale-95 transition-all"
           >
-            {t.edit} {t.personalInfo.toLowerCase()}
+            <Camera size={18} />
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={handleAvatarChange}
+          />
+        </div>
+        <p className="mt-3 text-[10px] font-black text-stone-400 uppercase tracking-widest">{t.changeProfilePhoto}</p>
+      </div>
+
+      <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xs font-black uppercase text-stone-400 tracking-widest">{t.identity}</h3>
+          {!isEditing && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="text-[10px] font-black uppercase text-terracotta tracking-widest px-3 py-1 bg-terracotta/5 rounded-lg"
+            >
+              {t.edit}
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-[10px] font-bold text-stone-400 uppercase">{t.fullName}</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-white border border-stone-100 rounded-xl p-3 text-sm font-bold text-stone-800 focus:outline-none focus:ring-1 focus:ring-terracotta mt-1 transition-all"
+                placeholder={t.fullName}
+              />
+            ) : (
+              <p className="font-bold text-stone-800 border-b border-stone-100 pb-2 transition-all">{currentUser?.name}</p>
+            )}
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-stone-400 uppercase">{t.emailAddr}</label>
+            <p className="font-bold text-stone-400 border-b border-stone-100 pb-2">{currentUser?.email}</p>
+            <p className="text-[9px] text-stone-300 italic mt-1">L'email ne peut pas être modifié ici pour des raisons de sécurité.</p>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-stone-400 uppercase">{t.memberSince}</label>
+            <p className="font-bold text-stone-800">{currentUser?.joinedDate}</p>
+          </div>
+        </div>
+      </div>
+
+      {isEditing ? (
+        <div className="flex gap-3">
+          <button
+            onClick={() => { setIsEditing(false); setName(currentUser?.name || ''); }}
+            className="flex-1 py-4 rounded-full font-bold text-sm text-stone-400 bg-stone-100 active:scale-95 transition-all"
+          >
+            {t.back || "Annuler"}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex-2 bg-terracotta text-white py-4 px-8 rounded-full font-bold text-sm shadow-lg shadow-terracotta/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            {isSaving ? <Loader size={16} className="animate-spin" /> : <Check size={16} />}
+            {t.save}
           </button>
         </div>
-      );
-    },
+      ) : (
+        <p className="text-center text-[10px] text-stone-400 font-medium px-6">
+          Vos informations sont stockées en toute sécurité et synchronisées sur tous vos appareils.
+        </p>
+      )}
+    </div>
+  );
+};
+
+const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, updateSettings, handleLogout, settings, handleSaveSettings, isSyncing, hasLoadedAtLeastOnce, showAlert }: any) => {
+  const views: Record<string, () => React.JSX.Element> = {
+    'personalInfo': () => (
+      <PersonalInfoView
+        currentUser={currentUser}
+        setCurrentUser={setCurrentUser}
+        t={t}
+        showAlert={showAlert}
+      />
+    ),
     'notifications': () => (
       <div className="flex flex-col items-center justify-center py-20 text-center bg-stone-50 rounded-3xl border border-stone-100">
         <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4">
