@@ -161,7 +161,7 @@
 
 /* ── Header & sticky elements ──────────────────────────────────────────── */
 .dark header {
-  background-color: rgba(15, 15, 17, 0.97) !important;
+  background-color: #111113 !important;
   border-bottom-color: rgba(255, 255, 255, 0.06) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
 }
@@ -624,24 +624,27 @@
   color: #1a1a1a !important;
   background: #f5f5f4 !important;
 }
+
 /* -- Recipe Detail: info stat cards (PREP/CUISSON/NIVEAU) --------------- */
 .dark .bg-stone-50\/80 {
-  background-color: rgba(30,30,33,0.8) !important;
+  background-color: rgba(30, 30, 33, 0.8) !important;
 }
 
 /* -- Recipe Detail: ingredient checkbox (unchecked state) ---------------- */
 .dark .bg-white.border-2.border-stone-200 {
   background-color: #252528 !important;
-  border-color: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 /* -- Recipe Detail: selected ingredient amber styles -------------------- */
 .dark .bg-amber-50 {
-  background-color: rgba(245,158,11,0.08) !important;
+  background-color: rgba(245, 158, 11, 0.08) !important;
 }
+
 .dark .border-amber-200 {
-  border-color: rgba(245,158,11,0.2) !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
 }
+
 .dark .text-amber-900 {
   color: #fbbf24 !important;
 }
@@ -649,15 +652,16 @@
 /* -- Recipe Detail: ingredient item name in dark ------------------------ */
 .dark .bg-stone-50.border-stone-100 {
   background-color: #1a1a1d !important;
-  border-color: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
 }
+
 .dark .bg-stone-50.border-stone-100:hover {
-  border-color: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 /* -- Stone-50/80 with border variant ------------------------------------ */
 .dark .bg-stone-50\/80.border-stone-100\/50,
 .dark .bg-stone-50\/80.border {
-  background-color: rgba(30,30,33,0.8) !important;
-  border-color: rgba(255,255,255,0.06) !important;
+  background-color: rgba(30, 30, 33, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
 }

@@ -56,6 +56,8 @@ import { getAIRecipeRecommendation } from './aiService';
 import { dbService } from './dbService';
 import { translations, LanguageCode } from './translations';
 import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { SystemBars, SystemBarsStyle } from '@capacitor/core';
 
 // --- Constants & Config ---
 const springTransition = { type: 'spring', stiffness: 500, damping: 28, mass: 0.5 };
@@ -1510,6 +1512,33 @@ export default function App() {
   const otherRecipes = displayRecipes.length > 5 ? displayRecipes.slice(5) : allRecipes.filter(r => !featuredRecipes.find(fr => fr.id === r.id)).slice(0, 5);
 
   const isDark = settings.darkMode === true;
+
+  // Sync Android status bar icons & theme-color meta tag with dark mode
+  useEffect(() => {
+    // 1. Update <html> class for color-scheme propagation
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    // 2. Update the <meta name="theme-color"> tag dynamically
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', isDark ? '#111113' : '#BF4E30');
+    }
+
+    // 3. Update Android status bar icon colors via Capacitor SystemBars plugin
+    if (Capacitor.isNativePlatform()) {
+      SystemBars.setStyle({
+        // Dark style = light/white icons (for dark backgrounds)
+        // Light style = dark icons (for light backgrounds)
+        style: isDark ? SystemBarsStyle.Dark : SystemBarsStyle.Light,
+      }).catch(() => {
+        // Silently fail on platforms that don't support this
+      });
+    }
+  }, [isDark]);
 
   const navItems = [
     { id: 'home', icon: Home, label: t.home },
