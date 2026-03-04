@@ -667,3 +667,27 @@
   background-color: rgba(30, 30, 33, 0.8) !important;
   border-color: rgba(255, 255, 255, 0.06) !important;
 }
+/* -- Settings Back Button Circle ---------------------------------------- */
+.btn-back-circle {
+  background-color: #f9fafb !important;
+  color: #1a1a1a !important;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.dark .btn-back-circle {
+  background-color: #1a1a1d !important;
+  color: #f2f2f4 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+.btn-back-circle:active {
+  transform: scale(0.95) !important;
+  background-color: #f3f4f6 !important;
+}
+
+.dark .btn-back-circle:active {
+  background-color: #252528 !important;
+}
+

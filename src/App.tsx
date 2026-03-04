@@ -2827,7 +2827,7 @@ export default function App() {
         {profileSubView && (
           <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={springTransition} className={`absolute inset-0 z-50 p-6 pt-6 flex flex-col ${isDark ? 'bg-[#111113]' : 'bg-white'}`}>
             <header className="flex items-center gap-4 mb-8 shrink-0">
-              <button onClick={() => setProfileSubView(null)} className="p-2 bg-stone-50 rounded-full"><ChevronLeft size={20} /></button>
+              <button onClick={() => setProfileSubView(null)} className="p-2 btn-back-circle bg-stone-50 rounded-full"><ChevronLeft size={20} /></button>
               <h2 className="text-xl font-black text-stone-800 tracking-tight">
                 {profileSubView === 'personalInfo' ? t.personalInfo :
                   profileSubView === 'security' ? t.security :
