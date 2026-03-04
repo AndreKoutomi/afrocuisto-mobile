@@ -1112,7 +1112,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
     'about': () => (
       <div className="space-y-8 text-center py-6">
         <div className="relative mx-auto w-24 h-24 mb-4">
-          <div className="absolute inset-0 bg-terracotta/5 rounded-[32px] animate-pulse" />
+          <div className="absolute inset-0 bg-terracotta/5 dark:bg-terracotta/10 rounded-[32px] animate-pulse" />
           <div className="relative flex items-center justify-center h-full">
             <img
               src="/images/chef_icon_v2.png"
@@ -1123,20 +1123,20 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
         </div>
 
         <div>
-          <h2 className="text-2xl font-black text-stone-800 tracking-tight mb-2">AfroCuisto v1.0.6</h2>
-          <p className="text-stone-500 font-medium text-sm px-8 leading-relaxed">
+          <h2 className="text-2xl font-black text-stone-800 dark:text-white tracking-tight mb-2">AfroCuisto v1.0.6</h2>
+          <p className="text-stone-500 dark:text-stone-400 font-medium text-sm px-8 leading-relaxed">
             L'excellence de la cuisine béninoise à portée de main. Découvrez le patrimoine culinaire du Bénin.
           </p>
         </div>
 
         <div className="pt-4 pb-2">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-stone-100/50 rounded-full border border-stone-200/50">
-            <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Powered by</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-stone-100/50 dark:bg-white/5 rounded-full border border-stone-200/50 dark:border-white/10 transition-colors">
+            <span className="text-[10px] font-black text-stone-400 dark:text-stone-500 uppercase tracking-widest">Powered by</span>
             <span className="text-[11px] font-bold text-terracotta">André Koutomi</span>
           </div>
         </div>
 
-        <p className="text-[10px] text-stone-400 italic">
+        <p className="text-[10px] text-stone-400 dark:text-stone-600 italic transition-colors">
           &copy; {new Date().getFullYear()} AfroCuisto. Tous droits réservés.
         </p>
       </div>
