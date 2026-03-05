@@ -1796,7 +1796,7 @@ export default function App() {
   const renderHome = () => (
     <div className="flex-1 flex flex-col pb-44">
       {/* Sleek Persistent Header */}
-      <header className={`px-6 pt-6 pb-6 sticky top-0 z-[100] w-full left-0 right-0 border-b transition-all duration-500 flex flex-col gap-6 ${isScrolled ? (isDark ? 'bg-[#111113]/95 border-b border-white/5 shadow-xl' : 'bg-white/95 backdrop-blur-2xl border-b border-stone-100 shadow-xl shadow-stone-200/40') : 'bg-transparent border-transparent'}`}>
+      <header className={`px-6 pt-6 pb-6 sticky top-0 z-[500] w-full left-0 right-0 border-b transition-all duration-500 flex flex-col gap-6 ${isScrolled ? (isDark ? 'bg-[#111113]/98 border-b border-white/5 shadow-xl' : 'bg-white/98 backdrop-blur-2xl border-b border-stone-100 shadow-xl shadow-stone-200/40') : 'bg-transparent border-transparent'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <motion.div
@@ -1852,7 +1852,7 @@ export default function App() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className={`fixed inset-0 z-[200] flex flex-col ${isDark ? '' : 'search-overlay-light'}`}
+            className={`fixed inset-0 z-[600] flex flex-col ${isDark ? '' : 'search-overlay-light'}`}
             style={{ background: isDark ? 'rgba(10,10,12,0.96)' : 'rgba(255,255,255,0.98)', backdropFilter: 'blur(20px)' }}
           >
             {/* Search Header */}
@@ -3224,9 +3224,9 @@ export default function App() {
           animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
           exit={{ opacity: 0, scale: 0.96, y: 18, filter: 'blur(3px)' }}
           transition={{ type: 'spring', damping: 38, stiffness: 480, mass: 0.5 }}
-          className="absolute inset-0 z-[100] bg-white overflow-hidden w-full flex flex-col origin-bottom shadow-[0_-20px_60px_rgba(0,0,0,0.15)]"
+          className="absolute inset-0 z-[700] bg-white overflow-hidden w-full flex flex-col origin-bottom shadow-[0_-20px_60px_rgba(0,0,0,0.15)]"
         >
-          <div className="absolute top-0 inset-x-0 z-[110] pointer-events-none p-6 pt-12">
+          <div className="absolute top-0 inset-x-0 z-[710] pointer-events-none p-6 pt-12">
             <div className="relative w-full flex justify-between items-start pointer-events-none">
               <button onClick={goBack} className="w-10 h-10 bg-[#fb5607]/80 backdrop-blur-md rounded-full text-white flex items-center justify-center border border-white/30 shadow-lg shadow-[#fb5607]/20 pointer-events-auto"><ChevronLeft size={24} /></button>
               <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} className={`w-10 h-10 rounded-full flex items-center justify-center border shadow-md transition-all pointer-events-auto ${currentUser?.favorites.includes(recipe.id) ? 'bg-white border-white text-rose-500' : 'bg-white border-stone-100 text-stone-400'}`}><Heart size={20} fill={currentUser?.favorites.includes(recipe.id) ? 'currentColor' : 'none'} /></button>
@@ -3839,7 +3839,7 @@ export default function App() {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 100, opacity: 0, scale: 0.92 }}
             transition={{ type: 'spring', damping: 24, stiffness: 360, mass: 0.85 }}
-            className="absolute bottom-6 left-4 right-4 z-[110]"
+            className="absolute bottom-6 left-4 right-4 z-[800]"
           >
 
             {/* Main pill */}
