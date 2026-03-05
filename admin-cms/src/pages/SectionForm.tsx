@@ -128,15 +128,11 @@ export function SectionForm() {
 
     const handleToggleRecipe = (recipeId: string) => {
         setFormData(prev => {
-            const isFeatured = prev.type === 'featured';
             if (prev.recipe_ids.includes(recipeId)) {
-                // Désélection toujours autorisée
+                // Désélection 
                 return { ...prev, recipe_ids: prev.recipe_ids.filter(rid => rid !== recipeId) };
             }
-            // Mise en avant : 1 plat max
-            if (isFeatured) {
-                return { ...prev, recipe_ids: [recipeId] };
-            }
+            // Sélection normale sans limite max
             return { ...prev, recipe_ids: [...prev.recipe_ids, recipeId] };
         });
     };

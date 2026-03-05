@@ -580,32 +580,52 @@ const FeaturedStackCarousel: React.FC<{
               <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '130px', height: '130px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
               <div style={{ position: 'absolute', right: '50px', bottom: '-40px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
 
-              {/* Left content */}
+              {/* Left content — staggered entrance on active card */}
               <div style={{ flex: 1, minWidth: 0, zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 {/* Badge */}
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '5px',
-                  background: 'rgba(255,255,255,0.26)',
-                  borderRadius: '14px', padding: '5px 10px', marginBottom: '12px',
-                }}>
+                <motion.div
+                  key={isActive ? `badge-${recipe.id}` : undefined}
+                  initial={isActive ? { opacity: 0, y: 18 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05, duration: 0.4, ease: 'easeOut' }}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                    background: 'rgba(255,255,255,0.26)',
+                    borderRadius: '14px', padding: '5px 10px', marginBottom: '12px',
+                  }}
+                >
                   <span style={{ fontSize: '11px' }}>💎</span>
                   <span style={{ fontSize: '9px', fontWeight: 900, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase', lineHeight: 1.2 }}>
                     {section.subtitle || 'Chef d\'œuvre'}
                   </span>
-                </div>
-                {/* Recipe Name + Difficulty */}
-                <h2 style={{
-                  margin: '0 0 10px', fontSize: 'clamp(18px, 5.5vw, 26px)',
-                  fontWeight: 900, color: '#fff', lineHeight: 1.1,
-                  letterSpacing: '-0.02em',
-                  display: '-webkit-box', WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word',
-                }}>
+                </motion.div>
+
+                {/* Recipe Name */}
+                <motion.h2
+                  key={isActive ? `title-${recipe.id}` : undefined}
+                  initial={isActive ? { opacity: 0, y: 22 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.12, duration: 0.45, ease: 'easeOut' }}
+                  style={{
+                    margin: '0 0 10px', fontSize: 'clamp(18px, 5.5vw, 26px)',
+                    fontWeight: 900, color: '#fff', lineHeight: 1.1,
+                    letterSpacing: '-0.02em',
+                    display: '-webkit-box', WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word',
+                  }}
+                >
                   {recipe.name}
-                </h2>
+                </motion.h2>
+
                 {/* Difficulty pill */}
                 {recipe.difficulty && (
-                  <div style={{ marginBottom: '12px' }}>
+                  <motion.div
+                    key={isActive ? `diff-${recipe.id}` : undefined}
+                    initial={isActive ? { opacity: 0, y: 16 } : false}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.4, ease: 'easeOut' }}
+                    style={{ marginBottom: '12px' }}
+                  >
                     <span style={{
                       display: 'inline-block',
                       fontSize: '9px', fontWeight: 900,
@@ -625,35 +645,46 @@ const FeaturedStackCarousel: React.FC<{
                     }}>
                       {recipe.difficulty}
                     </span>
-                  </div>
+                  </motion.div>
                 )}
+
                 {/* CTA */}
-                <button
+                <motion.button
+                  key={isActive ? `cta-${recipe.id}` : undefined}
+                  initial={isActive ? { opacity: 0, y: 14, scale: 0.9 } : false}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.28, duration: 0.4, ease: 'easeOut' }}
                   onClick={(e) => { e.stopPropagation(); setSelectedRecipe(recipe); }}
                   style={{
                     background: '#fff', border: 'none', borderRadius: '18px',
                     padding: '8px 16px', fontSize: '11px', fontWeight: 900,
                     color: '#c0392b', cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.18)', transition: 'all 0.2s',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.18)', transition: 'box-shadow 0.2s',
                   }}
                 >
                   Découvrir →
-                </button>
+                </motion.button>
               </div>
 
-              {/* Circular recipe image on the right */}
-              <div style={{
-                flexShrink: 0,
-                width: 'clamp(80px, 28vw, 120px)',
-                height: 'clamp(80px, 28vw, 120px)',
-                borderRadius: '50%', overflow: 'hidden',
-                border: '3px solid rgba(255,255,255,0.45)',
-                boxShadow: '0 8px 20px rgba(0,0,0,0.28)',
-                zIndex: 1,
-              }}>
+              {/* Circular recipe image — spring bounce */}
+              <motion.div
+                key={isActive ? `img-${recipe.id}` : undefined}
+                initial={isActive ? { opacity: 0, scale: 0.6, rotate: -12 } : false}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                transition={isActive ? { delay: 0.1, type: 'spring', stiffness: 260, damping: 18 } : { duration: 0 }}
+                style={{
+                  flexShrink: 0,
+                  width: 'clamp(80px, 28vw, 120px)',
+                  height: 'clamp(80px, 28vw, 120px)',
+                  borderRadius: '50%', overflow: 'hidden',
+                  border: '3px solid rgba(255,255,255,0.45)',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.28)',
+                  zIndex: 1,
+                }}
+              >
                 <img src={recipe.image} alt={recipe.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
-              </div>
+              </motion.div>
             </motion.div>
           );
         })}
@@ -3182,10 +3213,10 @@ export default function App() {
 
       return (
         <motion.div
-          initial={{ y: '100%', scale: 0.92, opacity: 0, borderRadius: '40px' }}
-          animate={{ y: 0, scale: 1, opacity: 1, borderRadius: '0px' }}
-          exit={{ y: '100%', scale: 0.92, opacity: 0, borderRadius: '40px' }}
-          transition={{ type: 'spring', damping: 28, stiffness: 220, mass: 0.6 }}
+          initial={{ opacity: 0, scale: 0.85, y: 60, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 0.9, y: 40, filter: 'blur(6px)' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.7 }}
           className="absolute inset-0 z-[100] bg-white overflow-hidden w-full flex flex-col origin-bottom shadow-[0_-20px_60px_rgba(0,0,0,0.15)]"
         >
           <div className="absolute top-0 inset-x-0 z-[110] pointer-events-none p-6 pt-12">
