@@ -127,275 +127,136 @@ const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval,
   toggleFavorite?: (id: string) => void;
 }) => {
   const [active, setActive] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [dragStart, setDragStart] = useState<number | null>(null);
-  const [progress, setProgress] = useState(0);
-  const rafRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const n = recipes.length;
   if (!n) return null;
 
-  const goTo = (i: number, fromUser = false) => {
-    setActive(i);
-    setProgress(0);
-    startTimeRef.current = null;
-    if (fromUser) {
-      setIsPaused(true);
-      setTimeout(() => setIsPaused(false), 4500);
-    }
-  };
-  const goNext = (fromUser = false) => goTo((active + 1) % n, fromUser);
-  const goPrev = (fromUser = false) => goTo((active - 1 + n) % n, fromUser);
-
   useEffect(() => {
-    if (!autoplayInterval || isPaused || n <= 1) return;
-    const duration = autoplayInterval;
-    const animate = (now: number) => {
-      if (!startTimeRef.current) startTimeRef.current = now;
-      const p = Math.min((now - startTimeRef.current) / duration, 1);
-      setProgress(p);
-      if (p >= 1) {
-        setActive(prev => (prev + 1) % n);
-        startTimeRef.current = null;
-        setProgress(0);
-      } else {
-        rafRef.current = requestAnimationFrame(animate);
-      }
-    };
-    rafRef.current = requestAnimationFrame(animate);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [active, autoplayInterval, isPaused, n]);
+    if (!autoplayInterval || n <= 1) return;
+    const interval = setInterval(() => {
+      const next = (active + 1) % n;
+      setActive(next);
+      scrollRef.current?.children[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, autoplayInterval);
+    return () => clearInterval(interval);
+  }, [active, n, autoplayInterval]);
 
-  const onTouchStart = (e: React.TouchEvent) => setDragStart(e.touches[0].clientX);
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (dragStart === null) return;
-    const delta = dragStart - e.changedTouches[0].clientX;
-    if (Math.abs(delta) > 40) delta > 0 ? goNext(true) : goPrev(true);
-    setDragStart(null);
+  const onScroll = () => {
+    if (!scrollRef.current) return;
+    const scrollLeft = scrollRef.current.scrollLeft;
+    const width = scrollRef.current.offsetWidth * 0.8;
+    const idx = Math.round(scrollLeft / width);
+    if (idx !== active && idx >= 0 && idx < n) setActive(idx);
   };
-  const onMouseDown = (e: React.MouseEvent) => setDragStart(e.clientX);
-  const onMouseUp = (e: React.MouseEvent) => {
-    if (dragStart === null) return;
-    const delta = dragStart - e.clientX;
-    if (Math.abs(delta) > 40) delta > 0 ? goNext(true) : goPrev(true);
-    setDragStart(null);
-  };
-
-  const ambientPalettes = [
-    ['#fb5607', '#ff8c42'], ['#7c3aed', '#a78bfa'], ['#059669', '#34d399'],
-    ['#0891b2', '#22d3ee'], ['#d97706', '#fbbf24'], ['#dc2626', '#f87171'],
-    ['#db2777', '#f472b6'], ['#4338ca', '#818cf8'],
-  ];
-  const [c1, c2] = ambientPalettes[active % ambientPalettes.length];
 
   return (
-    <div
-      style={{ position: 'relative', width: '100%', userSelect: 'none' }}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-      onMouseDown={onMouseDown}
-      onMouseUp={onMouseUp}
-    >
-      {/* Stack */}
-      <div style={{
-        position: 'relative',
-        height: 'clamp(320px, 85vw, 430px)',
-        margin: '0 20px',
-        perspective: '900px',
-      }}>
-        {/* Ambient glow */}
-        <motion.div
-          key={`glow-${active}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.7 }}
-          style={{
-            position: 'absolute', inset: '-30%', zIndex: 0, pointerEvents: 'none',
-            background: `radial-gradient(ellipse 65% 55% at 50% 65%, ${c1}28, transparent 70%)`,
-            filter: 'blur(20px)',
-          }}
+    <div className="relative w-full group overflow-visible pt-2 pb-8">
+      {/* Background Aura (Parallax-ish) */}
+      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[120%] pointer-events-none opacity-30 blur-[100px] z-0 overflow-hidden">
+        <div
+          className="absolute inset-0 transition-colors duration-1000"
+          style={{ background: `radial-gradient(circle at center, #fb5607 0%, transparent 70%)` }}
         />
+      </div>
 
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        className="flex gap-5 overflow-x-auto no-scrollbar scroll-smooth px-[10vw]"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
         {recipes.map((recipe, i) => {
-          const offset = ((i - active) % n + n) % n;
-          const absOffset = offset <= n / 2 ? offset : offset - n;
-          if (Math.abs(absOffset) > 3) return null;
+          const isActive = i === active;
           const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-          const isActive = absOffset === 0;
-          const tx = absOffset * 56;
-          const tz = -Math.abs(absOffset) * 52;
-          const ry = absOffset * 7;
-          const scale = 1 - Math.abs(absOffset) * 0.09;
-          const opacity = isActive ? 1 : Math.abs(absOffset) === 1 ? 0.68 : 0.35;
 
           return (
             <motion.div
               key={recipe.id}
-              animate={{ x: tx, z: tz, rotateY: ry, scale, opacity }}
-              transition={{ type: 'spring', stiffness: 280, damping: 26, mass: 0.9 }}
-              onClick={() => isActive ? setSelectedRecipe(recipe) : goTo(i, true)}
+              onClick={() => isActive ? setSelectedRecipe(recipe) : setActive(i)}
+              whileTap={{ scale: 0.96 }}
+              className="flex-shrink-0 w-[80vw] max-w-[340px] aspect-[4/5] relative rounded-[40px] overflow-hidden cursor-pointer shadow-2xl transition-all duration-500"
               style={{
-                position: 'absolute', inset: 0, zIndex: 10 - Math.abs(absOffset),
-                borderRadius: 28, overflow: 'hidden', cursor: 'pointer',
-                transformStyle: 'preserve-3d',
-                boxShadow: isActive
-                  ? `0 20px 56px rgba(0,0,0,0.26), 0 6px 18px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.12)`
-                  : `0 6px 20px rgba(0,0,0,0.12)`,
+                scrollSnapAlign: 'center',
+                boxShadow: isActive ? '0 25px 50px -12px rgba(0, 0, 0, 0.4)' : '0 10px 20px -5px rgba(0,0,0,0.15)',
+                transform: isActive ? 'scale(1)' : 'scale(0.92)',
               }}
             >
-              <img
-                src={recipe.image} alt={recipe.name} draggable={false}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              {/* Image with subtle parallax move effect */}
+              <motion.img
+                initial={{ scale: 1.2 }}
+                animate={{ scale: isActive ? 1.05 : 1.2, x: isActive ? 0 : (i < active ? 15 : -15) }}
+                transition={{ duration: 0.8, ease: "circOut" }}
+                src={recipe.image}
+                className="absolute inset-0 w-full h-full object-cover"
+                alt={recipe.name}
               />
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(175deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.88) 100%)',
-              }} />
-              {isActive && (
-                <motion.div
-                  animate={{ opacity: [0.2, 0.55, 0.2] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{
-                    position: 'absolute', inset: 0, pointerEvents: 'none',
-                    background: `linear-gradient(0deg, ${c1}50 0%, transparent 52%)`,
-                  }}
-                />
-              )}
 
-              {/* Top bar */}
-              <div style={{ position: 'absolute', top: 16, left: 16, right: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {recipe.category ? (
-                  <span style={{
-                    background: 'rgba(0,0,0,0.32)', backdropFilter: 'blur(14px)',
-                    border: '1px solid rgba(255,255,255,0.16)',
-                    borderRadius: 20, padding: '5px 13px',
-                    fontSize: 9, fontWeight: 900, color: '#fff',
-                    textTransform: 'uppercase', letterSpacing: '0.06em',
-                  }}>
-                    {recipe.category}
+              {/* Glass Overlays */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+
+              {/* Floating Header Info */}
+              <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-10">
+                <div className="flex flex-col gap-1.5">
+                  <span className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-[9px] font-black text-white uppercase tracking-widest shadow-lg">
+                    {recipe.category || 'Recette'}
                   </span>
-                ) : <div />}
-                {toggleFavorite && isActive && (
-                  <motion.button
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.12, type: 'spring', stiffness: 400 }}
-                    whileTap={{ scale: 0.82 }}
-                    onClick={e => { e.stopPropagation(); toggleFavorite(recipe.id); }}
-                    style={{
-                      width: 40, height: 40, borderRadius: '50%',
-                      background: isFav ? '#fb5607' : 'rgba(0,0,0,0.30)',
-                      backdropFilter: 'blur(14px)',
-                      border: `1px solid ${isFav ? '#fb5607' : 'rgba(255,255,255,0.18)'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer',
-                      boxShadow: isFav ? '0 4px 16px rgba(251,86,7,0.45)' : 'none',
-                    }}
+                  {recipe.isFeatured && (
+                    <span className="px-3 py-1.5 rounded-full bg-amber-400/20 backdrop-blur-xl border border-amber-400/30 text-[9px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1">
+                      <Star size={10} fill="currentColor" /> Coup de cœur
+                    </span>
+                  )}
+                </div>
+                {toggleFavorite && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-2xl border shadow-lg transition-all ${isFav ? 'bg-[#fb5607] border-[#fb5607] text-white' : 'bg-black/20 border-white/20 text-white'}`}
                   >
-                    <Heart size={17} style={{ color: '#fff', fill: isFav ? '#fff' : 'none' }} strokeWidth={2.5} />
-                  </motion.button>
+                    <Heart size={18} fill={isFav ? 'currentColor' : 'none'} strokeWidth={2.5} />
+                  </button>
                 )}
               </div>
 
-              {/* Bottom */}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 22px 24px' }}>
-                <AnimatePresence mode="wait">
-                  {isActive && (
-                    <motion.div
-                      key={`content-${recipe.id}`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-                    >
-                      <p style={{ margin: '0 0 5px', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.58)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        📍 {recipe.region}
-                      </p>
-                      <h3 style={{
-                        margin: '0 0 14px',
-                        fontSize: 'clamp(20px, 5.5vw, 26px)',
-                        fontWeight: 900, color: '#fff', lineHeight: 1.1,
-                        letterSpacing: '-0.03em', textShadow: '0 2px 14px rgba(0,0,0,0.5)',
-                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                      }}>
-                        {recipe.name}
-                      </h3>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          {recipe.prepTime && (
-                            <div style={{
-                              display: 'flex', alignItems: 'center', gap: 5,
-                              background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)',
-                              border: '1px solid rgba(255,255,255,0.1)',
-                              borderRadius: 20, padding: '5px 11px',
-                            }}>
-                              <Clock size={11} style={{ color: '#fff' }} />
-                              <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>{recipe.prepTime}</span>
-                            </div>
-                          )}
-                          {recipe.difficulty && (
-                            <div style={{
-                              display: 'flex', alignItems: 'center', gap: 5,
-                              background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)',
-                              border: '1px solid rgba(255,255,255,0.1)',
-                              borderRadius: 20, padding: '5px 11px',
-                            }}>
-                              <Flame size={11} style={{ color: c1 }} />
-                              <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>{recipe.difficulty}</span>
-                            </div>
-                          )}
-                        </div>
-                        <motion.button
-                          whileTap={{ scale: 0.92 }}
-                          onClick={e => { e.stopPropagation(); setSelectedRecipe(recipe); }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 5,
-                            background: `linear-gradient(135deg, ${c1}, ${c2})`,
-                            color: '#fff', border: 'none', borderRadius: 20,
-                            padding: '9px 16px', fontSize: 11, fontWeight: 900,
-                            cursor: 'pointer', boxShadow: `0 6px 18px ${c1}55`,
-                            whiteSpace: 'nowrap', flexShrink: 0,
-                          }}
-                        >
-                          Voir <ChevronRight size={13} strokeWidth={3} />
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                {!isActive && Math.abs(absOffset) === 1 && (
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,0.65)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {recipe.name}
+              {/* Text Content */}
+              <div className="absolute bottom-0 inset-x-0 p-6 z-10">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">
+                    {recipe.region}
                   </p>
-                )}
+                  <h3 className="text-white text-2xl font-black leading-tight mb-4 drop-shadow-md">
+                    {recipe.name}
+                  </h3>
+
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white">
+                      <Clock size={12} className="text-amber-400" />
+                      {recipe.prepTime}
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white">
+                      <Flame size={12} className="text-rose-500" />
+                      {recipe.difficulty}
+                    </div>
+                  </div>
+                </motion.div>
               </div>
+
+              {/* Progress bar for isActive */}
+              {isActive && (
+                <div className="absolute bottom-0 left-0 h-1 bg-white/20 w-full z-20">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: '100%' }}
+                    transition={{ duration: autoplayInterval ? autoplayInterval / 1000 : 0, ease: "linear" }}
+                    className="h-full bg-white"
+                  />
+                </div>
+              )}
             </motion.div>
           );
         })}
-      </div>
-
-      {/* Dots + progress */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, paddingTop: 18, paddingBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {recipes.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i, true)}
-              style={{
-                width: i === active ? 26 : 7, height: 7,
-                borderRadius: 4, border: 'none', cursor: 'pointer', padding: 0,
-                background: i === active ? c1 : 'rgba(0,0,0,0.13)',
-                transition: 'width 0.4s cubic-bezier(0.34,1.56,0.64,1), background 0.3s',
-                boxShadow: i === active ? `0 2px 8px ${c1}55` : 'none',
-              }}
-            />
-          ))}
-        </div>
-        {autoplayInterval && !isPaused && (
-          <div style={{ width: 60, height: 2, borderRadius: 2, background: 'rgba(0,0,0,0.09)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: 2, background: c1, width: `${progress * 100}%`, transition: 'none' }} />
-          </div>
-        )}
       </div>
     </div>
   );
@@ -1738,6 +1599,17 @@ export default function App() {
 
       </header>
 
+      {/* Hero Carousel - Featured Content */}
+      <section className="relative overflow-visible z-10 -mt-1">
+        <HeroCarousel
+          recipes={allRecipes.filter(r => r.categories?.includes('Populaire') || r.isFeatured || r.rating >= 4.5).slice(0, 6)}
+          setSelectedRecipe={setSelectedRecipe}
+          currentUser={currentUser}
+          toggleFavorite={toggleFavorite}
+          t={t}
+        />
+      </section>
+
       <AnimatePresence>
         {isSearchExpanded && (
           <motion.div
@@ -1930,7 +1802,7 @@ export default function App() {
 
         if (section.type === 'dynamic_carousel') {
           return (
-            <section key={section.id} className="mb-6">
+            <section key={section.id} className="mb-12">
               <div className="px-6 flex justify-between items-end mb-2">
                 <div className="flex flex-col">
                   <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
@@ -3768,21 +3640,31 @@ export default function App() {
   // --- Return JSX ---
 
   if (!currentUser) return (
-    <div className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl pt-[env(safe-area-inset-top,4px)] transition-colors duration-300 ${isDark ? 'dark bg-[#111113]' : 'bg-stone-50'}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl pt-[env(safe-area-inset-top,4px)] transition-colors duration-300 ${isDark ? 'dark bg-[#111113]' : 'bg-stone-50'}`}
+    >
       {renderAuth()}
       <ModernAlert />
-    </div>
+    </motion.div>
   );
 
   return (
-    <div className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top,4px)] ${isDark ? 'dark bg-[#111113]' : 'bg-stone-50'}`}>
+    <motion.div
+      initial={{ opacity: 0, scale: 1.08, filter: 'blur(20px)' }}
+      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top,4px)] ${isDark ? 'dark bg-[#111113]' : 'bg-stone-50'}`}
+    >
       <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto no-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
-          {activeTab === 'home' && <motion.div key="home" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={springTransition} className="h-full">{renderHome()}</motion.div>}
-          {activeTab === 'search' && <motion.div key="search" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} transition={springTransition} className="h-full">{renderExplorer()}</motion.div>}
-          {activeTab === 'favs' && <motion.div key="favs" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={springTransition} className="h-full">{renderFavorites()}</motion.div>}
-          {activeTab === 'cart' && <motion.div key="cart" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={springTransition} className="h-full">{renderShoppingList()}</motion.div>}
-          {activeTab === 'profile' && <motion.div key="profile" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} transition={springTransition} className="h-full">{renderProfile()}</motion.div>}
+          {activeTab === 'home' && <motion.div key="home" initial={{ opacity: 0, scale: 0.94, filter: 'blur(10px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} exit={{ opacity: 0, scale: 1.06, filter: 'blur(10px)' }} transition={springTransition} className="h-full">{renderHome()}</motion.div>}
+          {activeTab === 'search' && <motion.div key="search" initial={{ opacity: 0, y: 30, filter: 'blur(5px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -30, filter: 'blur(5px)' }} transition={springTransition} className="h-full">{renderExplorer()}</motion.div>}
+          {activeTab === 'favs' && <motion.div key="favs" initial={{ opacity: 0, x: 40, filter: 'blur(5px)' }} animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, x: -40, filter: 'blur(5px)' }} transition={springTransition} className="h-full">{renderFavorites()}</motion.div>}
+          {activeTab === 'cart' && <motion.div key="cart" initial={{ opacity: 0, x: 40, filter: 'blur(5px)' }} animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, x: -40, filter: 'blur(5px)' }} transition={springTransition} className="h-full">{renderShoppingList()}</motion.div>}
+          {activeTab === 'profile' && <motion.div key="profile" initial={{ opacity: 0, y: 40, filter: 'blur(10px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: 40, filter: 'blur(10px)' }} transition={springTransition} className="h-full">{renderProfile()}</motion.div>}
         </AnimatePresence>
       </main>
 
@@ -3861,6 +3743,6 @@ export default function App() {
         )}
       </AnimatePresence>
       <ModernAlert />
-    </div>
+    </motion.div>
   );
 }
