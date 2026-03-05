@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ChefHat,
@@ -524,7 +524,7 @@ const FeaturedStackCarousel: React.FC<{
   return (
     <section style={{ marginBottom: '32px', overflowX: 'hidden' }}>
       {/* Clip wrapper — prevents horizontal overflow but allows shadows vertically */}
-      <div style={{ overflowX: 'hidden', overflowY: 'visible', width: '100%', paddingBottom: '24px', marginBottom: '-12px' }}>
+      <div style={{ overflowX: 'hidden', overflowY: 'visible', width: '100%', paddingBottom: '12px', marginBottom: '-6px' }}>
         <div style={{
           position: 'relative',
           width: '100%',
@@ -571,8 +571,8 @@ const FeaturedStackCarousel: React.FC<{
                   cursor: isActive ? 'grab' : 'pointer',
                   transformStyle: 'preserve-3d',
                   boxShadow: isActive
-                    ? '0 28px 60px rgba(0,0,0,0.5), 0 0 0 1.5px rgba(255,255,255,0.18)'
-                    : '0 10px 30px rgba(0,0,0,0.35)',
+                    ? '0 12px 24px rgba(0,0,0,0.35), 0 0 0 1.5px rgba(255,255,255,0.18)'
+                    : '0 4px 14px rgba(0,0,0,0.25)',
                   willChange: 'transform',
                   touchAction: 'pan-y',
                 }}
