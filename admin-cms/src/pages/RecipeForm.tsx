@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ImagePlus, X, Clock, Flame, Globe, Tag, BookOpen, Sparkles, ChefHat, Leaf, Wand2, Zap } from 'lucide-react';
+import { ArrowLeft, Save, ImagePlus, X, Clock, Flame, Globe, Tag, BookOpen, Sparkles, ChefHat, Leaf, Wand2, Zap, Youtube } from 'lucide-react';
 import { aiService } from '../lib/ai';
 
 const INITIAL_STATE = {
@@ -20,7 +20,8 @@ const INITIAL_STATE = {
     style: '',
     type: '',
     base: '',
-    origine_humaine: ''
+    origine_humaine: '',
+    video_url: ''
 };
 
 export const CATEGORIES = [
@@ -106,15 +107,34 @@ export function RecipeForm() {
         setLoading(true);
         const cleanData = { ...formData };
         delete (cleanData as any).origine_humaine;
-        try {
+
+        const trySave = async (data: Record<string, any>) => {
             if (id) {
-                const { error } = await supabase.from('recipes').update(cleanData).eq('id', id);
-                if (error) throw error;
+                return supabase.from('recipes').update(data).eq('id', id);
             } else {
-                (cleanData as any).id = `rec_${Date.now()}`;
-                const { error } = await supabase.from('recipes').insert([cleanData]);
-                if (error) throw error;
+                (data as any).id = `rec_${Date.now()}`;
+                return supabase.from('recipes').insert([data]);
             }
+        };
+
+        try {
+            let { error } = await trySave({ ...cleanData });
+
+            // Si la colonne video_url n'existe pas encore en BDD, réessayer sans elle
+            if (error && (error.message?.includes('video_url') || (error as any).code === '42703')) {
+                console.warn('Colonne video_url absente — sauvegarde sans le champ vidéo.');
+                const dataWithoutVideo = { ...cleanData };
+                delete (dataWithoutVideo as any).video_url;
+                const retry = await trySave(dataWithoutVideo);
+                if (!retry.error) {
+                    alert('✅ Recette sauvegardée.\n\n⚠️ Le lien vidéo n\'a pas pu être enregistré car la colonne n\'existe pas encore dans la base de données.\n\nPour activer cette fonctionnalité, exécutez ce SQL dans Supabase :\nALTER TABLE recipes ADD COLUMN IF NOT EXISTS video_url TEXT;');
+                    navigate('/recipes');
+                    return;
+                }
+                error = retry.error;
+            }
+
+            if (error) throw error;
             navigate('/recipes');
         } catch (err) {
             console.error('Save error:', err);
@@ -323,6 +343,46 @@ export function RecipeForm() {
                                     placeholder="Détaillez la technique de préparation..."
                                     style={textareaStyle}
                                 />
+                            </Field>
+
+                            {/* ── Vidéo YouTube ── */}
+                            <Field label="Lien Vidéo YouTube">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                        <Youtube size={16} color="#ff0000" style={{ position: 'absolute', left: '13px', flexShrink: 0 }} />
+                                        <input
+                                            name="video_url"
+                                            value={(formData as any).video_url || ''}
+                                            onChange={handleChange}
+                                            placeholder="https://www.youtube.com/watch?v=... ou https://youtu.be/..."
+                                            style={{ ...inputStyle, paddingLeft: '38px', fontSize: '13px' }}
+                                        />
+                                    </div>
+                                    {/* Prévisualisation */}
+                                    {(() => {
+                                        const url = (formData as any).video_url || '';
+                                        let embedId = '';
+                                        if (url.includes('youtu.be/')) {
+                                            embedId = url.split('youtu.be/')[1]?.split('?')[0];
+                                        } else if (url.includes('v=')) {
+                                            embedId = url.split('v=')[1]?.split('&')[0];
+                                        }
+                                        if (!embedId) return null;
+                                        return (
+                                            <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1.5px solid #e5e7eb', aspectRatio: '16/9', position: 'relative', background: '#000' }}>
+                                                <iframe
+                                                    src={`https://www.youtube.com/embed/${embedId}`}
+                                                    style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', inset: 0 }}
+                                                    allowFullScreen
+                                                    title="Aperçu vidéo"
+                                                />
+                                            </div>
+                                        );
+                                    })()}
+                                    <p style={{ fontSize: '11px', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
+                                        Copiez l'URL complète de la vidéo YouTube. Elle sera affichée sur la page détail du plat dans l'app.
+                                    </p>
+                                </div>
                             </Field>
                         </div>
                     </div>

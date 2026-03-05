@@ -55,7 +55,8 @@ export const dbService = {
                     steps: r.steps,
                     techniqueTitle: r.technique_title,
                     techniqueDescription: r.technique_description,
-                    benefits: r.benefits
+                    benefits: r.benefits,
+                    videoUrl: r.video_url
                 }));
                 // Cache locally for offline use
                 localStorage.setItem(REMOTE_RECIPES_KEY, JSON.stringify(recipes));
