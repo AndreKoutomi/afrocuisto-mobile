@@ -37,27 +37,71 @@ export const dbService = {
             if (error) throw error;
 
             if (data) {
-                const recipes: Recipe[] = data.map(r => ({
-                    id: r.id,
-                    name: r.name,
-                    alias: r.alias,
-                    base: r.base,
-                    type: r.type,
-                    style: r.style,
-                    region: r.region,
-                    category: r.category,
-                    difficulty: r.difficulty,
-                    prepTime: r.prep_time,
-                    cookTime: r.cook_time,
-                    image: r.image,
-                    description: r.description,
-                    ingredients: r.ingredients,
-                    steps: r.steps,
-                    techniqueTitle: r.technique_title,
-                    techniqueDescription: r.technique_description,
-                    benefits: r.benefits,
-                    videoUrl: r.video_url
-                }));
+                const recipes: Recipe[] = data.map(r => {
+                    // ── Normalize ingredients ──────────────────────────────
+                    // Legacy format: [{item, amount}]
+                    // AI format:     [{name, quantity, unit, notes, category}]
+                    let ingredients: { item: string; amount: string }[] | undefined;
+                    if (Array.isArray(r.ingredients)) {
+                        ingredients = r.ingredients.map((ing: any) => {
+                            if (ing && typeof ing === 'object') {
+                                if ('item' in ing) {
+                                    // Already legacy format
+                                    return { item: ing.item || '', amount: ing.amount || '' };
+                                } else if ('name' in ing) {
+                                    // AI format → convert
+                                    const amount = [ing.quantity, ing.unit]
+                                        .filter(Boolean).join(' ');
+                                    return {
+                                        item: ing.name || '',
+                                        amount: amount || ing.notes || '',
+                                    };
+                                }
+                            }
+                            return { item: String(ing), amount: '' };
+                        });
+                    }
+
+                    // ── Normalize steps ────────────────────────────────────
+                    // Legacy format: string[]
+                    // AI format:     [{order, title, description}]
+                    let steps: string[] | undefined;
+                    if (Array.isArray(r.steps)) {
+                        steps = r.steps.map((s: any) => {
+                            if (typeof s === 'string') return s;
+                            if (s && typeof s === 'object') {
+                                const parts = [];
+                                if (s.title) parts.push(`**${s.title}**`);
+                                if (s.description) parts.push(s.description);
+                                return parts.join(' — ') || String(s);
+                            }
+                            return String(s);
+                        });
+                    }
+
+                    return {
+                        id: r.id,
+                        name: r.name,
+                        alias: r.alias,
+                        base: r.base,
+                        type: r.type,
+                        style: r.style,
+                        region: r.region,
+                        category: r.category,
+                        difficulty: r.difficulty,
+                        prepTime: r.prep_time,
+                        cookTime: r.cook_time,
+                        image: r.image,
+                        description: r.description,
+                        ingredients,
+                        steps,
+                        techniqueTitle: r.technique_title,
+                        techniqueDescription: r.technique_description,
+                        benefits: r.benefits,
+                        videoUrl: r.video_url,
+                        origine_humaine: r.origine_humaine,
+                    };
+                });
                 // Cache locally for offline use
                 localStorage.setItem(REMOTE_RECIPES_KEY, JSON.stringify(recipes));
                 return recipes;
