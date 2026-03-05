@@ -103,7 +103,6 @@ export function RecipeAIWizard({ onClose, onSaved }: Props) {
         setStep('saving');
         setError('');
         try {
-            // Only include columns that exist in the recipes table
             const payload: Record<string, any> = {
                 id: `rec_${Date.now()}`,
                 name: generated.name,
@@ -120,8 +119,11 @@ export function RecipeAIWizard({ onClose, onSaved }: Props) {
                 technique_title: generated.technique_title || '',
                 technique_description: generated.technique_description || '',
                 benefits: generated.benefits || '',
-                // DO NOT include: rating, servings, ingredients, steps
-                // (those columns don't exist in the DB schema)
+                // Colonnes enrichies — maintenant présentes en BDD
+                ingredients: generated.ingredients || [],
+                steps: generated.steps || [],
+                rating: generated.rating ?? 4.5,
+                servings: generated.servings ?? 4,
             };
 
             const { error: dbError } = await supabase.from('recipes').insert([payload]);
