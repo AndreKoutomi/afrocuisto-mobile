@@ -522,9 +522,9 @@ const FeaturedStackCarousel: React.FC<{
   };
 
   return (
-    <section style={{ marginBottom: '32px', overflow: 'hidden' }}>
-      {/* Clip wrapper — prevents side cards from pushing page width */}
-      <div style={{ overflow: 'hidden', width: '100%' }}>
+    <section style={{ marginBottom: '32px', overflowX: 'hidden' }}>
+      {/* Clip wrapper — prevents horizontal overflow but allows shadows vertically */}
+      <div style={{ overflowX: 'hidden', overflowY: 'visible', width: '100%', paddingBottom: '24px', marginBottom: '-12px' }}>
         <div style={{
           position: 'relative',
           width: '100%',
