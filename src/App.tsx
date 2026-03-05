@@ -528,7 +528,7 @@ const FeaturedStackCarousel: React.FC<{
         <div style={{
           position: 'relative',
           width: '100%',
-          height: 'clamp(240px, 68vw, 340px)',
+          height: 'clamp(280px, 80vw, 400px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
