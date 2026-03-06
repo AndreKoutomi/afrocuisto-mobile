@@ -1234,7 +1234,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
 
         <div className="pt-4 pb-2">
           <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-stone-200/40 dark:bg-white/[0.08] backdrop-blur-xl rounded-full border border-stone-300/50 dark:border-white/10 shadow-lg transition-all hover:scale-105 active:scale-95 cursor-default">
-            <span className="text-[9px] font-black text-stone-700 dark:text-white/60 uppercase tracking-[0.2em]">Powered by</span>
+            <span className="text-[9px] font-black text-stone-500 dark:text-white/60 uppercase tracking-[0.2em]">Powered by</span>
             <div className="w-1.5 h-1.5 rounded-full bg-slate-400/30 dark:bg-white/20" />
             <span className="text-[14px] font-black text-terracotta tracking-tight drop-shadow-[0_2px_10px_rgba(230,88,32,0.3)]">André Koutomi</span>
           </div>
@@ -1796,7 +1796,7 @@ export default function App() {
   const renderHome = () => (
     <div className="flex-1 flex flex-col pb-44">
       {/* Sleek Persistent Header */}
-      <header className={`px-6 pt-6 pb-6 sticky top-0 z-[500] w-full left-0 right-0 border-b transition-all duration-500 flex flex-col gap-6 ${isScrolled ? (isDark ? 'bg-[#111113]/98 border-b border-white/5 shadow-xl' : 'bg-white/98 backdrop-blur-2xl border-b border-stone-100 shadow-xl shadow-stone-200/40') : 'bg-transparent border-transparent'}`}>
+      <header className={`px-6 pt-5 pb-5 sticky top-0 z-[500] w-full left-0 right-0 transition-all duration-500 flex flex-col ${isScrolled ? (isDark ? 'bg-[#111113]/98 border-b border-white/5 shadow-xl' : 'bg-white/98 backdrop-blur-2xl border-b border-stone-100 shadow-xl shadow-stone-200/40') : (isDark ? 'bg-[#111113]' : 'bg-white')}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <motion.div
@@ -1804,11 +1804,11 @@ export default function App() {
               onClick={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
               className="cursor-pointer"
             >
-              <img src="/images/chef_icon_v2.png" className={`w-14 h-14 object-contain -ml-1 ${isDark ? 'logo-dark-mode' : ''}`} alt="AfroCuisto Logo" />
+              <img src="/images/chef_icon_v2.png" className={`w-12 h-12 object-contain -ml-1 ${isDark ? 'logo-dark-mode' : ''}`} alt="AfroCuisto Logo" />
             </motion.div>
             <div className="flex flex-col">
-              <h1 className={`text-2xl font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-stone-900'}`}>Afro<span className="text-[#fb5607]">Cuisto</span></h1>
-              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">{t.homeSlogan}</p>
+              <h1 className={`text-xl font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-stone-900'}`}>Afro<span className="text-[#fb5607]">Cuisto</span></h1>
+              <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mt-1">{t.homeSlogan}</p>
             </div>
           </div>
 
@@ -1831,8 +1831,30 @@ export default function App() {
             </button>
           </div>
         </div>
-
       </header>
+
+      {/* Categories horizontal pills - Non-sticky */}
+      <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-6 py-5">
+        {[
+          { name: 'Pâtes et Céréales (Wɔ̌)', short: t.catPates, icon: '🥣' },
+          { name: 'Sauces (Nùsúnnú)', short: t.catSauces, icon: '🍲' },
+          { name: 'Protéines & Grillades', short: t.catGrillades, icon: '🍗' },
+          { name: 'Boissons & Douceurs', short: t.catBoissons, icon: '🍹' },
+        ].map((cat, i) => (
+          <motion.div
+            key={cat.short}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 + i * 0.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => { setSelectedCategory(cat.name); setActiveTab('search'); }}
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-[18px] cursor-pointer shadow-sm border transition-all ${selectedCategory === cat.name ? 'bg-[#fb5607] text-white border-[#fb5607] shadow-[#fb5607]/20' : (isDark ? 'bg-white/5 text-stone-300 border-white/5 hover:bg-white/10' : 'bg-stone-50 text-stone-700 border-stone-200/40 hover:bg-stone-100')}`}
+          >
+            <span className="text-sm">{cat.icon}</span>
+            <span className="font-extrabold text-[11px] whitespace-nowrap">{cat.short}</span>
+          </motion.div>
+        ))}
+      </div>
 
       {/* Hero Carousel - Featured Content */}
       <section className="relative overflow-visible z-10 -mt-1">
@@ -1986,30 +2008,6 @@ export default function App() {
 
 
 
-      {/* Categories Horizontal Pills */}
-      <section className="mt-5 mb-8 pl-6">
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pr-6">
-          {[
-            { name: 'Pâtes et Céréales (Wɔ̌)', short: t.catPates, icon: '🥣' },
-            { name: 'Sauces (Nùsúnnú)', short: t.catSauces, icon: '🍲' },
-            { name: 'Protéines & Grillades', short: t.catGrillades, icon: '🍗' },
-            { name: 'Boissons & Douceurs', short: t.catBoissons, icon: '🍹' },
-          ].map((cat, i) => (
-            <motion.div
-              key={cat.short}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => { setSelectedCategory(cat.name); setActiveTab('search'); }}
-              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl cursor-pointer shadow-sm border transition-all ${selectedCategory === cat.name ? 'bg-terracotta text-white border-terracotta shadow-terracotta/20' : 'bg-white text-stone-700 border-stone-100/80 hover:bg-stone-50'}`}
-            >
-              <span className="text-base">{cat.icon}</span>
-              <span className="font-bold text-xs">{cat.short}</span>
-            </motion.div>
-          ))}
-        </div>
-      </section>
 
 
       {/* Dynamic Sections from Admin CMS */}
