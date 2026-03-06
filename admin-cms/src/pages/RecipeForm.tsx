@@ -36,6 +36,49 @@ export const CATEGORIES = [
 
 const DIFFICULTIES = ['Très Facile', 'Facile', 'Intermédiaire', 'Moyen', 'Difficile', 'Très Difficile', 'Extrême'];
 
+/* ── reusable style tokens ── */
+const inputStyle: React.CSSProperties = {
+    height: '46px', width: '100%',
+    borderRadius: '12px', border: '1.5px solid #e5e7eb',
+    fontSize: '14px', fontWeight: 600, color: '#111827',
+    backgroundColor: '#fff', padding: '0 14px', outline: 'none',
+    transition: 'border-color 0.2s', boxSizing: 'border-box',
+};
+
+const textareaStyle: React.CSSProperties = {
+    ...inputStyle, height: 'auto', padding: '12px 14px', resize: 'vertical', lineHeight: 1.6,
+};
+
+const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: '11px', fontWeight: 800,
+    color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px',
+};
+
+const cardStyle: React.CSSProperties = {
+    background: '#fff', borderRadius: '20px',
+    border: '1px solid #f0f0f0', boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
+    overflow: 'hidden',
+};
+
+const sectionHeader = (icon: React.ReactNode, title: string, subtitle: string, iconBg: string) => (
+    <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {icon}
+        </div>
+        <div>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>{title}</p>
+            <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>{subtitle}</p>
+        </div>
+    </div>
+);
+
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <label style={labelStyle}>{label}</label>
+        {children}
+    </div>
+);
+
 export function RecipeForm() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -145,46 +188,6 @@ export function RecipeForm() {
     };
 
     if (initialLoading) return <div className="center-content"><div className="loader"></div></div>;
-
-    /* ── reusable style tokens ── */
-    const inputStyle: React.CSSProperties = {
-        height: '46px', width: '100%',
-        borderRadius: '12px', border: '1.5px solid #e5e7eb',
-        fontSize: '14px', fontWeight: 600, color: '#111827',
-        backgroundColor: '#fff', padding: '0 14px', outline: 'none',
-        transition: 'border-color 0.2s', boxSizing: 'border-box',
-    };
-    const textareaStyle: React.CSSProperties = {
-        ...inputStyle, height: 'auto', padding: '12px 14px', resize: 'vertical', lineHeight: 1.6,
-    };
-    const labelStyle: React.CSSProperties = {
-        display: 'block', fontSize: '11px', fontWeight: 800,
-        color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px',
-    };
-    const sectionHeader = (icon: React.ReactNode, title: string, subtitle: string, iconBg: string) => (
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {icon}
-            </div>
-            <div>
-                <p style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>{title}</p>
-                <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>{subtitle}</p>
-            </div>
-        </div>
-    );
-
-    const cardStyle: React.CSSProperties = {
-        background: '#fff', borderRadius: '20px',
-        border: '1px solid #f0f0f0', boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
-        overflow: 'hidden',
-    };
-
-    const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={labelStyle}>{label}</label>
-            {children}
-        </div>
-    );
 
     return (
         <div style={{ maxWidth: '1200px' }}>

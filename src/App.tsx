@@ -940,19 +940,55 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && currentUser) {
+      // Restriction de taille à 2Mo avant traitement
+      if (file.size > 2 * 1024 * 1024) {
+        showAlert("L'image est trop volumineuse. Veuillez choisir une image de moins de 2Mo.", "error");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        const updatedUser = dbService.updateAvatar(currentUser.id, base64String);
-        if (updatedUser) {
-          setCurrentUser({ ...updatedUser });
-          try {
-            await dbService.syncUserToCloud(updatedUser);
-            showAlert(t.saveSuccess || "Photo de profil mise à jour !", "success");
-          } catch (err) {
-            showAlert("Erreur lors de la synchronisation", "error");
+        const img = new Image();
+        img.src = reader.result as string;
+        img.onload = async () => {
+          // Créer un canvas pour redimensionner et compresser l'image
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 400;
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
           }
-        }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Compresser en JPEG avec une qualité de 0.7
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+          const updatedUser = dbService.updateAvatar(currentUser.id, compressedBase64);
+          if (updatedUser) {
+            setCurrentUser({ ...updatedUser });
+            try {
+              await dbService.syncUserToCloud(updatedUser);
+              showAlert(t.saveSuccess || "Photo de profil mise à jour !", "success");
+            } catch (err) {
+              showAlert("Erreur lors de la synchronisation cloud", "warning");
+            }
+          }
+        };
       };
       reader.readAsDataURL(file);
     }
@@ -1069,7 +1105,7 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
   );
 };
 
-const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, updateSettings, handleLogout, settings, handleSaveSettings, isSyncing, hasLoadedAtLeastOnce, showAlert }: any) => {
+const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, updateSettings, handleLogout, settings, handleSaveSettings, isSyncing, hasLoadedAtLeastOnce, showAlert, handleDeleteAccount }: any) => {
   const views: Record<string, () => React.JSX.Element> = {
     'personalInfo': () => (
       <PersonalInfoView
@@ -1159,6 +1195,18 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
           <ChevronRight size={16} className="text-stone-400" />
         </button>
         <button
+          onClick={() => setProfileSubView('privacy')}
+          className="w-full flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 active:bg-stone-100 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-600">
+              <Eye size={18} />
+            </div>
+            <span className="font-bold text-stone-700 text-sm">{t.privacy}</span>
+          </div>
+          <ChevronRight size={16} className="text-stone-400" />
+        </button>
+        <button
           onClick={handleSaveSettings}
           className="w-full mt-6 bg-terracotta text-white py-4 rounded-full font-bold font-sm shadow-lg shadow-terracotta/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
         >
@@ -1201,15 +1249,32 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
                 <h4 className="text-sm font-bold text-stone-700 mb-1">{t.tracking}</h4>
                 <p className="text-[10px] text-stone-400 leading-relaxed">{t.trackingDesc}</p>
               </div>
-              <div className="w-10 h-5 bg-terracotta rounded-full relative flex-shrink-0">
-                <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full"></div>
+              <div className="w-10 h-6 bg-emerald-500 rounded-full relative flex-shrink-0 transition-colors">
+                <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+              </div>
+            </div>
+            <div className="flex items-start justify-between">
+              <div className="pr-4">
+                <h4 className="text-sm font-bold text-stone-700 mb-1">{t.dataSharing}</h4>
+                <p className="text-[10px] text-stone-400 leading-relaxed">{t.dataSharingDesc}</p>
+              </div>
+              <div className="w-10 h-6 bg-stone-200 rounded-full relative flex-shrink-0 transition-colors">
+                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
               </div>
             </div>
           </div>
         </div>
-        <button className="w-full border border-rose-100 bg-rose-50 text-rose-500 py-4 rounded-2xl font-bold text-sm">
-          {t.deleteAccount}
-        </button>
+
+        <div className="p-6 bg-rose-50/50 rounded-3xl border border-rose-100/50">
+          <h4 className="text-sm font-bold text-rose-800 mb-1">{t.deleteAccount}</h4>
+          <p className="text-[10px] text-rose-600/70 leading-relaxed mb-6">{t.deleteAccountDesc}</p>
+          <button
+            onClick={handleDeleteAccount}
+            className="w-full bg-rose-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rose-500/20 active:scale-95 transition-all"
+          >
+            {t.deleteAccount}
+          </button>
+        </div>
       </div>
     ),
     'about': () => (
@@ -1260,6 +1325,9 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authStep, setAuthStep] = useState<'form' | 'otp'>('form');
+  const [sentOtp, setSentOtp] = useState('');
+  const [otpInput, setOtpInput] = useState('');
 
   useEffect(() => {
     // Initial Auth Check
@@ -1296,7 +1364,7 @@ export default function App() {
             shoppingList: remoteProfile?.shoppingList || existingLocal?.shoppingList || [],
             joinedDate: existingLocal?.joinedDate || new Date(sessionUser.created_at || Date.now()).toLocaleDateString(),
             settings: mergedSettings,
-            avatar: remoteProfile?.avatar || existingLocal?.avatar
+            avatar: remoteProfile?.avatar || existingLocal?.avatar || currentUser?.avatar
           };
 
           setCurrentUser(userObj);
@@ -1662,6 +1730,28 @@ export default function App() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!currentUser) return;
+    showAlert(
+      "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible et toutes vos données (favoris, avis, liste de courses) seront définitivement supprimées.",
+      "info",
+      async () => {
+        setIsAuthLoading(true);
+        const success = await dbService.deleteAccount(currentUser.id);
+        setIsAuthLoading(false);
+        if (success) {
+          setCurrentUser(null);
+          dbService.setCurrentUser(null);
+          setActiveTab('home');
+          setProfileSubView(null);
+          showAlert("Votre compte et vos données ont été supprimés.", "success");
+        } else {
+          showAlert("Une erreur est survenue lors de la suppression.", "error");
+        }
+      }
+    );
+  };
+
   const handleLogout = async () => {
     // Persist current dark mode preference before clearing user
     const currentDarkMode = currentUser?.settings?.darkMode === true;
@@ -1700,19 +1790,70 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
+      // 1. Générer code OTP à 4 chiffres
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      setSentOtp(otp);
+
+      // 2. Envoyer l'email via dbService (EmailJS simulation/REST)
+      const success = await dbService.sendEmail(authFormData.email.trim(), authFormData.name.trim(), otp);
+
+      if (success) {
+        setAuthStep('otp');
+        showAlert("Un code de validation à 4 chiffres a été envoyé à " + authFormData.email, "info");
+      } else {
+        throw new Error("Erreur lors de l'envoi de l'email. Veuillez réessayer.");
+      }
+    } catch (err: any) {
+      setAuthError(err.message || "Erreur de communication.");
+      showAlert("Échec de l'envoi", "error");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpInput !== sentOtp) {
+      setAuthError("Code OTP incorrect. Veuillez vérifier vos emails.");
+      return;
+    }
+
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
       const data = await dbService.signUp(authFormData.email.trim(), authFormData.password, authFormData.name.trim());
 
       if (data?.session) {
         showAlert("Compte créé avec succès ! Bienvenue.", "success");
+        setAuthStep('form');
       } else {
-        showAlert("Compte créé ! Veuillez vérifier votre boîte mail pour confirmer votre inscription.", "info");
+        showAlert("Validation réussie ! Votre compte est créé.", "success");
         setAuthMode('login');
-        // On garde l'email mais on vide le mot de passe pour la sécurité
+        setAuthStep('form');
         setAuthFormData(prev => ({ ...prev, password: '' }));
       }
     } catch (err: any) {
-      setAuthError(err.message || "Erreur lors de la création du compte.");
-      showAlert("Échec de l'inscription", "error");
+      setAuthError(err.message || "Erreur lors de l'inscription finale.");
+      showAlert("Échec de la création", "error");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      setSentOtp(otp);
+      const success = await dbService.sendEmail(authFormData.email.trim(), authFormData.name.trim(), otp);
+      if (success) {
+        showAlert("Un nouveau code a été envoyé.", "success");
+      } else {
+        throw new Error("Échec du renvoi.");
+      }
+    } catch (err: any) {
+      setAuthError(err.message);
     } finally {
       setIsAuthLoading(false);
     }
@@ -3007,6 +3148,7 @@ export default function App() {
                   isSyncing={isSyncing}
                   hasLoadedAtLeastOnce={hasLoadedAtLeastOnce}
                   showAlert={showAlert}
+                  handleDeleteAccount={handleDeleteAccount}
                 />
               )}
             </div>
@@ -3692,13 +3834,13 @@ export default function App() {
               animate={{ x: authMode === 'login' ? 0 : '100%' }}
               transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
             />
-            <button onClick={() => { setAuthMode('login'); setAuthError(null); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'login' ? (isDark ? 'text-white' : 'text-stone-900') : (isDark ? 'text-white/40' : 'text-stone-400')}`}>Connexion</button>
-            <button onClick={() => { setAuthMode('signup'); setAuthError(null); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'signup' ? (isDark ? 'text-white' : 'text-stone-900') : (isDark ? 'text-white/40' : 'text-stone-400')}`}>Inscription</button>
+            <button onClick={() => { setAuthMode('login'); setAuthError(null); setAuthStep('form'); setOtpInput(''); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'login' ? (isDark ? 'text-white' : 'text-stone-900') : (isDark ? 'text-white/40' : 'text-stone-400')}`}>Connexion</button>
+            <button onClick={() => { setAuthMode('signup'); setAuthError(null); setAuthStep('form'); setOtpInput(''); }} className={`flex-1 py-3 text-[14px] font-bold z-10 transition-colors ${authMode === 'signup' ? (isDark ? 'text-white' : 'text-stone-900') : (isDark ? 'text-white/40' : 'text-stone-400')}`}>Inscription</button>
           </div>
 
-          <form onSubmit={authMode === 'login' ? handleLogin : handleSignup} className="space-y-4 relative">
+          <form onSubmit={authMode === 'login' ? handleLogin : (authStep === 'otp' ? handleVerifyOtp : handleSignup)} className="space-y-4 relative">
             <AnimatePresence mode="popLayout">
-              {authMode === 'signup' && (
+              {authMode === 'signup' && authStep === 'form' && (
                 <motion.div
                   initial={{ opacity: 0, height: 0, scale: 0.9 }}
                   animate={{ opacity: 1, height: 'auto', scale: 1 }}
@@ -3713,30 +3855,77 @@ export default function App() {
               )}
             </AnimatePresence>
 
-            <div className="relative group">
-              <Mail size={20} className={`absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#fb5607] transition-colors ${isDark ? 'text-white/30' : 'text-stone-400'}`} />
-              <input type="email" placeholder="Adresse email" required value={authFormData.email} onChange={e => setAuthFormData({ ...authFormData, email: e.target.value })} className={`w-full border rounded-full py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm transition-all shadow-sm ${isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/25' : 'bg-white border-stone-200/60 text-stone-800 placeholder:text-stone-400'}`} />
-            </div>
+            {authStep === 'form' ? (
+              <>
+                <div className="relative group">
+                  <Mail size={20} className={`absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#fb5607] transition-colors ${isDark ? 'text-white/30' : 'text-stone-400'}`} />
+                  <input type="email" placeholder="Adresse email" required value={authFormData.email} onChange={e => setAuthFormData({ ...authFormData, email: e.target.value })} className={`w-full border rounded-full py-4 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm transition-all shadow-sm ${isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/25' : 'bg-white border-stone-200/60 text-stone-800 placeholder:text-stone-400'}`} />
+                </div>
 
-            <div className="relative group">
-              <Lock size={20} className={`absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#fb5607] transition-colors ${isDark ? 'text-white/30' : 'text-stone-400'}`} />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Mot de passe"
-                required
-                minLength={6}
-                value={authFormData.password}
-                onChange={e => setAuthFormData({ ...authFormData, password: e.target.value })}
-                className={`w-full border rounded-full py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm transition-all shadow-sm ${isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/25' : 'bg-white border-stone-200/60 text-stone-800 placeholder:text-stone-400'}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 transition-colors ${isDark ? 'text-white/30 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'}`}
+                <div className="relative group">
+                  <Lock size={20} className={`absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#fb5607] transition-colors ${isDark ? 'text-white/30' : 'text-stone-400'}`} />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Mot de passe"
+                    required
+                    minLength={6}
+                    value={authFormData.password}
+                    onChange={e => setAuthFormData({ ...authFormData, password: e.target.value })}
+                    className={`w-full border rounded-full py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 focus:border-[#fb5607]/40 font-bold text-sm transition-all shadow-sm ${isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/25' : 'bg-white border-stone-200/60 text-stone-800 placeholder:text-stone-400'}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 transition-colors ${isDark ? 'text-white/30 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'}`}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-6 py-4"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
+                <div className="text-center space-y-2">
+                  <p className={`text-sm font-bold ${isDark ? 'text-white/70' : 'text-stone-600'}`}>
+                    Entrez le code envoyé à <br />
+                    <span className="text-[#fb5607]">{authFormData.email}</span>
+                  </p>
+                </div>
+
+                <div className="flex justify-center gap-3">
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={otpInput}
+                    autoFocus
+                    onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                    placeholder="0 0 0 0"
+                    className={`w-40 text-center tracking-[1em] text-2xl font-black border rounded-2xl py-4 focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20 border-[#fb5607]/40 ${isDark ? 'bg-white/5 text-white' : 'bg-white text-stone-800'}`}
+                  />
+                </div>
+
+                <div className="flex flex-col items-center gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setAuthStep('form')}
+                    className="text-[11px] font-black text-stone-400 uppercase tracking-widest hover:text-[#fb5607] transition-colors"
+                  >
+                    ← Modifier l'email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={isAuthLoading}
+                    className={`text-[11px] font-black uppercase tracking-widest transition-colors ${isAuthLoading ? 'text-stone-300' : 'text-[#fb5607] hover:underline'}`}
+                  >
+                    Renvoyer le code
+                  </button>
+                </div>
+              </motion.div>
+            )}
 
             <AnimatePresence>
               {authError && (
@@ -3754,7 +3943,7 @@ export default function App() {
             )}
 
             <button type="submit" disabled={isAuthLoading} className={`w-full bg-[#fb5607] text-white py-4 mt-2 rounded-full font-black text-sm uppercase tracking-widest flex justify-center items-center shadow-[0_15px_30px_rgba(251,86,7,0.25)] transition-all ${isAuthLoading ? 'opacity-80 cursor-wait' : 'hover:bg-[#eb4b05] active:scale-[0.98]'}`}>
-              {isAuthLoading ? <Loader size={20} className="animate-spin" /> : (authMode === 'login' ? 'Se connecter' : "C'est parti !")}
+              {isAuthLoading ? <Loader size={20} className="animate-spin" /> : (authMode === 'login' ? 'Se connecter' : (authStep === 'otp' ? 'Vérifier & S\'inscrire' : "C'est parti !"))}
             </button>
           </form>
         </motion.div>
