@@ -120,140 +120,176 @@
   background-color: #222222 !important;
 }
 
-/* ── 4. Text classes → high contrast AMOLED ─────────────────────────────── */
+/* ── 4. TEXT COLORS — AMOLED Nuclear Override ───────────────────────────── */
+/*
+ * Strategy: force ALL text to white in dark mode via universal selector,
+ * then restore accent colors (orange, amber, green, red, blue, white/opacity).
+ * This is the ONLY reliable way to override inline styles from React components.
+ */
 
-/* Tailwind stone text scale */
-.dark .text-stone-900,
-.dark .text-stone-800,
-.dark .text-\[\#000000\],
-.dark .text-\[\#1a1a1a\],
-.dark .text-\[\#111827\] {
+/* ❶ Universal white — overrides everything including inline styles */
+.dark * {
   color: #ffffff !important;
 }
 
-.dark .text-stone-700 {
-  color: #e8e8e8 !important;
+/* ❷ Restore: Orange / Terracotta accent */
+.dark .text-\[\#fb5607\],
+.dark .text-terracotta,
+.dark [class*="text-[#fb56"],
+.dark [class*="text-[#e04e"],
+.dark [class*="text-terracotta"],
+.dark [style*="color: #fb5607"],
+.dark [style*="color: '#fb5607'"],
+.dark [style*="color: #e04e00"],
+.dark [style*="color: #e55820"],
+.dark [style*="color: rgb(251, 86, 7)"],
+.dark [style*="color: rgba(251, 86, 7"],
+.dark [style*="color: rgba(251,86,7"] {
+  color: #fb5607 !important;
 }
 
-.dark .text-stone-600 {
-  color: #c0c0c0 !important;
+/* ❸ Restore: Amber / Yellow (star ratings) */
+.dark .text-amber-500,
+.dark .text-amber-400,
+.dark .text-amber-600,
+.dark [class*="text-amber"],
+.dark [class*="text-yellow"],
+.dark [style*="color: #f59e0b"],
+.dark [style*="color: '#f59e0b'"],
+.dark [style*="color: #fbbf24"],
+.dark [style*="color: #d97706"],
+.dark [style*="color: rgb(245, 158, 11)"] {
+  color: #f59e0b !important;
 }
 
-.dark .text-stone-500 {
-  color: #909090 !important;
+/* ❹ Restore: Emerald / Green (success states) */
+.dark .text-emerald-500,
+.dark .text-emerald-600,
+.dark .text-emerald-400,
+.dark [class*="text-emerald"],
+.dark [class*="text-green"],
+.dark .text-lime-500,
+.dark [style*="color: #10b981"],
+.dark [style*="color: #059669"],
+.dark [style*="color: #34d399"] {
+  color: #10b981 !important;
 }
 
-.dark .text-stone-400 {
-  color: #707070 !important;
+/* ❺ Restore: Rose / Red (error, danger, delete) */
+.dark .text-rose-500,
+.dark .text-rose-600,
+.dark .text-rose-400,
+.dark [class*="text-rose"],
+.dark [class*="text-red"],
+.dark [style*="color: #f43f5e"],
+.dark [style*="color: #ef4444"],
+.dark [style*="color: #e11d48"],
+.dark [style*="color: #fb7185"],
+.dark .text-rose-800 {
+  color: #f43f5e !important;
 }
 
-.dark .text-stone-300 {
-  color: #505050 !important;
+/* rose-800 used in amber warning badge label */
+.dark .text-rose-800 {
+  color: #fca5a5 !important;
 }
 
-/* Tailwind gray/slate text */
-.dark .text-gray-900,
-.dark .text-gray-800 {
+/* ❻ Restore: Blue / Indigo (info, cloud sync) */
+.dark .text-blue-500,
+.dark .text-blue-600,
+.dark [class*="text-blue"],
+.dark [class*="text-indigo"],
+.dark .text-indigo-600,
+.dark .text-sky-500,
+.dark [class*="text-sky"] {
+  color: #60a5fa !important;
+}
+
+/* ❼ Restore: White with opacity (already white but opacity matters) */
+.dark .text-white {
   color: #ffffff !important;
 }
 
-.dark .text-gray-700 {
-  color: #e0e0e0 !important;
+.dark .text-white\/80 {
+  color: rgba(255, 255, 255, 0.80) !important;
 }
 
-.dark .text-gray-600 {
-  color: #b8b8b8 !important;
+.dark .text-white\/70 {
+  color: rgba(255, 255, 255, 0.70) !important;
 }
 
-.dark .text-gray-500 {
-  color: #8a8a8a !important;
+.dark .text-white\/60 {
+  color: rgba(255, 255, 255, 0.60) !important;
 }
 
-.dark .text-gray-400 {
-  color: #686868 !important;
+.dark .text-white\/50 {
+  color: rgba(255, 255, 255, 0.50) !important;
 }
 
-.dark .text-slate-800,
-.dark .text-slate-900 {
-  color: #ffffff !important;
+.dark .text-white\/45 {
+  color: rgba(255, 255, 255, 0.45) !important;
 }
 
-.dark .text-slate-700 {
-  color: #e0e0e0 !important;
+.dark .text-white\/40 {
+  color: rgba(255, 255, 255, 0.40) !important;
 }
 
-/* Universal element-level fallback for dark mode:
-   Any p / h / span / label / li / td inside .dark gets white text
-   UNLESS it has an explicit color class or accent color inline style.
-   Using lower specificity than class selectors so explicit overrides win. */
-.dark p,
-.dark h1,
-.dark h2,
-.dark h3,
-.dark h4,
-.dark h5,
-.dark h6,
-.dark span,
-.dark label,
-.dark li,
-.dark td,
-.dark th,
-.dark div>small,
-.dark blockquote {
-  color: inherit;
+.dark .text-white\/35 {
+  color: rgba(255, 255, 255, 0.35) !important;
 }
 
-/* Set root color inheritance chain */
-.dark body {
-  color: #ffffff;
+.dark .text-white\/30 {
+  color: rgba(255, 255, 255, 0.30) !important;
 }
 
-.dark main,
-.dark section,
-.dark article,
-.dark div:not([class*="text-"]) {
-  color: inherit;
+.dark .text-white\/25 {
+  color: rgba(255, 255, 255, 0.25) !important;
 }
 
-/* ── Inline style colour overrides (React style={{}}) ─────────────────────── */
-
-/* Near-black / dark gray → white (strong text) */
-.dark [style*="color: #1a1a1a"],
-.dark [style*="color: '#1a1a1a'"],
-.dark [style*="color: #111827"],
-.dark [style*="color: '#111827'"],
-.dark [style*="color: #0f172a"],
-.dark [style*="color: #292524"],
-.dark [style*="color: rgb(17, 24, 39)"],
-.dark [style*="color: rgb(26, 26, 26)"] {
-  color: #ffffff !important;
+.dark .text-white\/20 {
+  color: rgba(255, 255, 255, 0.20) !important;
 }
 
-/* Dark gray → white (medium-strong text) */
-.dark [style*="color: #374151"],
-.dark [style*="color: '#374151'"],
-.dark [style*="color: rgb(55, 65, 81)"] {
-  color: #ffffff !important;
+.dark .text-white\/18 {
+  color: rgba(255, 255, 255, 0.18) !important;
 }
 
-/* Medium gray → white/65 (secondary text) */
-.dark [style*="color: #6b7280"],
-.dark [style*="color: '#6b7280'"],
-.dark [style*="color: rgb(107, 114, 128)"] {
+.dark .text-white\/15 {
+  color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.dark .text-white\/10 {
+  color: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* ❽ Restore: Orange with opacity variants used via isDark inline styles */
+.dark [style*="color: rgba(251, 86, 7, 0.7)"] {
+  color: rgba(251, 86, 7, 0.80) !important;
+}
+
+.dark [style*="color: rgba(255, 255, 255, 0.65)"] {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
-/* Light gray → white/50 (muted / meta text) */
-.dark [style*="color: #9ca3af"],
-.dark [style*="color: '#9ca3af'"],
-.dark [style*="color: rgb(156, 163, 175)"],
-.dark [style*="color: #d1d5db"],
-.dark [style*="color: '#d1d5db'"],
-.dark [style*="color: rgb(209, 213, 219)"],
-.dark [style*="color: #e5e7eb"],
-.dark [style*="color: '#e5e7eb'"] {
-  color: rgba(255, 255, 255, 0.45) !important;
+.dark [style*="color: rgba(255, 255, 255, 0.85)"] {
+  color: rgba(255, 255, 255, 0.85) !important;
 }
+
+.dark [style*="color: rgba(255,255,255,0.65)"] {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+/* Light orange in dark mode auth title */
+.dark [style*="color: #fb8c60"] {
+  color: #fb8c60 !important;
+}
+
+/* ❾ Restore: stone/gray text-opacity variants (for muted subtitles) */
+/* Keep muted white rather than forcing pure white on intentionally dim text */
+.dark .text-white\/8 {
+  color: rgba(255, 255, 255, 0.08) !important;
+}
+
 
 
 /* ── 5. Borders ─────────────────────────────────────────────────────────── */
