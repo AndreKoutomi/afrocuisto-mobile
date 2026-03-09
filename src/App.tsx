@@ -133,8 +133,9 @@ const AUTOPLAY_DURATION = 4500;
 
 
 // Material-style SVG icons (filled active, outlined inactive)
-const NavIcon = ({ id, active }: { id: string; active: boolean }) => {
-  const color = active ? '#F94D00' : 'rgba(255,255,255,0.65)';
+const NavIcon = ({ id, active, isDark }: { id: string; active: boolean; isDark?: boolean }) => {
+  // Active icon: orange on white bubble (light) | white on black bubble (dark AMOLED)
+  const color = active ? (isDark ? '#ffffff' : '#F94D00') : 'rgba(255,255,255,0.65)';
   const icons: Record<string, React.ReactElement> = {
     home: active ? (
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /></svg>
@@ -165,7 +166,7 @@ const NavIcon = ({ id, active }: { id: string; active: boolean }) => {
   return icons[id] || null;
 };
 
-const NavButton = ({ iconId, isActive, onClick }: { iconId: string; isActive: boolean; onClick: () => void }) => {
+const NavButton = ({ iconId, isActive, onClick, isDark }: { iconId: string; isActive: boolean; onClick: () => void; isDark?: boolean }) => {
   return (
     <motion.button
       onClick={onClick}
@@ -174,7 +175,7 @@ const NavButton = ({ iconId, isActive, onClick }: { iconId: string; isActive: bo
       className="relative flex items-center justify-center"
       style={{ width: 60, height: 60, flexShrink: 0 }}
     >
-      {/* Sliding white bubble */}
+      {/* Sliding bubble — white in light mode, AMOLED black in dark mode */}
       {isActive && (
         <motion.div
           layoutId="nav-white-bubble"
@@ -187,7 +188,7 @@ const NavButton = ({ iconId, isActive, onClick }: { iconId: string; isActive: bo
         transition={{ type: 'spring', stiffness: 480, damping: 26 }}
         className="relative z-10"
       >
-        <NavIcon id={iconId} active={isActive} />
+        <NavIcon id={iconId} active={isActive} isDark={isDark} />
       </motion.div>
     </motion.button>
   );
@@ -1815,6 +1816,7 @@ export default function App() {
                             lineHeight: 1.25, margin: '0 0 6px',
                             display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
+                            color: isDark ? '#ffffff' : '#1a1a1a',
                           }}>
                             {recipe.name}
                           </h3>
@@ -1920,6 +1922,7 @@ export default function App() {
                             fontSize: '13px', fontWeight: 800,
                             lineHeight: 1.25, margin: '0 0 5px',
                             display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                            color: isDark ? '#ffffff' : '#1a1a1a',
                           }}>
                             {recipe.name}
                           </h3>
@@ -2232,7 +2235,7 @@ export default function App() {
                                 </div>
                               </div>
                               <div style={{ padding: '10px 12px 12px' }}>
-                                <h3 className="hlist-card-title" style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1.25, margin: '0 0 5px', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
+                                <h3 className="hlist-card-title" style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1.25, margin: '0 0 5px', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: isDark ? '#ffffff' : '#1a1a1a' }}>{recipe.name}</h3>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
                                   <div className="hlist-card-badge" style={{ borderRadius: '20px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <Clock size={10} className="hlist-card-clock" />
@@ -2281,7 +2284,7 @@ export default function App() {
                             <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="hlist-card-title" style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 5px', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <p className="hlist-card-title" style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 5px', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isDark ? '#ffffff' : '#1a1a1a' }}>
                               {recipe.name}
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
@@ -3782,6 +3785,7 @@ export default function App() {
                       iconId={item.iconId}
                       isActive={isActive}
                       onClick={() => navigateTo(item.id)}
+                      isDark={isDark}
                     />
                   </React.Fragment>
                 );
