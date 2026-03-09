@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import DishSuggestionForm from './components/DishSuggestionForm';
-import HeroCarouselV3 from './components/HeroCarouselV3';
+import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ChefHat,
@@ -123,172 +123,6 @@ const PreparationStep = ({ step, index, recipeId }: { step: string; index: numbe
 };
 
 
-// ─── Cinematic Stack Carousel (dynamic_carousel sections) ──────────────────
-const SnapCarousel = ({ recipes, setSelectedRecipe, sectionId, autoplayInterval, currentUser, toggleFavorite }: {
-  recipes: Recipe[];
-  setSelectedRecipe: (r: Recipe) => void;
-  sectionId: string;
-  autoplayInterval?: number;
-  currentUser?: any;
-  toggleFavorite?: (id: string) => void;
-}) => {
-  const [active, setActive] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const n = recipes.length;
-  if (!n) return null;
-
-  const scrollToIndex = (idx: number, behavior: ScrollBehavior = 'smooth') => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const child = container.children[idx] as HTMLElement | undefined;
-    if (!child) return;
-
-    container.scrollTo({
-      left: child.offsetLeft - container.offsetWidth / 2 + child.offsetWidth / 2,
-      behavior
-    });
-  };
-
-  useEffect(() => {
-    if (!autoplayInterval || n <= 1) return;
-    const interval = setInterval(() => {
-      const next = (active + 1) % n;
-      setActive(next);
-      scrollToIndex(next, 'smooth');
-    }, autoplayInterval);
-    return () => clearInterval(interval);
-  }, [active, n, autoplayInterval]);
-
-  const onScroll = () => {
-    if (!scrollRef.current) return;
-    const scrollLeft = scrollRef.current.scrollLeft;
-    const width = scrollRef.current.offsetWidth * 0.8;
-    const idx = Math.round(scrollLeft / width);
-    if (idx !== active && idx >= 0 && idx < n) setActive(idx);
-  };
-
-  return (
-    <div className="snap-carousel" data-section={sectionId}>
-      {/* Background Aura (Parallax-ish) */}
-      <div className="snap-carousel-aura" aria-hidden="true" />
-
-      {/* Edge fade (premium mask) */}
-      <div className="snap-carousel-fade" aria-hidden="true" />
-
-      <div
-        ref={scrollRef}
-        onScroll={onScroll}
-        className="snap-carousel-track"
-        style={{ scrollSnapType: 'x mandatory' }}
-        aria-label="Carrousel"
-      >
-        {recipes.map((recipe, i) => {
-          const isActive = i === active;
-          const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-
-          return (
-            <motion.div
-              key={recipe.id}
-              onClick={() => (isActive ? setSelectedRecipe(recipe) : setActive(i))}
-              whileTap={{ scale: 0.98 }}
-              className="snap-carousel-card"
-              style={{
-                scrollSnapAlign: 'center',
-                transform: isActive ? 'scale(1)' : 'scale(0.94)',
-              }}
-            >
-              {/* Image with subtle parallax move effect */}
-              <motion.img
-                initial={{ scale: 1.18 }}
-                animate={{ scale: isActive ? 1.06 : 1.18, x: isActive ? 0 : (i < active ? 12 : -12) }}
-                transition={{ duration: 0.85, ease: 'circOut' }}
-                src={recipe.image}
-                className="absolute inset-0 w-full h-full object-cover"
-                alt={recipe.name}
-              />
-
-              {/* Glass Overlays */}
-              <div className="snap-carousel-glass" aria-hidden="true" />
-              <div className="snap-carousel-stroke" aria-hidden="true" />
-
-              {/* Floating Header Info */}
-              <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-10">
-                <div className="flex flex-col gap-1.5">
-                  <span className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-[9px] font-black text-white uppercase tracking-widest shadow-lg">
-                    {recipe.category || 'Recette'}
-                  </span>
-                  {recipe.isFeatured && (
-                    <span className="px-3 py-1.5 rounded-full bg-amber-400/20 backdrop-blur-xl border border-amber-400/30 text-[9px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1">
-                      <Star size={10} fill="currentColor" /> Coup de cœur
-                    </span>
-                  )}
-                </div>
-                {toggleFavorite && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-2xl border shadow-lg transition-all ${isFav ? 'bg-[#fb5607] border-[#fb5607] text-white' : 'bg-black/20 border-white/20 text-white'}`}
-                    aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                  >
-                    <Heart size={18} fill={isFav ? 'currentColor' : 'none'} strokeWidth={2.5} />
-                  </button>
-                )}
-              </div>
-
-              {/* Text Content */}
-              <div className="absolute bottom-0 inset-x-0 p-6 z-10">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
-                >
-                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">
-                    {recipe.region}
-                  </p>
-                  <h3 className="text-white text-2xl font-black leading-tight mb-4 drop-shadow-md">
-                    {recipe.name}
-                  </h3>
-
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white">
-                      <Clock size={12} className="text-amber-400" />
-                      {recipe.prepTime}
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white">
-                      <Flame size={12} className="text-rose-500" />
-                      {recipe.difficulty}
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Dots */}
-      {n > 1 && (
-        <div className="snap-carousel-dots" role="tablist" aria-label="Pagination du carrousel">
-          {recipes.map((_, i) => {
-            const isActive = i === active;
-            return (
-              <button
-                key={`${sectionId}-dot-${i}`}
-                type="button"
-                className={`snap-carousel-dot ${isActive ? 'snap-carousel-dot--active' : ''}`}
-                onClick={() => {
-                  setActive(i);
-                  scrollToIndex(i, 'smooth');
-                }}
-                aria-label={`Aller à l’élément ${i + 1}`}
-                aria-current={isActive ? 'true' : 'false'}
-              />
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
 
 
 const AUTOPLAY_DURATION = 4500;
@@ -296,539 +130,6 @@ const AUTOPLAY_DURATION = 4500;
 
 
 
-const HeroCarousel = ({ recipes, setSelectedRecipe, currentUser, toggleFavorite, t, isDark }: {
-  recipes: Recipe[],
-  setSelectedRecipe: (r: Recipe) => void,
-  currentUser: User | null,
-  toggleFavorite: (id: string) => void,
-  t: any,
-  isDark: boolean
-}) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [direction, setDirection] = useState<'left' | 'right'>('right');
-  const [progress, setProgress] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
-  const startTimeRef = useRef<number | null>(null);
-  const rafRef = useRef<number | null>(null);
-
-  const goTo = (idx: number, dir: 'left' | 'right' = 'right') => {
-    setDirection(dir);
-    setActiveIndex(idx);
-    setProgress(0);
-    startTimeRef.current = null;
-    setDragOffset(0);
-  };
-
-  const goNext = () => goTo((activeIndex + 1) % recipes.length, 'right');
-  const goPrev = () => goTo((activeIndex - 1 + recipes.length) % recipes.length, 'left');
-
-  useEffect(() => {
-    if (recipes.length <= 1 || isPaused) return;
-
-    const animate = (now: number) => {
-      if (!startTimeRef.current) startTimeRef.current = now;
-      const elapsed = now - startTimeRef.current;
-      const p = Math.min(elapsed / AUTOPLAY_DURATION, 1);
-      setProgress(p);
-
-      if (p >= 1) {
-        setDirection('right');
-        setActiveIndex(prev => (prev + 1) % recipes.length);
-        startTimeRef.current = null;
-        setProgress(0);
-      } else {
-        rafRef.current = requestAnimationFrame(animate);
-      }
-    };
-
-    rafRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [activeIndex, recipes.length, isPaused]);
-
-  if (!recipes.length) return null;
-
-  const recipe = recipes[activeIndex];
-  const previousRecipe = recipes[(activeIndex - 1 + recipes.length) % recipes.length];
-  const nextRecipe = recipes[(activeIndex + 1) % recipes.length];
-  const isFav = currentUser?.favorites.includes(recipe.id);
-
-  const sideCardClass = 'absolute top-[42px] bottom-[70px] w-[34%] rounded-[36px] overflow-hidden pointer-events-none';
-
-  return (
-    <section
-      className="relative mx-2 overflow-visible rounded-[38px] px-1 pb-8 pt-3"
-      style={{
-        touchAction: 'pan-y',
-        marginBottom: 16,
-        background: isDark
-          ? 'linear-gradient(180deg, rgba(18,18,20,0.96) 0%, rgba(10,10,12,0.78) 58%, rgba(10,10,12,0) 100%)'
-          : 'linear-gradient(180deg, rgba(255,250,244,0.98) 0%, rgba(255,244,229,0.8) 42%, rgba(255,255,255,0) 100%)',
-        boxShadow: isDark
-          ? '0 26px 70px rgba(0,0,0,0.34)'
-          : '0 28px 80px rgba(251,86,7,0.12)',
-      }}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-    >
-      <div className="hero-carousel-shell">
-        <div className="hero-carousel-glow hero-carousel-glow--primary" />
-        <div className="hero-carousel-glow hero-carousel-glow--secondary" />
-        <div className="hero-carousel-noise" />
-
-        <div className="relative h-[92vw] max-h-[560px] min-h-[390px] overflow-visible">
-          <AnimatePresence initial={false} mode="wait">
-            <motion.div
-              key={`left-${previousRecipe.id}-${activeIndex}`}
-              initial={{ opacity: 0.2, x: -12, scale: 0.9 }}
-              animate={{ opacity: 0.42, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: -28, scale: 0.88 }}
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className={`${sideCardClass} left-0 origin-left`}
-              style={{ transform: 'perspective(1200px) rotateY(22deg) translateX(-8px)', filter: 'saturate(0.82) brightness(0.9)' }}
-            >
-              <img src={previousRecipe.image} alt={previousRecipe.name} className="w-full h-full object-cover scale-110" />
-              <div className="absolute inset-0 bg-white/20" />
-              <div className="absolute inset-0 bg-gradient-to-r from-white/45 via-white/15 to-black/25" />
-            </motion.div>
-          </AnimatePresence>
-
-          <AnimatePresence initial={false} mode="wait">
-            <motion.div
-              key={`right-${nextRecipe.id}-${activeIndex}`}
-              initial={{ opacity: 0.2, x: 12, scale: 0.9 }}
-              animate={{ opacity: 0.42, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 28, scale: 0.88 }}
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className={`${sideCardClass} right-0 origin-right`}
-              style={{ transform: 'perspective(1200px) rotateY(-22deg) translateX(8px)', filter: 'saturate(0.82) brightness(0.9)' }}
-            >
-              <img src={nextRecipe.image} alt={nextRecipe.name} className="w-full h-full object-cover scale-110" />
-              <div className="absolute inset-0 bg-white/20" />
-              <div className="absolute inset-0 bg-gradient-to-l from-white/45 via-white/15 to-black/25" />
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between px-6 pt-5">
-            <div className="hero-carousel-status-panel">
-              <div className="flex items-center gap-2">
-                <span className="hero-carousel-status-dot" />
-                <span className="text-[10px] font-black uppercase tracking-[0.28em] text-white/75">Signature du chef</span>
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                {recipes.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => goTo(i, i > activeIndex ? 'right' : 'left')}
-                    className="relative h-2 overflow-hidden rounded-full transition-all duration-500"
-                    style={{ width: i === activeIndex ? 30 : 8, background: 'rgba(255,255,255,0.16)' }}
-                    aria-label={`Aller à la slide ${i + 1}`}
-                  >
-                    {i === activeIndex && (
-                      <motion.div
-                        className="absolute inset-y-0 left-0 rounded-full"
-                        style={{ width: `${progress * 100}%`, background: 'linear-gradient(90deg, #fb5607, #ffd166)' }}
-                      />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
-              className={`hero-carousel-fav ${isFav ? 'hero-carousel-fav--active' : ''}`}
-            >
-              <Heart size={18} fill={isFav ? 'currentColor' : 'none'} strokeWidth={2.4} className="mx-auto" />
-            </motion.button>
-          </div>
-
-          <AnimatePresence initial={false} mode="wait" custom={direction}>
-            <motion.div
-              key={recipe.id}
-              custom={direction}
-              variants={{
-                enter: (d: string) => ({ opacity: 0, x: d === 'right' ? 56 : -56, scale: 0.92 }),
-                center: { opacity: 1, x: 0, scale: 1 },
-                exit: (d: string) => ({ opacity: 0, x: d === 'right' ? -48 : 48, scale: 0.95 }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.16}
-              onDragStart={() => setIsPaused(true)}
-              onDrag={(event, info) => setDragOffset(info.offset.x)}
-              onDragEnd={(event, info) => {
-                setDragOffset(0);
-                setIsPaused(false);
-                if (info.offset.x < -70 || info.velocity.x < -280) goNext();
-                else if (info.offset.x > 70 || info.velocity.x > 280) goPrev();
-              }}
-              className="hero-carousel-card absolute inset-x-[9%] top-7 bottom-[54px] z-10 overflow-hidden"
-              style={{ cursor: 'grab' }}
-              onClick={() => setSelectedRecipe(recipe)}
-            >
-              <img src={recipe.image} className="absolute inset-0 h-full w-full object-cover" alt={recipe.name} />
-
-              <motion.div
-                className="absolute inset-0"
-                animate={{
-                  background: [
-                    'radial-gradient(circle at 20% 18%, rgba(255,255,255,0.26), transparent 30%)',
-                    'radial-gradient(circle at 75% 18%, rgba(255,255,255,0.22), transparent 28%)',
-                    'radial-gradient(circle at 20% 18%, rgba(255,255,255,0.26), transparent 30%)'
-                  ]
-                }}
-                transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-white/18 via-transparent to-black/86" />
-              <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-[#050505]/95 via-black/40 to-transparent" />
-              <div className="hero-carousel-card-stroke" />
-              <div className="hero-carousel-card-reflection" />
-
-              <div className="absolute left-6 top-6 right-6 flex items-start justify-between">
-                <div className="flex flex-col gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/12 px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-white backdrop-blur-xl shadow-[0_16px_34px_rgba(0,0,0,0.18)]">
-                    <Sparkles size={12} className="text-[#ffd166]" />
-                    Collection prestige
-                  </span>
-                  {recipe.difficulty && (
-                    <span className="inline-flex w-fit rounded-full border border-white/25 bg-black/18 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/92 backdrop-blur-md">
-                      {recipe.difficulty}
-                    </span>
-                  )}
-                </div>
-
-                {recipe.category && (
-                  <span className="rounded-full border border-white/35 bg-black/18 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/92 backdrop-blur-md">
-                    {recipe.category}
-                  </span>
-                )}
-              </div>
-
-              <div className="absolute bottom-0 left-0 right-0 p-6">
-                <motion.div
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.08, duration: 0.45 }}
-                  className="hero-carousel-content"
-                >
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-white/55">
-                        Sélection privée
-                      </p>
-                      <h2 className="text-[32px] font-black leading-[0.94] tracking-[-0.05em] text-white drop-shadow-[0_14px_34px_rgba(0,0,0,0.38)]">
-                        {recipe.name}
-                      </h2>
-                    </div>
-                    <div className="hero-carousel-rating">
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/45">Note</p>
-                      <div className="mt-1 flex items-center gap-1 text-sm font-black text-white">
-                        <Star size={13} className="fill-[#ffd166] text-[#ffd166]" />
-                        {recipe.rating ? recipe.rating.toFixed(1) : '4.9'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-4 flex flex-wrap items-center gap-2.5 text-[11px] font-bold text-white/82">
-                    {recipe.region && (
-                      <span className="hero-carousel-chip">
-                        <MapPin size={12} className="text-[#ff8c42]" />
-                        {recipe.region}
-                      </span>
-                    )}
-                    {(recipe.cookTime || recipe.prepTime) && (
-                      <span className="hero-carousel-chip">
-                        <Clock size={12} className="text-white/70" />
-                        {recipe.cookTime || recipe.prepTime}
-                      </span>
-                    )}
-                    {recipe.difficulty && (
-                      <span className="hero-carousel-chip">
-                        <Flame size={12} className="text-[#fb5607]" />
-                        {recipe.difficulty}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-end justify-between gap-3">
-                    <div className="max-w-[58%]">
-                      <p className="line-clamp-2 text-[12px] leading-relaxed text-white/68">
-                        {recipe.description || t?.contributionDesc || 'Une recette raffinée, inspirée des saveurs africaines les plus élégantes.'}
-                      </p>
-                    </div>
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedRecipe(recipe);
-                      }}
-                      className="hero-carousel-cta"
-                    >
-                      Découvrir
-                      <ChevronRight size={14} strokeWidth={3} />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="hero-carousel-nav absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
-            <button
-              onClick={goPrev}
-              className="hero-carousel-nav-btn"
-              aria-label="Précédent"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <div className="rounded-full border border-white/12 bg-black/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-white/65 backdrop-blur-xl">
-              {String(activeIndex + 1).padStart(2, '0')} / {String(recipes.length).padStart(2, '0')}
-            </div>
-            <button
-              onClick={goNext}
-              className="hero-carousel-nav-btn hero-carousel-nav-btn--accent"
-              aria-label="Suivant"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {dragOffset !== 0 && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-16 z-20 flex justify-center">
-              <div className="rounded-full border border-white/70 bg-white/70 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-stone-700 backdrop-blur-xl shadow-sm">
-                Glissez pour explorer
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-
-const FeaturedStackCarousel: React.FC<{
-  section: any;
-  recipes: Recipe[];
-  setSelectedRecipe: (r: Recipe) => void;
-}> = ({ recipes, setSelectedRecipe }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-
-  if (!recipes.length) return null;
-  const n = recipes.length;
-
-  const goNext = () => setCurrentIndex(i => (i + 1) % n);
-  const goPrev = () => setCurrentIndex(i => (i - 1 + n) % n);
-
-  const getCardProps = (slot: number) => {
-    const abs = Math.abs(slot);
-    return {
-      xPercent: slot * 30,          // was 38 — reduced to avoid overflow
-      rotateY: slot * -22,
-      scale: abs === 0 ? 1 : Math.max(0.62, 1 - abs * 0.16),
-      opacity: abs === 0 ? 1 : Math.max(0.35, 1 - abs * 0.3),
-      zIndex: 10 - abs,
-      y: abs * 4,
-    };
-  };
-
-  return (
-    <section style={{ marginBottom: '32px' }}>
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        height: 'clamp(280px, 80vw, 400px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        perspective: '1000px',
-        perspectiveOrigin: '50% 50%',
-        overflow: 'visible',
-      }}>
-        {[-2, -1, 0, 1, 2].map((slot) => {
-          const recipeIndex = ((currentIndex + slot) % n + n) % n;
-          const recipe = recipes[recipeIndex];
-          const { xPercent, rotateY, scale, opacity, zIndex, y } = getCardProps(slot);
-          const isActive = slot === 0;
-
-          return (
-            <motion.div
-              key={`slot${slot}-${recipeIndex}`}
-              animate={{ x: `${xPercent}%`, rotateY, scale, opacity, y, zIndex }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30, mass: 0.8 }}
-              drag={isActive ? 'x' : false}
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.15}
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={(_e, { offset: d, velocity: v }) => {
-                setIsDragging(false);
-                if (d.x < -40 || v.x < -200) goNext();
-                else if (d.x > 40 || v.x > 200) goPrev();
-              }}
-              onClick={() => {
-                if (isDragging) return;
-                if (isActive) setSelectedRecipe(recipe);
-                else if (slot < 0) goPrev();
-                else goNext();
-              }}
-              style={{
-                position: 'absolute',
-                width: 'clamp(180px, 52vw, 260px)',
-                height: '100%',
-                borderRadius: '28px',
-                overflow: 'hidden',
-                cursor: isActive ? 'grab' : 'pointer',
-                transformStyle: 'preserve-3d',
-                boxShadow: isActive
-                  ? '0 12px 24px rgba(0,0,0,0.35), 0 0 0 1.5px rgba(255,255,255,0.18)'
-                  : '0 4px 14px rgba(0,0,0,0.25)',
-                willChange: 'transform',
-                touchAction: 'pan-y',
-              }}
-            >
-              {/* Full-bleed image */}
-              <img
-                src={recipe.image}
-                alt={recipe.name}
-                draggable={false}
-                style={{
-                  position: 'absolute', inset: 0,
-                  width: '100%', height: '100%',
-                  objectFit: 'cover',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                }}
-              />
-
-              {/* Dim overlay on side cards */}
-              {!isActive && (
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  background: 'rgba(0,0,0,0.3)',
-                  backdropFilter: 'blur(1px)',
-                }} />
-              )}
-
-              {/* Active card: gradient + info */}
-              {isActive && (
-                <>
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)',
-                  }} />
-                  <div style={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0,
-                    padding: '20px 18px',
-                    display: 'flex', flexDirection: 'column', gap: '6px',
-                  }}>
-                    {recipe.difficulty && (
-                      <motion.span
-                        key={`d-${recipe.id}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1, duration: 0.35 }}
-                        style={{
-                          alignSelf: 'flex-start',
-                          fontSize: '9px', fontWeight: 900,
-                          textTransform: 'uppercase', letterSpacing: '0.08em',
-                          padding: '3px 9px', borderRadius: '8px',
-                          background: 'rgba(255,255,255,0.2)',
-                          backdropFilter: 'blur(8px)',
-                          color: '#fff',
-                          border: '1px solid rgba(255,255,255,0.25)',
-                        }}
-                      >
-                        {recipe.difficulty}
-                      </motion.span>
-                    )}
-                    <motion.h2
-                      key={`t-${recipe.id}`}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.17, duration: 0.38 }}
-                      style={{
-                        margin: 0,
-                        fontSize: 'clamp(17px, 5vw, 22px)',
-                        fontWeight: 900, color: '#fff',
-                        lineHeight: 1.15, letterSpacing: '-0.02em',
-                        textShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                      }}
-                    >
-                      {recipe.name}
-                    </motion.h2>
-                    <motion.div
-                      key={`m-${recipe.id}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.25, duration: 0.35 }}
-                      style={{
-                        display: 'flex', alignItems: 'center',
-                        justifyContent: 'space-between', marginTop: '4px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {recipe.region && (
-                          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>
-                            📍 {recipe.region}
-                          </span>
-                        )}
-                        {recipe.prepTime && (
-                          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
-                            ⏱ {recipe.prepTime}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedRecipe(recipe); }}
-                        style={{
-                          background: '#fff', border: 'none',
-                          borderRadius: '20px', padding: '7px 14px',
-                          fontSize: '10px', fontWeight: 900,
-                          color: '#111', cursor: 'pointer',
-                          boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
-                        }}
-                      >
-                        Voir →
-                      </button>
-                    </motion.div>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Dots */}
-      {n > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', marginTop: '16px' }}>
-          {recipes.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentIndex(idx)}
-              style={{
-                width: idx === currentIndex ? 22 : 6,
-                height: 6, borderRadius: 3, border: 'none',
-                background: idx === currentIndex ? '#c0392b' : 'rgba(0,0,0,0.15)',
-                transition: 'all 0.35s cubic-bezier(0.4,0,0.2,1)',
-                cursor: 'pointer', padding: 0,
-              }}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-};
 
 
 // Material-style SVG icons (filled active, outlined inactive)
@@ -2181,7 +1482,7 @@ export default function App() {
   const renderHome = () => (
     <div className="flex-1 flex flex-col pb-44">
       {/* Sleek Persistent Header */}
-      <header className={`px-6 pt-5 pb-5 sticky top-0 z-[500] w-full left-0 right-0 transition-all duration-500 flex flex-col ${isScrolled ? (isDark ? 'bg-[#111113]/98 border-b border-white/5 shadow-xl' : 'bg-white/98 backdrop-blur-2xl border-b border-stone-100 shadow-xl shadow-stone-200/40') : (isDark ? 'bg-[#111113]' : 'bg-white')}`}>
+      <header className={`px-8 pt-5 pb-5 sticky top-0 z-[500] w-full left-0 right-0 transition-all duration-500 flex flex-col ${isScrolled ? (isDark ? 'bg-[#111113]/98 border-b border-white/5 shadow-xl' : 'bg-white/98 backdrop-blur-2xl border-b border-stone-100 shadow-xl shadow-stone-200/40') : (isDark ? 'bg-[#111113]' : 'bg-white')}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <motion.div
@@ -2219,7 +1520,7 @@ export default function App() {
       </header>
 
       {/* Categories horizontal pills - Non-sticky */}
-      <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-6 py-5">
+      <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-8 py-5">
         {[
           { name: 'Pâtes et Céréales (Wɔ̌)', short: t.catPates, icon: '🥣' },
           { name: 'Sauces (Nùsúnnú)', short: t.catSauces, icon: '🍲' },
@@ -2241,17 +1542,6 @@ export default function App() {
         ))}
       </div>
 
-      {/* Hero Carousel - Featured Content */}
-      <section className="relative overflow-visible z-10 -mt-1">
-        <HeroCarouselV3
-          recipes={allRecipes.filter(r => r.categories?.includes('Populaire') || r.isFeatured || r.rating >= 4.5).slice(0, 6)}
-          setSelectedRecipe={setSelectedRecipe}
-          currentUser={currentUser}
-          toggleFavorite={toggleFavorite}
-          t={t}
-          isDark={isDark}
-        />
-      </section>
 
       <AnimatePresence>
         {isSearchExpanded && (
@@ -2419,148 +1709,15 @@ export default function App() {
 
         if (sectionRecipes.length === 0) return null;
 
-        if (section.type === 'dynamic_carousel') {
+        if (section.type === 'dynamic_carousel' || section.type === 'featured') {
           return (
-            <section key={section.id} className="mb-2">
-              <div className="px-6 flex justify-between items-end mb-2">
-                <div className="flex flex-col">
-                  <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                  {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
-                </div>
-              </div>
-              <SnapCarousel
-                recipes={sectionRecipes}
-                setSelectedRecipe={setSelectedRecipe}
-                sectionId={section.id}
-                currentUser={currentUser}
-                toggleFavorite={toggleFavorite}
-                autoplayInterval={
-                  (section.config?.autoplay === true || section.config?.autoplay === 'true')
-                    ? (parseInt(section.config?.autoplay_interval) || 3000)
-                    : undefined
-                }
-              />
-            </section>
-          );
-        }
-
-
-        // ── FEATURED — Mise en avant (Groupées si consécutives) ──
-        if (section.type === 'featured') {
-          const homeSections = dynamicSections.filter((s: any) => !s.config?.page || s.config.page === 'home');
-          const currentIdxInFiltered = homeSections.findIndex((s: any) => s.id === section.id);
-
-          // Si la section précédente était déjà 'featured', on ne fait rien (elle a été rendue dans le groupe)
-          if (currentIdxInFiltered > 0 && homeSections[currentIdxInFiltered - 1].type === 'featured') {
-            return null;
-          }
-
-          // Rechercher toutes les sections 'featured' consécutives
-          const featuredGroup = [section];
-          let nextIdx = currentIdxInFiltered + 1;
-          while (nextIdx < homeSections.length && homeSections[nextIdx].type === 'featured') {
-            featuredGroup.push(homeSections[nextIdx++]);
-          }
-
-          // Si on a plus d'une section, rendu horizontal. Sinon rendu vertical classique.
-          if (featuredGroup.length > 1) {
-            return (
-              <section key={`featured-group-${section.id}`} className="mb-14 pt-2">
-                <div className="flex gap-6 overflow-x-auto no-scrollbar px-6 pb-10">
-                  {featuredGroup.map((fs, fidx) => {
-                    const fsRecipes = allRecipes.filter(r => fs.recipe_ids?.includes(r.id));
-                    const fr = fsRecipes[0];
-                    if (!fr) return null;
-
-                    return (
-                      <motion.div
-                        key={fs.id}
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: fidx * 0.18 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setSelectedRecipe(fr)}
-                        className="featured-card"
-                        style={{
-                          flexShrink: 0,
-                          width: '425px',
-                          borderRadius: '36px',
-                          padding: '26px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '28px',
-                          position: 'relative',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {/* Image — Gauche */}
-                        <div className="featured-card-img" style={{
-                          flexShrink: 0,
-                          width: '165px',
-                          height: '165px',
-                          borderRadius: '30px',
-                          overflow: 'hidden',
-                          boxShadow: '0 15px 32px rgba(0,0,0,0.18)',
-                        }}>
-                          <img
-                            src={fr.image}
-                            alt={fr.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        </div>
-
-                        {/* Contenu — Droite */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="featured-badge" style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            borderRadius: '20px',
-                            padding: '6px 16px',
-                            marginBottom: '15px',
-                          }}>
-                            <span style={{ fontSize: '14px' }}>⭐</span>
-                            <span className="featured-badge-text" style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                              {fs.subtitle || 'Exclusivité'}
-                            </span>
-                          </div>
-                          <h2 className="featured-title" style={{
-                            margin: '0 0 16px',
-                            fontSize: '25px',
-                            fontWeight: 900,
-                            lineHeight: 1.15,
-                            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                            letterSpacing: '-0.02em',
-                          }}>
-                            {fr.name}
-                          </h2>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span className="featured-cta" style={{ fontSize: '16px', fontWeight: 900 }}>Découvrir le plat →</span>
-                          </div>
-                        </div>
-
-                        {/* Décoration subtile */}
-                        <div style={{
-                          position: 'absolute', right: '18px', top: '18px',
-                          opacity: 0.18, color: '#e55820', pointerEvents: 'none'
-                        }}>
-                          <Sparkles size={26} />
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          }
-
-          // Rendu Single (FORMAT TITANESQUE) SUPERPOSE
-          return (
-            <FeaturedStackCarousel
+            <FeaturedCarousel
               key={section.id}
               section={section}
               recipes={sectionRecipes}
               setSelectedRecipe={setSelectedRecipe}
+              currentUser={currentUser}
+              toggleFavorite={toggleFavorite}
             />
           );
         }
@@ -2569,7 +1726,7 @@ export default function App() {
           return (
             <section key={section.id} className="mb-10">
               {/* Section header */}
-              <div className="px-6 flex justify-between items-end mb-4">
+              <div className="px-8 flex justify-between items-end mb-4">
                 <div className="flex flex-col">
                   <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
                   {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
@@ -2578,7 +1735,7 @@ export default function App() {
               </div>
 
               {/* Horizontal scroll tray — food delivery style cards */}
-              <div className="flex gap-4 overflow-x-auto px-6 no-scrollbar pb-3">
+              <div className="flex gap-4 overflow-x-auto px-8 no-scrollbar pb-3">
                 {sectionRecipes.map((recipe, ridx) => {
                   const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                   const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1); // e.g. 4.0–4.8
@@ -2693,17 +1850,15 @@ export default function App() {
         if (section.type === 'vertical_list_2') {
           return (
             <section key={section.id} className="mb-10">
-              {/* En-tête */}
-              <div className="px-6 flex justify-between items-end mb-4">
+              <div className="px-8 flex justify-between items-end mb-4">
                 <div className="flex flex-col">
                   <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
                   {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
                 </div>
-
               </div>
 
-              {/* Grille 2 colonnes — style card horizontal_list */}
-              <div className="px-6 grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
+              {/* Zone Grille — alignement avec le header */}
+              <div className="px-8 grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 {sectionRecipes.map((recipe, ridx) => {
                   const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                   const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
@@ -2795,16 +1950,13 @@ export default function App() {
         // ── VERTICAL LIST (vertical_list_1 et fallback) ──
         return (
           <section key={section.id} className="mb-10">
-            <div className="px-6 flex justify-between items-end mb-4">
+            <div className="px-8 flex justify-between items-end mb-4">
               <div className="flex flex-col">
                 <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
                 {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
               </div>
-
             </div>
-
-            {/* Vertical list — food delivery row cards */}
-            <div className="px-6 flex flex-col gap-3">
+            <div className="px-8 flex flex-col gap-3">
               {sectionRecipes.map((recipe, ridx) => {
                 const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                 const ratingNum = (4.0 + (ridx % 5) * 0.1).toFixed(1);
@@ -2972,109 +2124,28 @@ export default function App() {
 
               if (section.type === 'dynamic_carousel') {
                 return (
-                  <section key={section.id} className="mb-2">
-                    <div className="px-6 flex justify-between items-center mb-4">
-                      <div>
-                        <h2 className="text-xl font-black text-stone-900 tracking-tight">{section.title}</h2>
-                        {section.subtitle && <p className="text-[10px] text-[#fb5607] font-bold uppercase tracking-widest mt-0.5">{section.subtitle}</p>}
-                      </div>
-                    </div>
-                    <div className="flex gap-3 overflow-x-auto px-6 no-scrollbar pb-8 pt-4">
-                      {sectionRecipes.map((recipe, ridx) => {
-                        const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
-                        return (
-                          <motion.div
-                            key={recipe.id}
-                            whileTap={{ scale: 0.96 }}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: ridx * 0.08 }}
-                            onClick={() => setSelectedRecipe(recipe)}
-                            className="flex-shrink-0 cursor-pointer group"
-                            style={{ width: '190px' }}
-                          >
-                            {/* Card — no border, just shadow */}
-                            <div style={{
-                              background: 'linear-gradient(160deg, #ff6b1a 0%, #fb5607 50%, #e84d00 100%)',
-                              borderRadius: '24px',
-                              overflow: 'hidden',
-                              boxShadow: '0 4px 10px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.05)',
-                            }}>
-                              {/* Image top — 4:3 for more height */}
-                              <div style={{ position: 'relative', aspectRatio: '4/3', overflow: 'hidden' }}>
-                                <img
-                                  src={recipe.image}
-                                  alt={recipe.name}
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }}
-                                  className="group-hover:scale-105"
-                                />
-                              </div>
-
-                              {/* Content — fixed height */}
-                              <div style={{ padding: '12px 14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {/* Title + category */}
-                                <div>
-                                  <h3 style={{
-                                    fontSize: '14px', fontWeight: 800, color: '#fff',
-                                    lineHeight: 1.25, margin: '0 0 3px',
-                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                  }}>{recipe.name}</h3>
-                                  <p style={{
-                                    fontSize: '11px', color: 'rgba(255,255,255,0.70)', fontWeight: 500, margin: 0,
-                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                  }}>{recipe.category || recipe.region}</p>
-                                </div>
-
-                                {/* Rating pill button */}
-                                <div style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                  background: 'rgba(255,255,255,0.20)',
-                                  backdropFilter: 'blur(8px)',
-                                  borderRadius: '20px',
-                                  padding: '5px 10px',
-                                  alignSelf: 'flex-start',
-                                }}>
-                                  <Star size={12} style={{ color: '#fde68a', fill: '#fde68a', flexShrink: 0 }} />
-                                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#fff' }}>{ratingNum}</span>
-                                </div>
-
-                                {/* CTA row */}
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.90)', letterSpacing: '0.03em' }}>
-                                    Voir la recette
-                                  </span>
-                                  <div style={{
-                                    width: '28px', height: '28px',
-                                    background: '#fff',
-                                    borderRadius: '50%',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-                                    transition: 'transform 0.2s',
-                                  }} className="group-hover:scale-110">
-                                    <ChevronRight size={14} style={{ color: '#fb5607' }} strokeWidth={3} />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </section>
+                  <FeaturedCarousel
+                    key={section.id}
+                    section={section}
+                    recipes={sectionRecipes}
+                    setSelectedRecipe={setSelectedRecipe}
+                    currentUser={currentUser}
+                    toggleFavorite={toggleFavorite}
+                  />
                 );
               }
 
               if (section.type === 'horizontal_list') {
                 return (
                   <section key={section.id} className="mb-10">
-                    <div className="px-6 flex justify-between items-end mb-4">
+                    <div className="px-8 flex justify-between items-end mb-4">
                       <div className="flex flex-col">
                         <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
                         {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
                       </div>
 
                     </div>
-                    <div className="flex gap-4 overflow-x-auto px-6 no-scrollbar pb-3">
+                    <div className="flex gap-4 overflow-x-auto px-8 no-scrollbar pb-3">
                       {sectionRecipes.map((recipe, ridx) => {
                         const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                         const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
@@ -3126,14 +2197,13 @@ export default function App() {
               if (section.type === 'vertical_list_2') {
                 return (
                   <section key={section.id} className="mb-10">
-                    <div className="px-6 flex justify-between items-end mb-4">
+                    <div className="px-8 flex justify-between items-end mb-4">
                       <div className="flex flex-col">
                         <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
                         {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
                       </div>
-
                     </div>
-                    <div className="px-6 grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                    <div className="px-8 grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
                       {sectionRecipes.map((recipe, ridx) => {
                         const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                         const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
@@ -3179,14 +2249,13 @@ export default function App() {
               // ── VERTICAL LIST (fallback Explorer) ──
               return (
                 <section key={section.id} className="mb-10">
-                  <div className="px-6 flex justify-between items-end mb-4">
+                  <div className="px-8 flex justify-between items-end mb-4">
                     <div className="flex flex-col">
                       <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
                       {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
                     </div>
-
                   </div>
-                  <div className="px-6 flex flex-col gap-3">
+                  <div className="px-8 flex flex-col gap-3">
                     {sectionRecipes.map((recipe, ridx) => {
                       const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                       const ratingNum = (4.0 + (ridx % 5) * 0.1).toFixed(1);
@@ -3234,7 +2303,7 @@ export default function App() {
                 </section>
               );
             })}
-          </div>
+          </div >
         )
       }
     </div >

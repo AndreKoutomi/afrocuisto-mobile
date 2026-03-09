@@ -1,0 +1,271 @@
+import React from 'react';
+import { motion } from 'motion/react';
+import { Heart, Star, Clock } from 'lucide-react';
+import { Recipe, User } from '../types';
+
+interface FeaturedCarouselProps {
+    section: any;
+    recipes: Recipe[];
+    setSelectedRecipe: (r: Recipe) => void;
+    currentUser: User | null;
+    toggleFavorite: (id: string) => void;
+}
+
+export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
+    section,
+    recipes,
+    setSelectedRecipe,
+    currentUser,
+    toggleFavorite
+}) => {
+    const scrollRef = React.useRef<HTMLDivElement>(null);
+    const [isInteracting, setIsInteracting] = React.useState(false);
+    const interactionTimeout = React.useRef<NodeJS.Timeout | null>(null);
+
+    const handleInteraction = (interacting: boolean) => {
+        setIsInteracting(interacting);
+        if (interactionTimeout.current) clearTimeout(interactionTimeout.current);
+
+        if (interacting) {
+            // Auto-reset interacting state after 5 seconds of inactivity (especially for mobile)
+            interactionTimeout.current = setTimeout(() => {
+                setIsInteracting(false);
+            }, 5000);
+        }
+    };
+
+    const n = recipes.length;
+
+    const config = section?.config || {};
+    const rawAutoScroll = config.auto_scroll ?? config.autoScroll ?? config.autoscroll;
+    const shouldAutoScroll = rawAutoScroll === true || rawAutoScroll === 'true' ||
+        rawAutoScroll === 1 || rawAutoScroll === '1' || (section?.title?.toLowerCase() === 'test');
+    const rawInterval = config.scroll_interval ?? config.scrollInterval ?? config.interval;
+    const intervalTime = Number(rawInterval) || 4000;
+
+    React.useEffect(() => {
+        console.log(`[Carousel Debug] ${section?.title} - shouldAutoScroll: ${shouldAutoScroll}, isInteracting: ${isInteracting}`);
+
+        if (!shouldAutoScroll || isInteracting || n <= 1 || !scrollRef.current) return;
+
+        const interval = setInterval(() => {
+            const container = scrollRef.current;
+            if (container) {
+                const cardWidth = 280 + 16;
+                const maxScroll = container.scrollWidth - container.clientWidth;
+
+                console.log(`[Carousel Debug] Rolling: ${container.scrollLeft} / ${maxScroll}`);
+
+                const currentScroll = Math.ceil(container.scrollLeft);
+                const behavior = (config.scroll_behavior || 'smooth') as ScrollBehavior;
+
+                if (currentScroll >= maxScroll - 20) {
+                    container.scrollTo({ left: 0, behavior });
+                } else {
+                    container.scrollBy({ left: cardWidth, behavior });
+                }
+            }
+        }, intervalTime);
+
+        return () => {
+            clearInterval(interval);
+            if (interactionTimeout.current) clearTimeout(interactionTimeout.current);
+        };
+    }, [n, section?.id, shouldAutoScroll, intervalTime, isInteracting]);
+
+    if (!n) return null;
+
+    const isFav = (id: string) => currentUser?.favorites?.includes(id) ?? false;
+
+    return (
+        <section style={{ marginBottom: '32px', marginLeft: '-20px' }}>
+            {/* Section header */}
+            {section?.title && (
+                <div style={{ padding: '0 32px 16px ', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
+                            {section.title}
+                        </h2>
+                        {section?.subtitle && (
+                            <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#6b7280', fontWeight: 600, letterSpacing: '0.04em' }}>
+                                {section.subtitle}
+                            </p>
+                        )}
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#fb5607', cursor: 'pointer' }}>
+                        Voir tout
+                    </span>
+                </div>
+            )}
+
+            {/* Horizontal Scroll Area */}
+            <div
+                ref={scrollRef}
+                className="hide-scrollbar"
+                onMouseEnter={() => handleInteraction(true)}
+                onMouseLeave={() => handleInteraction(false)}
+                onTouchStart={() => handleInteraction(true)}
+                onTouchEnd={() => handleInteraction(false)}
+                style={{
+                    display: 'flex',
+                    gap: 16,
+                    overflowX: 'auto',
+                    padding: '20px 32px 40px 50px',
+                    // scrollSnapType: 'x mandatory',
+                    WebkitOverflowScrolling: 'touch',
+                }}
+            >
+                {recipes.map((recipe, index) => {
+                    const isFavorite = isFav(recipe.id);
+
+                    // Dynamic widths based on the visual style (narrow, medium, wide pattern)
+                    const widths = ['280px', '280px', '280px'];
+                    const cardWidth = widths[index % widths.length];
+
+                    return (
+                        <div
+                            key={recipe.id}
+                            onClick={() => setSelectedRecipe(recipe)}
+                            style={{
+                                flexShrink: 0,
+                                width: cardWidth,
+                                scrollSnapAlign: 'start',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                cursor: 'pointer',
+                                position: 'relative',
+                            }}
+                        >
+                            {/* Image Container */}
+                            <div style={{
+                                position: 'relative',
+                                width: '100%',
+                                height: '360px', // Fixed height for alignment
+                                borderRadius: 28,
+                                overflow: 'hidden',
+                                boxShadow: '0 12px 30px rgba(0,0,0,0.18)',
+                                backgroundColor: '#f3f4f6',
+                            }}>
+                                <img
+                                    src={recipe.image}
+                                    alt={recipe.name}
+                                    draggable={false}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+
+                                {/* Dark Gradient Overlay at bottom for text readability */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '40%',
+                                    background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)',
+                                    pointerEvents: 'none',
+                                }} />
+
+                                {/* Heart Button Inside Image */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
+                                    style={{
+                                        position: 'absolute', top: 12, right: 12,
+                                        width: 32, height: 32, borderRadius: '50%',
+                                        background: 'rgba(252, 251, 251, 0.65)',
+                                        backdropFilter: 'blur(10px)',
+                                        border: '1px solid rgba(255, 255, 255, 1)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        boxShadow: '0 4px 4px rgba(0,0,0,0.15)',
+                                        cursor: 'pointer',
+                                        zIndex: 10,
+                                    }}
+                                >
+                                    <Heart
+                                        size={16}
+                                        fill={isFavorite ? '#f43f5e' : 'none'}
+                                        color={isFavorite ? '#f43f5e' : '#f43f5e'}
+                                        strokeWidth={isFavorite ? 0 : 2.5}
+                                    />
+                                </button>
+
+                                {/* Rating Badge - Top Left */}
+                                <div style={{
+                                    position: 'absolute', top: 12, left: 12,
+                                    background: 'rgba(255, 255, 255, 0.95)',
+                                    backdropFilter: 'blur(10px)',
+                                    padding: '5px 10px',
+                                    borderRadius: '14px',
+                                    display: 'flex', alignItems: 'center', gap: 5,
+                                    zIndex: 10,
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                    border: '1px solid rgba(255, 255, 255, 0.5)'
+                                }}>
+                                    <Star size={12} fill="#fb5607" color="#fb5607" strokeWidth={0} />
+                                    <span style={{ fontSize: '11px', fontWeight: 900, color: '#111827' }}>
+                                        {(4.0 + (index % 5) * 0.2).toFixed(1)}
+                                    </span>
+                                </div>
+
+                                {/* Title Overlay centered at the bottom */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: 16,
+                                    left: 0,
+                                    right: 0,
+                                    padding: '0 12px',
+                                    textAlign: 'center',
+                                    color: '#ffffff',
+                                    zIndex: 5,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center'
+                                }}>
+                                    <p style={{
+                                        margin: '0 0 6px',
+                                        fontSize: '9px',
+                                        fontWeight: 900,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.12em',
+                                        color: '#ffffff',
+                                        backgroundColor: 'rgba(251, 86, 7, 0.85)',
+                                        padding: '4px 10px',
+                                        borderRadius: '50px',
+                                        backdropFilter: 'blur(4px)',
+                                        boxShadow: '0 4px 10px rgba(251, 86, 7, 0.3)',
+                                    }}>
+                                        {recipe.region}
+                                    </p>
+                                    <h3 style={{
+                                        margin: 0,
+                                        fontSize: '18px',
+                                        fontWeight: 800,
+                                        lineHeight: 1.2,
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                        wordBreak: 'break-word',
+                                        fontFamily: 'Montserrat, sans-serif'
+                                    }}>
+                                        {recipe.name}
+                                    </h3>
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        gap: 6, marginTop: 10,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                        backdropFilter: 'blur(12px)',
+                                        padding: '5px 12px',
+                                        borderRadius: '20px',
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                        boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                                    }}>
+                                        <Clock size={12} color="#ffffff" strokeWidth={3} />
+                                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#ffffff' }}>
+                                            {recipe.prepTime}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+};

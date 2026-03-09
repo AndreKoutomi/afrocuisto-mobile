@@ -13,7 +13,6 @@ const TYPE_META: Record<string, { label: string; icon: any; color: string; bg: s
     horizontal_list: { label: 'Horizontal', icon: AlignJustify, color: '#0891b2', bg: '#e0f2fe', description: 'Liste à défilement horizontal compact' },
     vertical_list_1: { label: 'Liste simple', icon: List, color: '#059669', bg: '#d1fae5', description: 'Cartes verticales avec image et détails' },
     vertical_list_2: { label: 'Grille 2col', icon: LayoutGrid, color: '#d97706', bg: '#fef3c7', description: 'Grille en deux colonnes, style magazine' },
-    featured: { label: 'Mise en avant', icon: Star, color: '#e11d48', bg: '#fff1f2', description: 'Plat unique mis en avant en grand format hero' },
 };
 
 function getTypeMeta(type: string) {

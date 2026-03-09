@@ -361,73 +361,44 @@ export function SectionForm() {
                             </div>
                         </div>
                         <div style={{ padding: '24px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '14px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
 
-                                {/* ── HERO CAROUSEL ── */}
-                                {(() => {
-                                    const isActive = formData.type === 'hero_carousel';
-                                    return (
-                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, type: 'hero_carousel' }))}
-                                            style={{ border: isActive ? '2.5px solid #F94D00' : '2px solid #f0f0f0', background: isActive ? '#fff8f5' : '#fafafa', borderRadius: '18px', padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', transition: 'all 0.2s', position: 'relative' }}>
-                                            {isActive && <div style={{ position: 'absolute', top: '8px', right: '8px', color: '#F94D00' }}><CheckCircle2 size={14} /></div>}
-                                            {/* Mockup */}
-                                            <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', background: '#1a1a2e', aspectRatio: '9/7', position: 'relative', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
-                                                {/* Image placeholder */}
-                                                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f64f59 100%)', opacity: 0.85 }} />
-                                                {/* Gradient overlay */}
-                                                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 55%)' }} />
-                                                {/* Dots top */}
-                                                <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', gap: '3px' }}>
-                                                    <div style={{ width: '14px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.9)' }} />
-                                                    <div style={{ width: '4px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.4)' }} />
-                                                    <div style={{ width: '4px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.4)' }} />
-                                                </div>
-                                                {/* Heart top right */}
-                                                <div style={{ position: 'absolute', top: '6px', right: '8px', width: '16px', height: '16px', borderRadius: '50%', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <div style={{ width: '8px', height: '7px', background: '#F94D00', borderRadius: '2px', clipPath: 'polygon(50% 100%, 0% 35%, 15% 15%, 50% 30%, 85% 15%, 100% 35%)' }} />
-                                                </div>
-                                                {/* Bottom content */}
-                                                <div style={{ position: 'absolute', bottom: '8px', left: '8px', right: '8px' }}>
-                                                    <div style={{ width: '40%', height: '4px', background: 'rgba(249,77,0,0.7)', borderRadius: '2px', marginBottom: '4px' }} />
-                                                    <div style={{ width: '80%', height: '6px', background: 'rgba(255,255,255,0.9)', borderRadius: '3px', marginBottom: '5px' }} />
-                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                        <div style={{ width: '45%', height: '3px', background: 'rgba(255,255,255,0.5)', borderRadius: '2px' }} />
-                                                        <div style={{ width: '28%', height: '14px', background: '#F94D00', borderRadius: '6px' }} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div style={{ textAlign: 'center' }}>
-                                                <p style={{ margin: 0, fontSize: '11px', fontWeight: 800, color: isActive ? '#F94D00' : '#374151' }}>Hero</p>
-                                                <p style={{ margin: 0, fontSize: '9px', color: '#9ca3af', marginTop: '2px' }}>Bannière accueil</p>
-                                            </div>
-                                        </button>
-                                    );
-                                })()}
 
-                                {/* ── DYNAMIC CAROUSEL ── */}
+                                {/* ── DYNAMIC CAROUSEL (new bank-card style) ── */}
                                 {(() => {
                                     const isActive = formData.type === 'dynamic_carousel';
                                     return (
                                         <button type="button" onClick={() => setFormData(prev => ({ ...prev, type: 'dynamic_carousel' }))}
                                             style={{ border: isActive ? '2.5px solid var(--primary)' : '2px solid #f0f0f0', background: isActive ? '#fff5f0' : '#fafafa', borderRadius: '18px', padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', transition: 'all 0.2s', position: 'relative' }}>
                                             {isActive && <div style={{ position: 'absolute', top: '8px', right: '8px', color: 'var(--primary)' }}><CheckCircle2 size={14} /></div>}
-                                            {/* Mockup */}
-                                            <div style={{ width: '100%', aspectRatio: '9/7', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '-8px' }}>
-                                                {/* Side card left */}
-                                                <div style={{ width: '34%', aspectRatio: '2/3', borderRadius: '12px', background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)', position: 'absolute', left: '2px', top: '8px', opacity: 0.55, transform: 'rotate(-4deg) scale(0.88)', boxShadow: '0 3px 10px rgba(0,0,0,0.10)' }} />
-                                                {/* Center main card */}
-                                                <div style={{ width: '54%', aspectRatio: '2/3', borderRadius: '14px', background: 'linear-gradient(135deg, #667eea, #764ba2)', zIndex: 2, position: 'relative', boxShadow: '0 8px 20px rgba(102,126,234,0.35)' }}>
-                                                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 50%)', borderRadius: '14px' }} />
-                                                    <div style={{ position: 'absolute', bottom: '8px', left: '8px', right: '8px' }}>
-                                                        <div style={{ width: '70%', height: '5px', background: 'rgba(255,255,255,0.85)', borderRadius: '2px', marginBottom: '3px' }} />
-                                                        <div style={{ width: '50%', height: '3px', background: 'rgba(255,255,255,0.5)', borderRadius: '2px' }} />
+                                            {/* Premium bank-card style mockup */}
+                                            <div style={{ width: '100%', aspectRatio: '9/7', position: 'relative', overflow: 'hidden', borderRadius: '10px' }}>
+                                                {/* Main card */}
+                                                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', borderRadius: '10px' }}>
+                                                    {/* Blob decoration */}
+                                                    <div style={{ position: 'absolute', width: '50px', height: '50px', borderRadius: '50%', background: 'rgba(196,181,253,0.25)', top: '-10px', right: '-10px' }} />
+                                                    {/* Left text content */}
+                                                    <div style={{ position: 'absolute', left: '8px', top: '10px', right: '42%' }}>
+                                                        <div style={{ width: '55%', height: '3px', background: 'rgba(255,255,255,0.5)', borderRadius: '2px', marginBottom: '4px' }} />
+                                                        <div style={{ width: '80%', height: '5px', background: '#fff', borderRadius: '2px', marginBottom: '3px' }} />
+                                                        <div style={{ width: '65%', height: '5px', background: '#fff', borderRadius: '2px', marginBottom: '8px' }} />
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '6px' }}>
+                                                            <div style={{ width: '55%', height: '2px', background: 'rgba(255,255,255,0.55)', borderRadius: '1px' }} />
+                                                            <div style={{ width: '45%', height: '2px', background: 'rgba(255,255,255,0.55)', borderRadius: '1px' }} />
+                                                        </div>
+                                                        <div style={{ width: '30px', height: '8px', background: 'rgba(255,255,255,0.22)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.35)' }} />
+                                                    </div>
+                                                    {/* Right image circle */}
+                                                    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '42%', borderRadius: '0 10px 10px 0', overflow: 'hidden' }}>
+                                                        <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)', filter: 'brightness(0.75)' }} />
+                                                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #7C3AED, transparent 60%)' }} />
                                                     </div>
                                                 </div>
-                                                {/* Side card right */}
-                                                <div style={{ width: '34%', aspectRatio: '2/3', borderRadius: '12px', background: 'linear-gradient(135deg, #fff3e0, #ffe0b2)', position: 'absolute', right: '2px', top: '8px', opacity: 0.55, transform: 'rotate(4deg) scale(0.88)', boxShadow: '0 3px 10px rgba(0,0,0,0.10)' }} />
+                                                {/* Next card peek */}
+                                                <div style={{ position: 'absolute', right: '-8px', top: '6px', bottom: '6px', width: '22px', borderRadius: '8px', background: 'linear-gradient(135deg, #fb5607, #C2410C)', opacity: 0.5 }} />
                                                 {/* Dots */}
-                                                <div style={{ position: 'absolute', bottom: '-2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '3px' }}>
-                                                    <div style={{ width: '10px', height: '3px', borderRadius: '2px', background: 'var(--primary)' }} />
+                                                <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '3px' }}>
+                                                    <div style={{ width: '10px', height: '3px', borderRadius: '2px', background: '#7C3AED' }} />
                                                     <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#d1d5db' }} />
                                                     <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#d1d5db' }} />
                                                 </div>
@@ -579,42 +550,16 @@ export function SectionForm() {
                                     );
                                 })()}
 
-                                {/* ── FEATURED (Mise en avant) ── */}
-                                {(() => {
-                                    const isActive = formData.type === 'featured';
-                                    return (
-                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, type: 'featured', recipe_ids: prev.recipe_ids.slice(0, 1) }))}
-                                            style={{ border: isActive ? '2.5px solid #16a34a' : '2px solid #f0f0f0', background: isActive ? '#f0fdf4' : '#fafafa', borderRadius: '18px', padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', transition: 'all 0.2s', position: 'relative' }}>
-                                            {isActive && <div style={{ position: 'absolute', top: '8px', right: '8px', color: '#16a34a' }}><CheckCircle2 size={14} /></div>}
-                                            <div style={{ width: '100%', aspectRatio: '9/7', borderRadius: '10px', overflow: 'hidden', background: 'linear-gradient(135deg, #16a34a, #22c55e)', position: 'relative', display: 'flex', alignItems: 'center', padding: '6px 8px', boxShadow: '0 3px 12px rgba(22,163,74,0.25)' }}>
-                                                <div style={{ flex: 1, zIndex: 1 }}>
-                                                    <div style={{ width: '55%', height: '3px', background: 'rgba(255,255,255,0.6)', borderRadius: '2px', marginBottom: '4px' }} />
-                                                    <div style={{ width: '75%', height: '5px', background: '#fff', borderRadius: '2px', marginBottom: '3px' }} />
-                                                    <div style={{ width: '65%', height: '5px', background: '#fff', borderRadius: '2px', marginBottom: '8px' }} />
-                                                    <div style={{ width: '40px', height: '9px', background: '#fff', borderRadius: '6px' }} />
-                                                </div>
-                                                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(255,255,255,0.25)', flexShrink: 0, border: '2px solid rgba(255,255,255,0.5)' }} />
-                                            </div>
-                                            <div style={{ textAlign: 'center' }}>
-                                                <p style={{ margin: 0, fontSize: '11px', fontWeight: 800, color: isActive ? '#16a34a' : '#374151' }}>Mise en avant</p>
-                                                <p style={{ margin: 0, fontSize: '9px', color: '#9ca3af', marginTop: '2px' }}>1 plat à la une</p>
-                                            </div>
-                                        </button>
-                                    );
-                                })()}
-
                             </div>
 
                             {/* Description contextuelle du type sélectionné */}
                             <div style={{ marginTop: '16px', background: '#f9fafb', borderRadius: '14px', padding: '14px 16px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                                 <Info size={15} color="#9ca3af" style={{ flexShrink: 0, marginTop: '1px' }} />
                                 <p style={{ margin: 0, fontSize: '11px', color: '#6b7280', fontWeight: 500, lineHeight: 1.6 }}>
-                                    {formData.type === 'hero_carousel' && "Bannière plein-écran en haut de la page d'accueil. Défile automatiquement avec des animations cinématiques. Recommandé pour les coups de cœur et les plats phares."}
-                                    {formData.type === 'dynamic_carousel' && "Carrousel de cards circulaires avec image flottante, défilement horizontal. Idéal pour les sections vedettes avec un style premium."}
+                                    {formData.type === 'dynamic_carousel' && "Carrousel de cartes premium style bancaire — dégradé coloré, image à droite, contenu à gauche, aperçu de la carte suivante. Style moderne pour les sections vedettes."}
                                     {formData.type === 'horizontal_list' && "Rangée de cards défilantes en scroll horizontal. Format compact adapté aux sections secondaires avec beaucoup de plats."}
                                     {formData.type === 'vertical_list_1' && "Liste verticale avec une seule colonne. Format épuré avec image, nom et infos complémentaires sur chaque ligne."}
                                     {formData.type === 'vertical_list_2' && "Grille à 2 colonnes pour une vue compacte et visuelle. Parfait pour les pages de découverte avec de nombreuses recettes."}
-                                    {formData.type === 'featured' && "Bannière pleine largeur mettant UN seul plat en avant. Le nom de la recette s'affiche en grand avec un visuel percutant et un bouton \"Découvrir\". Parfait pour les plats phares."}
                                 </p>
                             </div>
 
@@ -637,7 +582,7 @@ export function SectionForm() {
                                     <div style={{ marginTop: '16px', background: '#fafafa', borderRadius: '16px', padding: '18px', border: '1px solid #f0f0f0' }}>
                                         {/* Header row */}
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                            <p style={{ ...labelStyle, margin: 0 }}>Options du Coverflow</p>
+                                            <p style={{ ...labelStyle, margin: 0 }}>Options du Carrousel</p>
                                             {isAutoplay && (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fff5f0', borderRadius: '20px', padding: '4px 10px' }}>
                                                     <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)', animation: 'pulse 1.5s infinite' }} />
