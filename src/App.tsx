@@ -1569,11 +1569,11 @@ export default function App() {
 
     return (
       <div className="flex-1 flex flex-col pb-44" style={{
-        background: isDark ? '#111827' : '#f3f4f6',
+        background: isDark ? '#000000ff' : '#f3f4f6',
         minHeight: '100vh',
       }}>
         {/* Top bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 24px 16px', position: 'sticky', top: 0, background: isDark ? '#111827' : '#f3f4f6', zIndex: 50 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 24px 16px', position: 'sticky', top: 0, background: isDark ? '#000000ff' : '#f3f4f6', zIndex: 50 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <img src="/icon.png" alt="AfroCuisto Logo" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
             <span style={{ fontSize: '22px', fontWeight: 900, color: isDark ? '#ffffff' : '#111827', letterSpacing: '-0.02em' }}>AfroCuisto</span>
@@ -1595,134 +1595,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Suggestion Section (Special Offers) */}
-        <div style={{ padding: '0 24px', marginTop: '10px' }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: isDark ? '#ffffff' : '#111827', margin: '0 0 30px', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '-0.02em' }}>
-            Nos <span style={{ fontWeight: 900, position: 'relative' }}>
-              Suggestions
-              <div style={{ position: 'absolute', bottom: 4, left: 0, right: 0, height: 3, background: '#fb5607', zIndex: -1, borderRadius: 2 }} />
-            </span>
-          </h1>
 
-          <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '4px' }} className="no-scrollbar">
-            {suggestions.map((recipe) => (
-              <motion.div
-                key={recipe.id}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedRecipe(recipe)}
-                style={{
-                  minWidth: '280px', height: '150px',
-                  background: isDark ? '#1f2937' : '#ffffff',
-                  borderRadius: '24px',
-                  padding: '24px 110px 24px 24px',
-                  position: 'relative',
-                  boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.3)' : '0 12px 30px rgba(0,0,0,0.06)',
-                  cursor: 'pointer',
-                  flexShrink: 0
-                }}
-              >
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#ffffff' : '#111827', margin: '0 0 8px', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
-                <p style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#9ca3af' : '#4b5563', margin: '0 0 16px' }}>
-                  Spécialité <span style={{ fontWeight: 800, color: isDark ? '#e5e7eb' : '#1f2937' }}>{recipe.region || "Chef"}</span>
-                </p>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <span style={{ fontSize: 20, fontWeight: 900, color: isDark ? '#ffffff' : '#111827' }}>{recipe.prepTime}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#6b7280' : '#9ca3af', textDecoration: 'line-through' }}>{parseInt(recipe.prepTime) + 15} min</span>
-                </div>
 
-                {/* Circular overflowing image */}
-                <div style={{
-                  position: 'absolute', right: '-35px', top: '50%', transform: 'translateY(-50%)',
-                  width: '130px', height: '130px', borderRadius: '50%',
-                  boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
-                  overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
-                }}>
-                  <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
 
-        {/* Populaires Section (Seasonal Salads) */}
-        <div style={{ padding: '0 24px', marginTop: '30px' }}>
-          <h2 style={{ fontSize: 24, fontWeight: 700, color: isDark ? '#ffffff' : '#111827', margin: '0 0 60px', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '-0.02em' }}>
-            Recettes <span style={{ fontWeight: 900, position: 'relative' }}>
-              Populaires
-              <div style={{ position: 'absolute', bottom: 3, left: -2, right: -2, height: 3, background: '#fb5607', zIndex: -1, borderRadius: 2 }} />
-            </span>
-          </h2>
-
-          <div style={{ display: 'flex', overflowX: 'auto', gap: '24px', paddingBottom: '40px', paddingTop: '60px', paddingLeft: '4px', paddingRight: '24px' }} className="no-scrollbar">
-            {populaires.map((recipe) => {
-              const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-              return (
-                <motion.div
-                  key={recipe.id}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedRecipe(recipe)}
-                  style={{
-                    minWidth: '170px', width: '170px',
-                    background: isDark ? '#1f2937' : '#ffffff',
-                    borderRadius: '28px',
-                    padding: '85px 20px 20px',
-                    position: 'relative',
-                    boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.3)' : '0 12px 30px rgba(0,0,0,0.04)',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    display: 'flex', flexDirection: 'column'
-                  }}
-                >
-                  {/* Top overflowing circular image */}
-                  <div style={{
-                    position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)',
-                    width: '130px', height: '130px', borderRadius: '50%',
-                    boxShadow: '0 12px 30px rgba(0,0,0,0.2)', backgroundColor: '#ddd',
-                    overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
-                  }}>
-                    <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-
-                  {/* Region / Category Badge */}
-                  <div style={{
-                    position: 'absolute', top: '56px', left: '50%', transform: 'translateX(-50%)',
-                    background: '#fb5607', color: '#fff',
-                    padding: '3px 10px', borderRadius: '12px',
-                    fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    boxShadow: '0 2px 8px rgba(251,86,7,0.4)',
-                    zIndex: 10,
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {recipe.region || recipe.category || 'Mets Local'}
-                  </div>
-
-                  <h3 style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#f3f4f6' : '#4b5563', margin: '0 0 20px', lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {recipe.name}
-                  </h3>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto' }}>
-                    <span style={{ fontSize: 18, fontWeight: 900, color: isDark ? '#ffffff' : '#111827' }}>
-                      {recipe.prepTime}
-                    </span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
-                      style={{
-                        width: 36, height: 36, borderRadius: 12,
-                        background: isFav ? '#ef4444' : (isDark ? '#374151' : '#111827'),
-                        border: 'none', color: '#ffffff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', flexShrink: 0
-                      }}
-                    >
-                      <Heart size={18} style={{ color: isFav ? '#fff' : '#fff', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2} />
-                    </button>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
 
 
         <AnimatePresence>
@@ -1909,49 +1784,87 @@ export default function App() {
                 {/* Section header */}
                 <div className="px-8 flex justify-between items-end mb-4">
                   <div className="flex flex-col">
-                    <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
+                    <h2 style={{ paddingTop: '20px' }} className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
                     {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
                   </div>
                 </div>
 
                 {/* Horizontal scroll tray v2 — styled like 'Nos suggestions' */}
-                <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '32px' }} className="no-scrollbar">
-                  {sectionRecipes.map((recipe) => (
-                    <motion.div
-                      key={recipe.id}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setSelectedRecipe(recipe)}
-                      style={{
-                        minWidth: '280px', height: '150px',
-                        background: isDark ? '#1f2937' : '#ffffff',
-                        borderRadius: '24px',
-                        padding: '24px 110px 24px 24px',
-                        position: 'relative',
-                        boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.3)' : '0 12px 30px rgba(0,0,0,0.06)',
-                        cursor: 'pointer',
-                        flexShrink: 0
-                      }}
-                    >
-                      <h3 style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#ffffff' : '#111827', margin: '0 0 8px', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#9ca3af' : '#4b5563', margin: '0 0 16px' }}>
-                        Spécialité <span style={{ fontWeight: 800, color: isDark ? '#e5e7eb' : '#1f2937' }}>{recipe.region || "Chef"}</span>
-                      </p>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                        <span style={{ fontSize: 20, fontWeight: 900, color: isDark ? '#ffffff' : '#111827' }}>{recipe.prepTime}</span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#6b7280' : '#9ca3af', textDecoration: 'line-through' }}>{parseInt(recipe.prepTime) + 15} min</span>
-                      </div>
+                <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '32px', paddingTop: '20px' }} className="no-scrollbar">
+                  {sectionRecipes.map((recipe) => {
+                    const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
+                    return (
+                      <motion.div
+                        key={recipe.id}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedRecipe(recipe)}
+                        style={{
+                          minWidth: '280px', height: '150px',
+                          background: isDark ? '#000000cc' : '#ffffff',
+                          borderRadius: '24px',
+                          borderWidth: '1px',
+                          borderColor: '#ffffff27',
+                          padding: '24px 110px 24px 24px',
+                          position: 'relative',
+                          boxShadow: isDark ? '0 8px 30px rgba(0, 0, 0, 1)' : '0 12px 30px rgba(0,0,0,0.06)',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                      >
+                        <h3 style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#ffffff' : '#111827', margin: '0 0 12px', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
 
-                      {/* Circular overflowing image */}
-                      <div style={{
-                        position: 'absolute', right: '-35px', top: '50%', transform: 'translateY(-50%)',
-                        width: '130px', height: '130px', borderRadius: '50%',
-                        boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
-                        overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
-                      }}>
-                        <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                    </motion.div>
-                  ))}
+                        {/* Pilules d'informations (Région & Temps) */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              padding: '5px 12px', borderRadius: '50px',
+                              backgroundColor: isDark ? 'rgba(251, 86, 7, 0.15)' : 'rgba(251, 86, 7, 0.08)',
+                              color: '#fb5607', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                              border: isDark ? '1px solid rgba(251, 86, 7, 0.3)' : '1px solid rgba(251, 86, 7, 0.2)'
+                            }}>
+                              {recipe.region || "Chef"}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '5px',
+                              padding: '5px 12px', borderRadius: '50px',
+                              backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                              color: isDark ? '#e5e7eb' : '#4b5563', fontSize: '11px', fontWeight: 800,
+                              border: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'
+                            }}>
+                              <Clock size={12} strokeWidth={2.5} className="mb-[1px]" />
+                              {recipe.prepTime}
+                            </span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
+                              style={{
+                                width: 28, height: 28, borderRadius: '50%',
+                                background: isFav ? '#ef4444' : (isDark ? '#374151' : '#f3f4f6'),
+                                border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', flexShrink: 0
+                              }}
+                            >
+                              <Heart size={14} style={{ color: isFav ? '#fff' : (isDark ? '#9ca3af' : '#6b7280'), fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Circular overflowing image */}
+                        <div style={{
+                          position: 'absolute', right: '-35px', top: '50%', transform: 'translateY(-50%)',
+                          width: '130px', height: '130px', borderRadius: '50%',
+                          boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
+                          overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
+                        }}>
+                          <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </section>
             );
@@ -1970,7 +1883,7 @@ export default function App() {
                 </div>
 
                 {/* Horizontal scroll tray — styled like 'Recettes Populaires' */}
-                <div style={{ display: 'flex', overflowX: 'auto', gap: '24px', paddingBottom: '40px', paddingTop: '60px', paddingLeft: '32px', paddingRight: '32px' }} className="no-scrollbar">
+                <div style={{ display: 'flex', overflowX: 'auto', gap: '24px', paddingBottom: '40px', paddingTop: '78px', paddingLeft: '32px', paddingRight: '32px' }} className="no-scrollbar">
                   {sectionRecipes.map((recipe, ridx) => {
                     const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                     return (
@@ -1980,8 +1893,10 @@ export default function App() {
                         onClick={() => setSelectedRecipe(recipe)}
                         style={{
                           minWidth: '170px', width: '170px',
-                          background: isDark ? '#1f2937' : '#ffffff',
+                          background: isDark ? '#000000cc' : '#ffffff',
                           borderRadius: '28px',
+                          borderWidth: '1px',
+                          borderColor: '#ffffff27',
                           padding: '85px 20px 20px',
                           position: 'relative',
                           boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.3)' : '0 12px 30px rgba(0,0,0,0.04)',
@@ -2961,11 +2876,14 @@ export default function App() {
                     <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/10 pointer-events-none"></div>
                   </div>
 
-                  <div className="absolute left-6 top-10 flex flex-col gap-5 z-20 items-center">
-                    <button onClick={goBack} className="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-stone-800 shadow-lg shadow-black/10 transition-colors pointer-events-auto">
-                      <ChevronLeft size={28} strokeWidth={2.5} />
+                  <div className="fixed left-6 top-8 flex flex-col gap-3 z-[80] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
+                    backgroundColor: isDark ? 'rgba(31, 41, 55, 0.65)' : 'rgba(243, 244, 246, 0.75)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.6)'
+                  }}>
+                    <button onClick={goBack} className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center text-[#fb5607] shadow-sm transition-transform active:scale-95 pointer-events-auto shrink-0">
+                      <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
                     </button>
-                    <div className="h-2"></div>
+
                     <button
                       onClick={async () => {
                         const shareData = {
@@ -2984,13 +2902,13 @@ export default function App() {
                           console.log('Partage annulé ou erreur', err);
                         }
                       }}
-                      className="w-12 h-12 bg-white rounded-3xl flex items-center justify-center shadow-lg shadow-orange-900/5 text-[#fb5607] pointer-events-auto"
+                      className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center shadow-sm text-[#fb5607] transition-transform active:scale-95 pointer-events-auto shrink-0"
                     >
                       <Share2 size={18} strokeWidth={2.5} />
                     </button>
 
-                    <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} className={`w-12 h-12 rounded-3xl flex items-center justify-center shadow-lg transition-all pointer-events-auto ${currentUser?.favorites.includes(recipe.id) ? 'bg-[#fb5607] text-white shadow-[#fb5607]/30' : 'bg-white text-[#fb5607] shadow-orange-900/5'}`}>
-                      <Heart size={18} fill={currentUser?.favorites.includes(recipe.id) ? 'currentColor' : 'none'} strokeWidth={currentUser?.favorites.includes(recipe.id) ? 0 : 2.5} />
+                    <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center shadow-sm transition-transform active:scale-95 pointer-events-auto shrink-0">
+                      <Heart size={18} color={currentUser?.favorites.includes(recipe.id) ? '#ef4444' : '#fb5607'} fill={currentUser?.favorites.includes(recipe.id) ? '#ef4444' : 'none'} strokeWidth={currentUser?.favorites.includes(recipe.id) ? 0 : 2.5} />
                     </button>
                   </div>
                 </div>
