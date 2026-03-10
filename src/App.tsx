@@ -85,6 +85,7 @@ const normalizeString = (str: string) =>
 
 // --- Sub-Components & Helpers ---
 
+// Petit badge pour afficher la difficulté d'une recette avec une couleur spécifique
 const DifficultyBadge = ({ difficulty, t }: { difficulty: Difficulty; t: any }) => {
   const colors: Record<string, string> = {
     'Facile': 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -110,24 +111,27 @@ const DifficultyBadge = ({ difficulty, t }: { difficulty: Difficulty; t: any }) 
   );
 };
 
+// Composant pour afficher une étape de préparation (ex: 1. Faire bouillir l'eau)
 const PreparationStep = ({ step, index, recipeId }: { step: string; index: number; recipeId: string }) => {
-  const [isDone, setIsDone] = useState(false);
+  const [isDone, setIsDone] = useState(false); // État interne : l'utilisateur a-t-il coché cette étape ?
   return (
     <motion.div
       key={`${recipeId}-step-${index}`}
-      initial={{ opacity: 0, x: -10 }}
+      initial={{ opacity: 0, x: -10 }} // Animation d'entrée : arrive de la gauche
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true }}
-      transition={{ delay: index * 0.05 }}
-      onClick={() => setIsDone(!isDone)}
+      transition={{ delay: index * 0.05 }} // Petit décalage pour un effet cascade
+      onClick={() => setIsDone(!isDone)} // Au clic, on inverse "isDone"
       className={`group flex gap-4 p-4 rounded-[24px] transition-all duration-300 cursor-pointer border ${isDone ? 'bg-emerald-50/40 border-emerald-100/50' : 'bg-stone-50 border-stone-100/50 active:bg-stone-100'}`}
     >
       <div className="flex-shrink-0 mt-0.5">
+        {/* Rond de numérotation qui se transforme en coche verte si terminée */}
         <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isDone ? 'bg-emerald-500 border-emerald-500 shadow-sm shadow-emerald-200' : 'bg-white border-stone-200 group-hover:border-terracotta'}`}>
           {isDone && <CheckCircle2 size={14} className="text-white" />}
           {!isDone && <span className="text-[10px] font-black text-stone-400">{index + 1}</span>}
         </div>
       </div>
+      {/* Le texte de l'étape, barré si terminé */}
       <p className={`text-[13px] font-medium leading-relaxed transition-all duration-300 ${isDone ? 'text-stone-400 line-through' : 'text-stone-700'}`}>
         {step}
       </p>
@@ -146,33 +150,44 @@ const AUTOPLAY_DURATION = 4500;
 
 
 // Material-style SVG icons (filled active, outlined inactive)
+// Icônes personnalisées pour la barre de navigation
 const NavIcon = ({ id, active, isDark }: { id: string; active: boolean; isDark?: boolean }) => {
-  // Active icon: orange on white bubble (light) | white on black bubble (dark AMOLED)
+  // Couleur active : orange en mode clair, blanc en mode sombre AMOLED
   const color = active ? (isDark ? '#ffffff' : '#F94D00') : 'rgba(255,255,255,0.65)';
   const icons: Record<string, React.ReactElement> = {
     home: active ? (
+      // Icône Accueil (Home) pleine
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /></svg>
     ) : (
+      // Icône Accueil (Home) vide
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinejoin="round"><path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9" /></svg>
     ),
     search: active ? (
+      // Icône Recherche (Search) pleine
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14" /></svg>
     ) : (
+      // Icône Recherche (Search) vide
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="22" y2="22" /></svg>
     ),
     favs: active ? (
+      // Icône Favoris (Hearts) pleine
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54z" /></svg>
     ) : (
+      // Icône Favoris (Hearts) vide
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" /></svg>
     ),
     cart: active ? (
+      // Icône Panier (Cart) pleine
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm0 10a2 2 0 110-4 2 2 0 010 4z" /></svg>
     ) : (
+      // Icône Panier (Cart) vide
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" /></svg>
     ),
     profile: active ? (
+      // Icône Profil pleine
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" /></svg>
     ) : (
+      // Icône Profil vide
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
     ),
   };
@@ -222,15 +237,18 @@ const benineseJuices = [
 
 // --- Deep Views ---
 
+// Vue pour gérer la sécurité (mot de passe et email)
 const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, showAlert }: any) => {
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [formData, setFormData] = useState({ current: '', new: '', confirm: '', email: currentUser?.email || '' });
-  const [showPass, setShowPass] = useState({ current: false, new: false, confirm: false });
+  const [showSuccess, setShowSuccess] = useState(false); // Affiche un message de succès après modification
+  const [formData, setFormData] = useState({ current: '', new: '', confirm: '', email: currentUser?.email || '' }); // Formulaire temporaire
+  const [showPass, setShowPass] = useState({ current: false, new: false, confirm: false }); // Gérer l'affichage des mots de passe (oeil)
 
+  // Fonction pour enregistrer les changements
   const handleSave = () => {
     if (!currentUser) return;
 
     if (securitySubView === 'password') {
+      // Vérifications pour le mot de passe
       if (!formData.new || formData.new !== formData.confirm) {
         showAlert("Les mots de passe ne correspondent pas", "error");
         return;
@@ -241,21 +259,22 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
       }
       const updatedUser = { ...currentUser, password: formData.new };
       setCurrentUser(updatedUser);
-      dbService.setCurrentUser(updatedUser);
+      dbService.setCurrentUser(updatedUser); // Sauvegarde locale
     } else if (securitySubView === 'email') {
+      // Vérifications pour l'email
       if (!formData.email || !formData.email.includes('@')) {
         showAlert("Email invalide", "error");
         return;
       }
       const updatedUser = { ...currentUser, email: formData.email };
       setCurrentUser(updatedUser);
-      dbService.setCurrentUser(updatedUser);
+      dbService.setCurrentUser(updatedUser); // Sauvegarde locale
     }
 
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
-      setSecuritySubView('main');
+      setSecuritySubView('main'); // Retour à l'écran de sécurité principal
     }, 2000);
   };
 
@@ -366,16 +385,18 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
   }
 };
 
+// Vue pour gérer les informations personnelles (nom, photo)
 const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(currentUser?.name || '');
-  const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isEditing, setIsEditing] = useState(false); // Mode édition activé ou non
+  const [name, setName] = useState(currentUser?.name || ''); // Nom à modifier
+  const [isSaving, setIsSaving] = useState(false); // Est-on en train d'enregistrer sur Internet ?
+  const fileInputRef = useRef<HTMLInputElement>(null); // Référence pour l'input caché de sélection de fichier
 
+  // Fonction pour changer la photo de profil
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && currentUser) {
-      // Restriction de taille à 2Mo avant traitement
+      // Restriction de taille à 2Mo
       if (file.size > 2 * 1024 * 1024) {
         showAlert("L'image est trop volumineuse. Veuillez choisir une image de moins de 2Mo.", "error");
         return;
@@ -386,23 +407,18 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
         const img = new Image();
         img.src = reader.result as string;
         img.onload = async () => {
-          // Créer un canvas pour redimensionner et compresser l'image
+          // Utilisation d'un Canvas HTML pour redimensionner et compresser l'image (gain de place)
           const canvas = document.createElement('canvas');
           const MAX_WIDTH = 400;
           const MAX_HEIGHT = 400;
           let width = img.width;
           let height = img.height;
 
+          // Calcul des proportions
           if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
+            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
           } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
+            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
           }
 
           canvas.width = width;
@@ -410,13 +426,15 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
 
-          // Compresser en JPEG avec une qualité de 0.7
+          // Transformation en format texte compressé (Base64 JPEG)
           const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
 
+          // Enregistrement local
           const updatedUser = dbService.updateAvatar(currentUser.id, compressedBase64);
           if (updatedUser) {
             setCurrentUser({ ...updatedUser });
             try {
+              // Tentative de synchronisation avec le serveur cloud
               await dbService.syncUserToCloud(updatedUser);
               showAlert(t.saveSuccess || "Photo de profil mise à jour !", "success");
             } catch (err) {
@@ -425,10 +443,11 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
           }
         };
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(file); // Lecture du fichier sélectionné
     }
   };
 
+  // Fonction pour enregistrer le nouveau nom
   const handleSave = async () => {
     if (!currentUser || !name.trim()) return;
     setIsSaving(true);
@@ -436,8 +455,8 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
       const updatedUser = { ...currentUser, name: name.trim() };
       setCurrentUser(updatedUser);
       dbService.setCurrentUser(updatedUser);
-      await dbService.syncUserToCloud(updatedUser);
-      setIsEditing(false);
+      await dbService.syncUserToCloud(updatedUser); // Synchro cloud
+      setIsEditing(false); // Quitter le mode édition
       showAlert(t.saveSuccess || "Modifications enregistrées !", "success");
     } catch (err) {
       showAlert("Erreur lors de la sauvegarde", "error");
@@ -826,6 +845,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
 
 // --- Modern Alert Component ---
 
+// Composant d'alerte moderne (Pop-up) personnalisé
 const ModernAlertComponent = ({
   show,
   message,
@@ -856,11 +876,12 @@ const ModernAlertComponent = ({
           className="w-full max-w-[320px] bg-white rounded-[40px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.3)] border border-white/20"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* En-tête de l'alerte (couleur selon le type) */}
           <div className={`h-32 flex items-center justify-center relative overflow-hidden ${type === 'success' ? 'bg-emerald-50 text-emerald-500' :
             type === 'error' ? 'bg-rose-50 text-rose-500' :
               'bg-[#fb5607]/5 text-[#fb5607]'
             }`}>
-            {/* Background Glow */}
+            {/* Effet lumineux en arrière-plan */}
             <div className={`absolute inset-0 opacity-20 blur-3xl ${type === 'success' ? 'bg-emerald-400' :
               type === 'error' ? 'bg-rose-400' :
                 'bg-[#fb5607]'
@@ -880,6 +901,7 @@ const ModernAlertComponent = ({
           <div className="p-8 pb-10 text-center">
             <p className="text-sm font-black text-stone-900 leading-relaxed mb-8 px-2">{message}</p>
             <div className="flex flex-col gap-2">
+              {/* Bouton de confirmation ou simple bouton fermer */}
               <button
                 onClick={() => {
                   if (onConfirm) onConfirm();
@@ -892,6 +914,7 @@ const ModernAlertComponent = ({
               >
                 {onConfirm ? "Confirmer" : "C'est compris"}
               </button>
+              {/* Bouton Annuler (si confirmation demandée) */}
               {onConfirm && (
                 <button
                   onClick={onClose}
@@ -910,17 +933,20 @@ const ModernAlertComponent = ({
 
 // --- Main Application ---
 
+// --- APPLICATION PRINCIPALE (COMPOSANT RACINE) ---
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(dbService.getCurrentUser());
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [authFormData, setAuthFormData] = useState({ name: '', email: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authStep, setAuthStep] = useState<'form' | 'otp'>('form');
-  const [sentOtp, setSentOtp] = useState('');
-  const [otpInput, setOtpInput] = useState('');
-  const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  // --- ÉTATS (MÉMOIRE) DE L'APPLICATION ---
+  const [currentUser, setCurrentUser] = useState<User | null>(dbService.getCurrentUser()); // Utilisateur actuellement connecté
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login'); // Mode choisi : Connexion ou Inscription
+  const [authFormData, setAuthFormData] = useState({ name: '', email: '', password: '' }); // Données saisies dans le formulaire
+  const [showPassword, setShowPassword] = useState(false); // Masquer/Afficher le mot de passe
+  const [isAuthLoading, setIsAuthLoading] = useState(false); // Est-on en train de se connecter ?
+  const [authError, setAuthError] = useState<string | null>(null); // Message d'erreur éventuel lors de l'auth
+  const [authStep, setAuthStep] = useState<'form' | 'otp'>('form'); // Étape d'authentification (Formulaire ou Code OTP)
+  const [sentOtp, setSentOtp] = useState(''); // Code OTP qui a été envoyé par mail
+  const [otpInput, setOtpInput] = useState(''); // Code OTP saisi par l'utilisateur
+  const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]; // Références pour les cases OTP
+
 
   useEffect(() => {
     // Initial Auth Check
@@ -1002,13 +1028,15 @@ export default function App() {
     onConfirm?: () => void;
   }>({ show: false, message: '', type: 'info' });
 
+  // Effet pour gérer l'état de connexion au lancement de l'appli
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+    const handleOnline = () => setIsOffline(false); // On est en ligne
+    const handleOffline = () => setIsOffline(true); // On a perdu internet
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // On nettoie les écouteurs d'événements si le composant s'arrête
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -1044,14 +1072,16 @@ export default function App() {
     };
   }, []);
 
+  // Effet pour synchroniser les données avec le serveur Supabase
   useEffect(() => {
+    // Fonction pour récupérer les recettes
     const syncRecipes = async () => {
       setIsSyncing(true);
       setSyncError(false);
       try {
         const remote = await dbService.getRemoteRecipes();
         if (remote && remote.length > 0) {
-          setAllRecipes(remote);
+          setAllRecipes(remote); // Mise à jour de la liste locale avec les données du serveur
           setHasLoadedAtLeastOnce(true);
         } else if (allRecipes.length === 0) {
           setSyncError(true);
@@ -1066,6 +1096,7 @@ export default function App() {
       }
     };
 
+    // Fonction pour récupérer les sections de la page d'accueil
     const syncSections = async () => {
       try {
         const sections = await dbService.getRemoteSections();
@@ -1075,14 +1106,15 @@ export default function App() {
       }
     };
 
-    // Always attempt sync; dbService handles offline fallback to cache
+    // Lancement des synchronisations
     syncRecipes();
     syncSections();
 
-    // 1. Realtime Sync Subscription
+    // Configuration des mises à jour en temps réel (Realtime)
     let channel: any;
     let sectionsChannel: any;
     if (dbService.supabase) {
+      // Écoute des changements sur la table 'recipes'
       channel = dbService.supabase
         .channel('schema-db-changes')
         .on(
@@ -1095,6 +1127,7 @@ export default function App() {
         )
         .subscribe();
 
+      // Écoute des changements sur la table 'home_sections'
       sectionsChannel = dbService.supabase
         .channel('sections-db-changes')
         .on(
@@ -1108,7 +1141,7 @@ export default function App() {
         .subscribe();
     }
 
-    // 2. Foreground Sync (Capacitor)
+    // Gérer le retour de l'application au premier plan (sur mobile)
     const handleAppStateChange = (state: any) => {
       if (state.isActive) {
         console.log('App resumed, syncing recipes and sections...');
@@ -1119,6 +1152,7 @@ export default function App() {
     const appListener = CapacitorApp.addListener('appStateChange', handleAppStateChange);
 
     return () => {
+      // Nettoyage des abonnements lors de la fermeture
       if (channel) dbService.supabase?.removeChannel(channel);
       if (sectionsChannel) dbService.supabase?.removeChannel(sectionsChannel);
       appListener.then(l => l.remove());
@@ -1170,16 +1204,16 @@ export default function App() {
     }
   }, [selectedRecipe]);
 
-  // Navigation Logic
+  // Logique de navigation (changer d'onglet)
   const navigateTo = (tab: string) => {
     if (tab === activeTab) return;
-    setHistory(prev => [...prev, tab]);
-    setActiveTab(tab);
-    setSelectedRecipe(null);
-    setProfileSubView(null);
+    setHistory(prev => [...prev, tab]); // Mémorise l'historique pour le bouton "Retour"
+    setActiveTab(tab); // Change l'onglet actif
+    setSelectedRecipe(null); // Ferme une éventuelle recette ouverte
+    setProfileSubView(null); // Réinitialise les sous-vues de profil
     setSecuritySubView('main');
     setIsScrolled(false);
-    if (mainScrollRef.current) mainScrollRef.current.scrollTo(0, 0);
+    if (mainScrollRef.current) mainScrollRef.current.scrollTo(0, 0); // Remonte en haut de page
   };
 
   const onMainScroll = (e: React.UIEvent<HTMLElement>) => {
@@ -1187,25 +1221,31 @@ export default function App() {
     if (e.currentTarget.scrollTop <= 50) setIsSearchExpanded(false);
   };
 
+  // Fonction pour revenir en arrière (Bouton physique Retour sur Android ou bouton virtuel)
   const goBack = () => {
+    // 1. Si une recette est ouverte, on la ferme
     if (selectedRecipe) {
       setSelectedRecipe(null);
       return;
     }
+    // 2. Si on est dans un menu de sécurité, on revient au menu profil principal
     if (profileSubView === 'Sécurité du compte' && securitySubView !== 'main') {
       setSecuritySubView('main');
       return;
     }
+    // 3. Si on est dans une sous-vue de profil (ex: paramètres), on revient au profil
     if (profileSubView) {
       setProfileSubView(null);
       return;
     }
+    // 4. Si on a des filtres de recherche actifs, on les efface
     if (selectedCategory || selectedRegion || searchQuery) {
       setSelectedCategory(null);
       setSelectedRegion(null);
       setSearchQuery('');
       return;
     }
+    // 5. Sinon, on recule dans l'historique des onglets
     if (history.length > 1) {
       const newHistory = [...history];
       newHistory.pop();
@@ -1214,6 +1254,7 @@ export default function App() {
       setActiveTab(prevTab);
       return;
     }
+    // 6. Si on est au tout début de l'appli, on propose de quitter l'application
     CapacitorApp.exitApp();
   };
 
@@ -1287,14 +1328,16 @@ export default function App() {
     );
   };
 
+  // Déconnexion de l'utilisateur
   const handleLogout = async () => {
-    // Persist current dark mode preference before clearing user
+    // Sauvegarde du mode sombre avant de partir
     const currentDarkMode = currentUser?.settings?.darkMode === true;
     localStorage.setItem('afrocuisto_dark_mode', String(currentDarkMode));
-    await dbService.signOut();
+
+    await dbService.signOut(); // Appel de la déconnexion Supabase
     dbService.setCurrentUser(null);
     setCurrentUser(null);
-    setActiveTab('home');
+    setActiveTab('home'); // Retour à l'accueil
     setHistory(['home']);
     setSelectedRecipe(null);
     showAlert("Vous êtes maintenant déconnecté", "success");
