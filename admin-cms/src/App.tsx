@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
+ * ============================================================================
+ * Rôle principal : Point d'entrée de l'interface d'administration. Il vérifie si l'administrateur est connecté. Si oui, il affiche le tableau de bord, sinon il le renvoie sur la page de connexion.
+ * 
+ * Conseils de lecture :
+ * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
+ * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
+ * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
+ * ============================================================================
+ */
+
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';

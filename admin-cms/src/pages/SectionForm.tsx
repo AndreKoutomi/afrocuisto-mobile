@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
+ * ============================================================================
+ * Rôle principal : Permet de créer ou de modifier visuellement une rubrique dynamique de l'accueil (ex: 'Plats épicés', 'Recettes du mois').
+ * 
+ * Conseils de lecture :
+ * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
+ * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
+ * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
+ * ============================================================================
+ */
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useParams, Link } from 'react-router-dom';

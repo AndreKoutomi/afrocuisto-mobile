@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
+ * ============================================================================
+ * Rôle principal : Page des paramètres pour personnaliser le comportement global de l'application.
+ * 
+ * Conseils de lecture :
+ * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
+ * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
+ * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
+ * ============================================================================
+ */
+
 import { useState, useEffect } from 'react';
 import { Save, Key, Layers, CheckCircle2, AlertCircle, Beaker, Loader2 } from 'lucide-react';
 import { aiService } from '../lib/ai';

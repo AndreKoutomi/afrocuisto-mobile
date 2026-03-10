@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
+ * ============================================================================
+ * Rôle principal : Service de gestion des données. Agit comme un pont intermédiaire entre l'application (le frontend) et Supabase (la base de données en nuage). Il contient toutes les requêtes (sauvegarde, connexion, déconnexion, récupération de recettes).
+ * 
+ * Conseils de lecture :
+ * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
+ * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
+ * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
+ * ============================================================================
+ */
+
 import { User, Recipe } from './types';
 import type { DishSuggestionPayload } from './components/DishSuggestionForm';
 import { createClient } from '@supabase/supabase-js';

@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
+ * ============================================================================
+ * Rôle principal : Le tableau de bord central. Affiche des statistiques rapides (nombre total de recettes, utilisateurs récents) pour aider l'administrateur.
+ * 
+ * Conseils de lecture :
+ * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
+ * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
+ * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
+ * ============================================================================
+ */
+
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Book, Users, Star } from 'lucide-react';

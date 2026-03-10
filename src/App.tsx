@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
+ * ============================================================================
+ * Rôle principal : Cœur de l'application mobile. Gère l'interface utilisateur (UI), la navigation entre les onglets (Accueil, Explorer, Favoris, Profil), les animations fluides, l'affichage des détails d'une recette, et l'état global de l'application.
+ * 
+ * Conseils de lecture :
+ * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
+ * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
+ * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
+ * ============================================================================
+ */
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import DishSuggestionForm from './components/DishSuggestionForm';
 import { FeaturedCarousel } from './components/FeaturedCarousel';

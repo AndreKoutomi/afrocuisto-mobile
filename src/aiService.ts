@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
+ * ============================================================================
+ * Rôle principal : Service d'Intelligence Artificielle. Se connecte aux API de Google Gemini ou Anthropic Claude pour générer des recommandations culinaires personnalisées et intelligentes aux utilisateurs.
+ * 
+ * Conseils de lecture :
+ * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
+ * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
+ * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
+ * ============================================================================
+ */
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Recipe } from "./types";
 

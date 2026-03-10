@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
+ * ============================================================================
+ * Rôle principal : Consigne et liste de façon sécurisée les transactions ou les achats liés à l'application.
+ * 
+ * Conseils de lecture :
+ * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
+ * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
+ * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
+ * ============================================================================
+ */
+
 import { useState } from 'react';
 import { CreditCard, Search, Download, Filter, FileText, ArrowUpRight, ArrowDownRight, RefreshCw, XCircle, CheckCircle2, Clock } from 'lucide-react';
 
