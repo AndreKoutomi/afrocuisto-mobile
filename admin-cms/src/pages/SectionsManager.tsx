@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import {
     Plus, Trash2, ArrowUp, ArrowDown, LayoutGrid, GalleryHorizontal,
-    List, AlignJustify, Smartphone, Compass, Sparkles, RefreshCw,
-    Star
+    List, AlignJustify, Smartphone, Compass, Sparkles, RefreshCw
 } from 'lucide-react';
 import { aiService } from '../lib/ai';
 import { Link } from 'react-router-dom';
@@ -11,6 +10,7 @@ import { Link } from 'react-router-dom';
 const TYPE_META: Record<string, { label: string; icon: any; color: string; bg: string; description: string }> = {
     dynamic_carousel: { label: 'Carrousel', icon: GalleryHorizontal, color: '#7c3aed', bg: '#ede9fe', description: 'Défilement fluide et cinématique de recettes' },
     horizontal_list: { label: 'Horizontal', icon: AlignJustify, color: '#0891b2', bg: '#e0f2fe', description: 'Liste à défilement horizontal compact' },
+    horizontal_list_v2: { label: 'Horizontal v2', icon: GalleryHorizontal, color: '#8b5cf6', bg: '#f5f3ff', description: 'Scroll horizontal premium avec cards élégantes' },
     vertical_list_1: { label: 'Liste simple', icon: List, color: '#059669', bg: '#d1fae5', description: 'Cartes verticales avec image et détails' },
     vertical_list_2: { label: 'Grille 2col', icon: LayoutGrid, color: '#d97706', bg: '#fef3c7', description: 'Grille en deux colonnes, style magazine' },
 };

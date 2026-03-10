@@ -143,7 +143,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                                 height: '360px', // Fixed height for alignment
                                 borderRadius: 28,
                                 overflow: 'hidden',
-                                boxShadow: '0 12px 30px rgba(0,0,0,0.18)',
+                                boxShadow: '0 12px 10px rgba(131, 131, 131, 0.18)',
                                 backgroundColor: '#f3f4f6',
                             }}>
                                 <img
@@ -159,7 +159,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                                     bottom: 0,
                                     left: 0,
                                     right: 0,
-                                    height: '40%',
+                                    height: '20%',
                                     background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)',
                                     pointerEvents: 'none',
                                 }} />

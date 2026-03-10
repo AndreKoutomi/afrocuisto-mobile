@@ -361,10 +361,7 @@ export function SectionForm() {
                             </div>
                         </div>
                         <div style={{ padding: '24px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
-
-
-                                {/* ── DYNAMIC CAROUSEL (new bank-card style) ── */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '14px' }}>                                {/* ── DYNAMIC CAROUSEL (new bank-card style) ── */}
                                 {(() => {
                                     const isActive = formData.type === 'dynamic_carousel';
                                     return (
@@ -467,6 +464,36 @@ export function SectionForm() {
                                     );
                                 })()}
 
+                                {/* ── HORIZONTAL LIST V2 ── */}
+                                {(() => {
+                                    const isActive = formData.type === 'horizontal_list_v2';
+                                    return (
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, type: 'horizontal_list_v2' }))}
+                                            style={{ border: isActive ? '2.5px solid #8b5cf6' : '2px solid #f0f0f0', background: isActive ? '#f5f3ff' : '#fafafa', borderRadius: '18px', padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', transition: 'all 0.2s', position: 'relative' }}>
+                                            {isActive && <div style={{ position: 'absolute', top: '8px', right: '8px', color: '#8b5cf6' }}><CheckCircle2 size={14} /></div>}
+                                            {/* Mockup — Nos suggestions style */}
+                                            <div style={{ width: '100%', aspectRatio: '9/7', display: 'flex', gap: '8px', padding: '4px 0', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
+                                                <div style={{ width: '85%', height: '65%', background: '#fff', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)', display: 'flex', position: 'relative', flexShrink: 0 }}>
+                                                    <div style={{ flex: 1, padding: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px', maxWidth: '60%' }}>
+                                                        <div style={{ width: '90%', height: '3px', background: '#111827', borderRadius: '2px' }} />
+                                                        <div style={{ width: '60%', height: '2px', background: '#9ca3af', borderRadius: '1px' }} />
+                                                        <div style={{ width: '40%', height: '4px', background: '#111827', borderRadius: '2px', marginTop: '4px' }} />
+                                                    </div>
+                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #11998e, #38ef7d)', position: 'absolute', right: '-10px', top: '50%', transform: 'translateY(-50%)', border: '2px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }} />
+                                                </div>
+                                                <div style={{ width: '30%', height: '65%', background: '#fff', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)', flexShrink: 0, padding: '6px' }}>
+                                                    <div style={{ width: '90%', height: '3px', background: '#111827', borderRadius: '2px' }} />
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <p style={{ margin: 0, fontSize: '11px', fontWeight: 800, color: isActive ? '#8b5cf6' : '#374151' }}>Horizontal v2</p>
+                                                <p style={{ margin: 0, fontSize: '9px', color: '#9ca3af', marginTop: '2px' }}>Scroll latéral</p>
+                                            </div>
+                                        </button>
+                                    );
+                                })()}
+
+
                                 {/* ── VERTICAL LIST 1 (1 col) ── */}
                                 {(() => {
                                     const isActive = formData.type === 'vertical_list_1';
@@ -558,6 +585,7 @@ export function SectionForm() {
                                 <p style={{ margin: 0, fontSize: '11px', color: '#6b7280', fontWeight: 500, lineHeight: 1.6 }}>
                                     {formData.type === 'dynamic_carousel' && "Carrousel de cartes premium style bancaire — dégradé coloré, image à droite, contenu à gauche, aperçu de la carte suivante. Style moderne pour les sections vedettes."}
                                     {formData.type === 'horizontal_list' && "Rangée de cards défilantes en scroll horizontal. Format compact adapté aux sections secondaires avec beaucoup de plats."}
+                                    {formData.type === 'horizontal_list_v2' && "Scroll horizontal premium avec cards élégantes et image circulaire débordante. Idéal pour mettre en avant une sélection ciblée comme des suggestions."}
                                     {formData.type === 'vertical_list_1' && "Liste verticale avec une seule colonne. Format épuré avec image, nom et infos complémentaires sur chaque ligne."}
                                     {formData.type === 'vertical_list_2' && "Grille à 2 colonnes pour une vue compacte et visuelle. Parfait pour les pages de découverte avec de nombreuses recettes."}
                                 </p>
