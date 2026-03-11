@@ -559,7 +559,7 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
   );
 };
 
-const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, updateSettings, handleLogout, settings, handleSaveSettings, isSyncing, hasLoadedAtLeastOnce, showAlert, handleDeleteAccount }: any) => {
+const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, updateSettings, handleLogout, settings, isSyncing, hasLoadedAtLeastOnce, showAlert, handleDeleteAccount }: any) => {
   const renderViewContent = () => {
     switch (profileSubView) {
       case 'personalInfo':
@@ -663,13 +663,6 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
                 <span className="font-bold text-stone-700 text-sm">{t.privacy}</span>
               </div>
               <ChevronRight size={16} className="text-stone-400" />
-            </button>
-            <button
-              onClick={handleSaveSettings}
-              className="w-full mt-6 bg-terracotta text-white py-4 rounded-full font-bold font-sm shadow-lg shadow-terracotta/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 size={18} />
-              {t.save} {t.settings.toLowerCase()}
             </button>
 
             {/* Sync Status Indicator */}
@@ -1271,7 +1264,7 @@ export default function App() {
   const settings = currentUser?.settings || { darkMode: savedDarkMode, language: 'fr', unitSystem: 'metric' };
   const t = translations[settings.language as LanguageCode] || translations.fr;
 
-  const updateSettings = (newSettings: Partial<UserSettings>) => {
+  const updateSettings = async (newSettings: Partial<UserSettings>) => {
     if (currentUser) {
       const updatedUser = {
         ...currentUser,
@@ -1283,17 +1276,13 @@ export default function App() {
       if ('darkMode' in newSettings) {
         localStorage.setItem('afrocuisto_dark_mode', String(newSettings.darkMode));
       }
-    }
-  };
 
-  const handleSaveSettings = async () => {
-    // Re-read the current user from the local store to avoid stale closure
-    const latestUser = dbService.getCurrentUser();
-    if (latestUser) {
-      dbService.setCurrentUser(latestUser);
-      // Sync to Supabase cloud
-      await dbService.syncUserToCloud(latestUser);
-      showAlert("Paramètres enregistrés et synchronisés !", "success");
+      // Auto-sync settings to the cloud
+      try {
+        await dbService.syncUserToCloud(updatedUser);
+      } catch (err) {
+        console.error("Failed to sync settings:", err);
+      }
     }
   };
 
@@ -2624,7 +2613,6 @@ export default function App() {
                   updateSettings={updateSettings}
                   handleLogout={handleLogout}
                   settings={settings}
-                  handleSaveSettings={handleSaveSettings}
                   isSyncing={isSyncing}
                   hasLoadedAtLeastOnce={hasLoadedAtLeastOnce}
                   showAlert={showAlert}
@@ -2850,11 +2838,12 @@ export default function App() {
 
       return (
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 28, filter: 'blur(4px)' }}
-          animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
-          exit={{ opacity: 0, scale: 0.96, y: 18, filter: 'blur(3px)' }}
-          transition={{ type: 'spring', damping: 38, stiffness: 480, mass: 0.5 }}
-          className="absolute inset-0 z-[700] bg-white overflow-hidden w-full flex flex-col origin-bottom shadow-[0_-20px_60px_rgba(0,0,0,0.15)]"
+          initial={{ opacity: 0, scale: 0.96, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 30 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 380, mass: 0.8 }}
+          style={{ willChange: 'transform, opacity' }}
+          className={`absolute inset-0 z-[700] overflow-hidden w-full flex flex-col origin-bottom shadow-[0_-20px_60px_rgba(0,0,0,0.15)] ${isDark ? 'bg-[#000000]' : 'bg-white'}`}
         >
           <div className="absolute top-0 inset-x-0 z-[710] pointer-events-none p-6 pt-12">
             {/* Old top bar intentionally removed to allow the new layout */}
@@ -2864,10 +2853,11 @@ export default function App() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={recipe.id}
-                initial={{ opacity: 0, x: 10 }}
+                initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={springTransition}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300, mass: 0.8 }}
+                style={{ willChange: 'transform, opacity' }}
                 className="absolute inset-x-0 top-0"
               >
                 <div className="relative h-[48vh] w-full shrink-0 overflow-hidden">
@@ -3010,6 +3000,7 @@ export default function App() {
                         : `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent('recette ' + recipe.name)}&controls=1`}
                       title="Tutoriel de préparation"
                       frameBorder="0"
+                      loading="lazy"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     ></iframe>
