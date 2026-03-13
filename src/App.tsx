@@ -2533,8 +2533,8 @@ export default function App() {
     const favoriteRecipes = dbService.getFavorites(currentUser!, allRecipes);
 
     return (
-      <div className={`flex-1 flex flex-col pb-44 pt-4 transition-colors ${isDark ? 'bg-black' : 'bg-stone-50'}`}>
-        <header className="px-6 pt-4 pb-2 flex items-center justify-between">
+      <div className={`flex-1 flex flex-col pb-44 pt-4 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
+        <header className="px-6 pt-4 pb-8 flex items-center justify-between">
           <h1 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.favorites}</h1>
           {isOffline && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
@@ -2577,7 +2577,7 @@ export default function App() {
   };
 
   const renderProfile = () => (
-    <div className={`flex-1 flex flex-col pb-44 pt-4 relative ${isDark ? 'bg-black' : 'bg-stone-50'}`}>
+    <div className={`flex-1 flex flex-col pb-44 pt-4 relative ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
       <AnimatePresence>
         {profileSubView && (
           <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={springTransition} className={`absolute inset-0 z-50 p-6 pt-6 flex flex-col ${isDark ? 'bg-black' : 'bg-white'}`}>
@@ -3248,8 +3248,8 @@ export default function App() {
     const totalXOF = list.reduce((acc, i) => acc + (parseFloat(i.priceXOF ?? '0') || 0), 0);
 
     return (
-      <div className={`flex-1 flex flex-col pb-44 animate-in fade-in slide-in-from-bottom-4 duration-700 ${isDark ? 'bg-[#000000]' : 'bg-stone-50'}`}>
-        <header className={`px-6 pt-10 pb-6 sticky top-0 z-[100] flex flex-col gap-1 transition-all duration-500 ${isDark ? 'bg-[#000000]/95' : 'bg-stone-50/95 backdrop-blur-2xl'}`}>
+      <div className={`flex-1 flex flex-col pb-44 animate-in fade-in slide-in-from-bottom-4 duration-700 ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>
+        <header className={`px-6 pt-10 pb-6 sticky top-0 z-[100] flex flex-col gap-1 transition-all duration-500 ${isDark ? 'bg-[#000000]/95' : 'bg-[#f3f4f6] backdrop-blur-2xl'}`}>
           <div className="flex items-center justify-between">
             <h2 className={`text-[24px] font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-stone-900'}`}>{t.myShoppingList}</h2>
             {isOffline && (
@@ -3810,7 +3810,7 @@ export default function App() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top,4px)] ${isDark ? 'dark bg-[#000000]' : 'bg-stone-50'}`}
+      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top,4px)] ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
     >
       <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
