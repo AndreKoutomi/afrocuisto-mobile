@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================================
  * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
  * ============================================================================
@@ -65,6 +65,7 @@ import {
   Check,
   AlertCircle,
   Loader,
+  Phone,
   RefreshCw
 } from 'lucide-react';
 import { recipes } from './data';
@@ -246,14 +247,16 @@ const benineseJuices = [
 
 // --- Deep Views ---
 
-// Vue pour gérer la sécurité (mot de passe et email)
 const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, showAlert }: any) => {
   const [showSuccess, setShowSuccess] = useState(false); // Affiche un message de succès après modification
-  const [formData, setFormData] = useState({ current: '', new: '', confirm: '', email: currentUser?.email || '' }); // Formulaire temporaire
+  const [formData, setFormData] = useState({ current: '', new: '', confirm: '', email: currentUser?.email || '', phone: currentUser?.phone || '', otp: '' }); // Formulaire temporaire
   const [showPass, setShowPass] = useState({ current: false, new: false, confirm: false }); // Gérer l'affichage des mots de passe (oeil)
+  const [phoneCountry, setPhoneCountry] = useState('+229');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [sentOtp, setSentOtp] = useState('');
 
   // Fonction pour enregistrer les changements
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!currentUser) return;
 
     if (securitySubView === 'password') {
@@ -266,25 +269,97 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
         showAlert("Mot de passe actuel incorrect", "error");
         return;
       }
-      const updatedUser = { ...currentUser, password: formData.new };
-      setCurrentUser(updatedUser);
-      dbService.setCurrentUser(updatedUser); // Sauvegarde locale
+      setIsAuthLoading(true);
+      try {
+        const updatedUser = { ...currentUser, password: formData.new };
+        setCurrentUser(updatedUser);
+        dbService.setCurrentUser(updatedUser); // Sauvegarde locale
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          setSecuritySubView('main');
+        }, 2000);
+      } catch (e: any) {
+        showAlert(e.message || "Erreur lors de la modification", "error");
+      } finally {
+        setIsAuthLoading(false);
+      }
     } else if (securitySubView === 'email') {
       // Vérifications pour l'email
       if (!formData.email || !formData.email.includes('@')) {
         showAlert("Email invalide", "error");
         return;
       }
-      const updatedUser = { ...currentUser, email: formData.email };
-      setCurrentUser(updatedUser);
-      dbService.setCurrentUser(updatedUser); // Sauvegarde locale
-    }
+      setIsAuthLoading(true);
+      try {
+        const updatedUser = { ...currentUser, email: formData.email };
+        setCurrentUser(updatedUser);
+        dbService.setCurrentUser(updatedUser);
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          setSecuritySubView('main');
+        }, 2000);
+      } catch (e: any) {
+        showAlert(e.message || "Erreur", "error");
+      } finally {
+        setIsAuthLoading(false);
+      }
+    } else if (securitySubView === 'phone') {
+      if (!formData.phone) {
+        showAlert("Numéro invalide", "error");
+        return;
+      }
+      setIsAuthLoading(true);
+      try {
+        const fullPhone = `${phoneCountry}${formData.phone.trim()}`;
+        dbService.formatPhone(fullPhone);
 
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      setSecuritySubView('main'); // Retour à l'écran de sécurité principal
-    }, 2000);
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        setSentOtp(otp);
+        const success = await dbService.sendEmail(currentUser.email, currentUser.name, otp);
+        if (!success) {
+          throw new Error("Impossible d'envoyer l'email de sécurité");
+        }
+
+        setSecuritySubView('phone-validation');
+      } catch (err: any) {
+        showAlert(err.message || "Impossible d'envoyer le code", "error");
+      } finally {
+        setIsAuthLoading(false);
+      }
+    } else if (securitySubView === 'phone-validation') {
+      if (!formData.otp) {
+        return;
+      }
+      if (formData.otp !== sentOtp) {
+        showAlert("Code incorrect. Veuillez vérifier vos emails.", "error");
+        return;
+      }
+
+      setIsAuthLoading(true);
+      try {
+        const fullPhone = `${phoneCountry}${formData.phone.trim()}`;
+        const cleanPhone = dbService.formatPhone(fullPhone);
+
+        await dbService.adminUpdateUserPhone(currentUser.id, cleanPhone);
+
+        const updatedUser = { ...currentUser, phone: cleanPhone };
+        setCurrentUser(updatedUser);
+        dbService.setCurrentUser(updatedUser);
+        dbService.syncUserToCloud(updatedUser);
+
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          setSecuritySubView('main');
+        }, 2000);
+      } catch (err: any) {
+        showAlert(err.message || "Erreur de mise à jour", "error");
+      } finally {
+        setIsAuthLoading(false);
+      }
+    }
   };
 
   if (showSuccess) {
@@ -368,8 +443,68 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
             </div>
             <p className="mt-4 text-[10px] text-stone-400 italic">{t.authCodeDesc}</p>
           </div>
-          <button onClick={handleSave} className="w-full bg-terracotta text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform shadow-lg shadow-terracotta/20">{t.save}</button>
+          <button onClick={handleSave} disabled={isAuthLoading} className="w-full bg-terracotta text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform shadow-lg shadow-terracotta/20">{isAuthLoading ? "Chargement..." : t.save}</button>
           <button onClick={() => setSecuritySubView('main')} className="w-full text-stone-400 py-2 font-bold text-sm">{t.back}</button>
+        </motion.div>
+      );
+    case 'phone':
+      return (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={springTransition} className="space-y-4">
+          <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
+            <h3 className="text-[10px] font-black uppercase text-stone-400 mb-4">Configurer un numéro</h3>
+            <div className="space-y-4">
+              <div className="flex gap-2 relative">
+                <div className="relative w-[110px] shrink-0">
+                  <select
+                    value={phoneCountry}
+                    onChange={e => setPhoneCountry(e.target.value)}
+                    className="w-full appearance-none bg-white rounded-xl border border-stone-100 py-3 pl-3 pr-8 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-terracotta text-stone-900"
+                  >
+                    <option value="+229">🇧🇯 +229</option>
+                    <option value="+225">🇨🇮 +225</option>
+                    <option value="+221">🇸🇳 +221</option>
+                    <option value="+228">🇹🇬 +228</option>
+                    <option value="+237">🇨🇲 +237</option>
+                    <option value="+241">🇬🇦 +241</option>
+                    <option value="+243">🇨🇩 +243</option>
+                    <option value="+33">🇫🇷 +33</option>
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400" />
+                </div>
+                <div className="relative flex-1">
+                  <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input type="tel" placeholder="01 23 45 67"
+                    value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full bg-white border border-stone-100 rounded-xl py-3 pl-9 pr-4 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-terracotta text-stone-900" />
+                </div>
+              </div>
+            </div>
+            <p className="mt-4 text-[10px] text-stone-400 italic">Un code de sécurité sera envoyé sur votre adresse email ({currentUser?.email}) pour valider cette modification.</p>
+          </div>
+          <button onClick={handleSave} disabled={isAuthLoading} className="w-full bg-terracotta text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform shadow-lg shadow-terracotta/20">{isAuthLoading ? "Envoi du code..." : "Continuer"}</button>
+          <button onClick={() => setSecuritySubView('main')} className="w-full text-stone-400 py-2 font-bold text-sm">{t.back}</button>
+        </motion.div>
+      );
+    case 'phone-validation':
+      return (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={springTransition} className="space-y-4">
+          <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
+            <h3 className="text-[10px] font-black uppercase text-stone-400 mb-4">Code de sécurité Email</h3>
+            <p className="text-[12px] text-stone-500 mb-4">
+              Veuillez entrer le code à 4 chiffres envoyé à l'adresse <span className="font-bold text-terracotta">{currentUser?.email}</span>.
+            </p>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Code OTP"
+                value={formData.otp}
+                onChange={e => setFormData({ ...formData, otp: e.target.value })}
+                className="w-full bg-white border border-stone-100 rounded-xl p-3 text-sm font-bold text-center tracking-[0.2em] focus:outline-none focus:ring-1 focus:ring-terracotta text-stone-900"
+              />
+            </div>
+          </div>
+          <button onClick={handleSave} disabled={isAuthLoading} className="w-full bg-terracotta text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform shadow-lg shadow-terracotta/20">{isAuthLoading ? "Vérification..." : "Valider"}</button>
+          <button onClick={() => setSecuritySubView('phone')} className="w-full text-stone-400 py-2 font-bold text-sm">{t.back}</button>
         </motion.div>
       );
     default:
@@ -386,6 +521,13 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
             <div className="flex items-center gap-3">
               <Mail size={18} className="text-stone-500" />
               <span className="font-bold text-stone-700 text-sm">{t.changeEmail}</span>
+            </div>
+            <ChevronRight size={16} className="text-stone-400" />
+          </button>
+          <button onClick={() => setSecuritySubView('phone')} className="w-full flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 active:bg-stone-100 transition-colors">
+            <div className="flex items-center gap-3">
+              <Phone size={18} className="text-stone-500" />
+              <span className="font-bold text-stone-700 text-sm">Ajouter/Modifier numéro</span>
             </div>
             <ChevronRight size={16} className="text-stone-400" />
           </button>
@@ -867,14 +1009,16 @@ export default function App() {
   // --- ÉTATS (MÉMOIRE) DE L'APPLICATION ---
   const [currentUser, setCurrentUser] = useState<User | null>(dbService.getCurrentUser()); // Utilisateur actuellement connecté
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login'); // Mode choisi : Connexion ou Inscription
-  const [authFormData, setAuthFormData] = useState({ name: '', email: '', password: '' }); // Données saisies dans le formulaire
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email'); // Méthode d'auth : email ou téléphone
+  const [authFormData, setAuthFormData] = useState({ name: '', email: '', password: '', phone: '' }); // Données saisies dans le formulaire
   const [showPassword, setShowPassword] = useState(false); // Masquer/Afficher le mot de passe
   const [isAuthLoading, setIsAuthLoading] = useState(false); // Est-on en train de se connecter ?
   const [authError, setAuthError] = useState<string | null>(null); // Message d'erreur éventuel lors de l'auth
   const [authStep, setAuthStep] = useState<'form' | 'otp'>('form'); // Étape d'authentification (Formulaire ou Code OTP)
-  const [sentOtp, setSentOtp] = useState(''); // Code OTP qui a été envoyé par mail
+  const [sentOtp, setSentOtp] = useState(''); // Code OTP qui a été envoyé par mail (mode email)
   const [otpInput, setOtpInput] = useState(''); // Code OTP saisi par l'utilisateur
   const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]; // Références pour les cases OTP
+  const [phoneCountry, setPhoneCountry] = useState('+229'); // Indicatif pays pour l'inscription
 
 
   useEffect(() => {
@@ -886,8 +1030,21 @@ export default function App() {
       const updateUserObject = async (sessionUser: any) => {
         setIsSyncing(true);
         try {
+          // Force fetch the freshest user auth data to catch instant bans
+          const { data: { user: freshestUser } } = await dbService.supabase!.auth.getUser();
+          const targetUser = freshestUser || sessionUser;
+
+          if (targetUser?.user_metadata?.banned) {
+            console.warn("User is banned, auto-logging out.");
+            await dbService.signOut();
+            setCurrentUser(null);
+            dbService.setCurrentUser(null);
+            setAuthError("Votre compte a été désactivé par un administrateur.");
+            return;
+          }
+
           // Fetch remote profile
-          const remoteProfile = await dbService.getRemoteUserProfile(sessionUser.id);
+          const remoteProfile = await dbService.getRemoteUserProfile(targetUser.id);
           const existingLocal = dbService.getUsers().find(u => u.email === sessionUser.email) || null;
 
           // localStorage dark mode is ALWAYS the source of truth for the current session
@@ -905,12 +1062,13 @@ export default function App() {
           };
 
           const userObj: User = {
-            id: sessionUser.id,
-            name: remoteProfile?.name || sessionUser.user_metadata?.full_name || existingLocal?.name || sessionUser.email?.split('@')[0] || "User",
-            email: sessionUser.email!,
+            id: targetUser.id,
+            name: remoteProfile?.name || targetUser.user_metadata?.full_name || existingLocal?.name || targetUser.email?.split('@')[0] || "User",
+            email: targetUser.email || sessionUser.email!,
+            phone: remoteProfile?.phone || targetUser.phone || sessionUser.phone || existingLocal?.phone || '',
             favorites: remoteProfile?.favorites || existingLocal?.favorites || [],
             shoppingList: remoteProfile?.shoppingList || existingLocal?.shoppingList || [],
-            joinedDate: existingLocal?.joinedDate || new Date(sessionUser.created_at || Date.now()).toLocaleDateString(),
+            joinedDate: existingLocal?.joinedDate || new Date(targetUser.created_at || Date.now()).toLocaleDateString(),
             settings: mergedSettings,
             avatar: remoteProfile?.avatar || existingLocal?.avatar || currentUser?.avatar
           };
@@ -920,7 +1078,7 @@ export default function App() {
           setHasLoadedAtLeastOnce(true);
 
           // ONLY re-create remote profile if it's missing AND the user is actually logged in
-          if (!remoteProfile && sessionUser.id) {
+          if (!remoteProfile && targetUser.id) {
             await dbService.syncUserToCloud(userObj);
           }
         } catch (err) {
@@ -945,6 +1103,57 @@ export default function App() {
     };
     initAuth();
   }, []);
+
+  // Surveiller le bannissement en temps réel pendant que l'utilisateur navigue (Polling + App Resume)
+  useEffect(() => {
+    if (!currentUser || !dbService.supabase) return;
+
+    const checkBanStatus = async () => {
+      try {
+        const { data: { user }, error } = await dbService.supabase!.auth.getUser();
+        if (error) return; // Ignore simple network errors here 
+
+        if (user?.user_metadata?.banned) {
+          console.warn("L'utilisateur a été banni pendant la session. Éjection en cours...");
+          await dbService.signOut();
+          setCurrentUser(null);
+          dbService.setCurrentUser(null);
+          setAuthError("Votre compte a été désactivé par un administrateur. Veuillez contacter le support technique.");
+          setAuthMode('login');
+        }
+      } catch (err) {
+        // Silently catch network errors during polling
+      }
+    };
+
+    // 1. Polling toutes les 30 secondes
+    const interval = setInterval(checkBanStatus, 30000);
+
+    // 2. Vérification au retour de l'application au premier plan (Foreground / Visibility)
+    let appStateListener: any;
+
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) checkBanStatus();
+      }).then(listener => { appStateListener = listener; });
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkBanStatus();
+    };
+
+    if (!Capacitor.isNativePlatform()) {
+      window.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (appStateListener) appStateListener.remove();
+      if (!Capacitor.isNativePlatform()) {
+        window.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
+  }, [currentUser]);
 
   // Cloud Sync & Internet Dependency
   const [allRecipes, setAllRecipes] = useState<Recipe[]>(recipes); // Use static data as first fallback
@@ -1095,7 +1304,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [profileSubView, setProfileSubView] = useState<string | null>(null);
-  const [securitySubView, setSecuritySubView] = useState<'main' | 'password' | 'email' | 'validation'>('main');
+  const [securitySubView, setSecuritySubView] = useState<'main' | 'password' | 'email' | 'validation' | 'phone' | 'phone-validation'>('main');
   const [aiRecommendation, setAiRecommendation] = useState<string>("Chargement de votre suggestion personnalisée...");
   const [kidPageIndex, setKidPageIndex] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -1273,13 +1482,42 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      await dbService.signIn(authFormData.email.trim(), authFormData.password);
+      const identifier = authFormData.email.trim(); // "email" field doubles as phone field
+      const password = authFormData.password;
+
+      if (dbService.isPhoneNumber(identifier)) {
+        // Phone + password login (no OTP)
+        const phone = dbService.formatPhone(identifier);
+        await dbService.signInWithPhonePassword(phone, password);
+      } else {
+        // Email + password login
+        try {
+          await dbService.signIn(identifier, password);
+        } catch (err: any) {
+          if (err.message && err.message.includes("Email not confirmed")) {
+            console.log("Legacy unconfirmed account detected. Auto-confirming via admin API...");
+            const confirmed = await dbService.adminForceConfirmEmail(identifier);
+            if (confirmed) {
+              // Retry login!
+              await dbService.signIn(identifier, password);
+            } else {
+              throw err;
+            }
+          } else {
+            throw err;
+          }
+        }
+      }
     } catch (err: any) {
-      let msg = err.message || "Email ou mot de passe incorrect";
+      let msg = err.message || "Identifiants incorrects";
       if (msg.includes("Email not confirmed")) {
-        msg = "Veuillez confirmer votre adresse email avant de vous connecter. Vérifiez vos spams !";
-      } else if (msg.includes("Invalid login credentials")) {
-        msg = "Email ou mot de passe incorrect. Vérifiez vos identifiants.";
+        msg = "Veuillez confirmer votre adresse email. Vérifiez vos spams !";
+      } else if (msg.includes("Invalid login credentials") || msg.includes("invalid_credentials")) {
+        msg = "Identifiants incorrects. Vérifiez votre email/téléphone et mot de passe.";
+      } else if (msg.includes("phone") && msg.includes("not")) {
+        msg = "Connexion par téléphone non disponible. Essayez avec votre email.";
+      } else if (msg.includes("account_disabled")) {
+        msg = "Votre compte a été désactivé par un administrateur. Veuillez contacter le support technique.";
       }
       setAuthError(msg);
       showAlert(msg, "error");
@@ -1293,7 +1531,7 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      // Step 1: Send OTP to verify email ownership before creating the account
+      // Email signup: send email OTP (custom flow)
       const otp = Math.floor(1000 + Math.random() * 9000).toString();
       setSentOtp(otp);
       setOtpInput('');
@@ -1301,9 +1539,7 @@ export default function App() {
       if (!success) {
         throw new Error("Impossible d'envoyer le code de vérification. Vérifiez votre adresse email.");
       }
-      // Transition to OTP step
       setAuthStep('otp');
-      // Auto-focus first OTP digit after transition
       setTimeout(() => { otpRefs[0]?.current?.focus(); }, 400);
     } catch (err: any) {
       setAuthError(err.message || "Erreur lors de l'envoi du code.");
@@ -1314,6 +1550,8 @@ export default function App() {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Email OTP verification (custom local check)
     if (otpInput !== sentOtp) {
       setAuthError("Code OTP incorrect. Veuillez vérifier vos emails.");
       return;
@@ -1325,7 +1563,8 @@ export default function App() {
       // 1. Try to sign up
       let data;
       try {
-        data = await dbService.signUp(authFormData.email.trim(), authFormData.password, authFormData.name.trim());
+        const fullPhone = authFormData.phone.trim() ? `${phoneCountry}${authFormData.phone.trim()}` : undefined;
+        data = await dbService.signUp(authFormData.email.trim(), authFormData.password, authFormData.name.trim(), fullPhone);
       } catch (err: any) {
         // 2. If user already exists (ghost account), we try to log them in directly
         // because they proved ownership via OTP.
@@ -1343,6 +1582,7 @@ export default function App() {
           id: data.session.user.id,
           name: authFormData.name.trim(),
           email: authFormData.email.trim(),
+          phone: authFormData.phone.trim() ? `${phoneCountry}${authFormData.phone.trim()}` : '',
           favorites: [],
           shoppingList: [],
           joinedDate: new Date().toLocaleDateString(),
@@ -1354,7 +1594,7 @@ export default function App() {
 
         showAlert("Compte récupéré et activé ! Bienvenue.", "success");
         setAuthStep('form');
-        setAuthFormData({ name: '', email: '', password: '' });
+        setAuthFormData({ name: '', email: '', password: '', phone: '' });
       } else {
         showAlert("Activation réussie ! Connectez-vous maintenant.", "success");
         setAuthMode('login');
@@ -1387,6 +1627,31 @@ export default function App() {
       setIsAuthLoading(false);
     }
   };
+
+  const handleGoogleAuth = async () => {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      await dbService.signInWithGoogle();
+      // The page will redirect to Google — no further action needed here
+    } catch (err: any) {
+      setAuthError(err.message || "Erreur lors de la connexion avec Google.");
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleFacebookAuth = async () => {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      await dbService.signInWithFacebook();
+      // The page will redirect to Facebook — no further action needed here
+    } catch (err: any) {
+      setAuthError(err.message || "Erreur lors de la connexion avec Facebook.");
+      setIsAuthLoading(false);
+    }
+  };
+
 
   const toggleFavorite = (recipeId: string) => {
     if (!currentUser) return;
@@ -3056,136 +3321,126 @@ export default function App() {
     }
   };
 
-  const renderAuth = () => (
-    <div className={`flex-1 flex flex-col min-h-screen relative overflow-hidden ${isDark ? 'bg-[#000000]' : 'bg-[#faf8f5]'}`}>
-      {/* ─── HERO SECTION ─── */}
-      <div className="relative overflow-hidden" style={{ height: '42vh', minHeight: 220, maxHeight: 320 }}>
-        {/* Gradient background */}
-        <div className={`absolute inset-0 ${isDark
-          ? 'bg-gradient-to-br from-[#1a0a02] via-[#2a1005] to-[#0c0c0e]'
-          : 'bg-gradient-to-br from-[#fb5607] via-[#e8490a] to-[#c43a04]'}`} />
 
-        {/* Radial glow overlay */}
-        <div className="absolute inset-0" style={{
-          background: isDark
-            ? 'radial-gradient(ellipse 80% 60% at 50% 80%, rgba(251,86,7,0.18) 0%, transparent 70%)'
-            : 'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255,255,255,0.12) 0%, transparent 70%)'
-        }} />
+  // ─── AUTH SCREEN ─────────────────────────────────────────────────────────
+  const renderAuth = () => {
 
-        {/* Animated food emojis floating in background */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-          {[{ e: '🍲', x: '8%', y: '12%', delay: '0s', size: '2rem', dur: '6s' },
-          { e: '🥘', x: '78%', y: '8%', delay: '1.4s', size: '1.6rem', dur: '8s' },
-          { e: '🍗', x: '88%', y: '55%', delay: '0.8s', size: '1.8rem', dur: '7s' },
-          { e: '🫙', x: '5%', y: '65%', delay: '2s', size: '1.5rem', dur: '9s' },
-          { e: '🥜', x: '60%', y: '75%', delay: '1s', size: '1.4rem', dur: '6.5s' },
-          { e: '🌶️', x: '35%', y: '10%', delay: '3s', size: '1.6rem', dur: '7.5s' },
-          ].map((item, i) => (
-            <span key={i} className="absolute" style={{
-              left: item.x, top: item.y, fontSize: item.size,
-              opacity: isDark ? 0.25 : 0.35,
-              animation: `authFloat ${item.dur} ease-in-out infinite`,
-              animationDelay: item.delay,
-              filter: 'blur(0.5px)'
-            }}>{item.e}</span>
-          ))}
+    // ── Social OAuth button ─────────────────────────────────────────────────
+    const OAuthBtn = ({
+      onClick, label, icon, color
+    }: { onClick: () => void; label: string; icon: React.ReactNode; color?: string }) => (
+      <motion.button
+        type="button"
+        onClick={onClick}
+        whileTap={{ scale: 0.95 }}
+        disabled={isAuthLoading}
+        aria-label={label}
+        className={`flex-1 flex items-center justify-center gap-2.5 rounded-[14px] py-3.5 border font-bold text-[13px] transition-all disabled:opacity-60 ${isDark
+          ? 'bg-white/5 border-white/10 hover:bg-white/9 text-white'
+          : 'bg-white border-stone-200 hover:border-stone-300 shadow-sm text-stone-800'}`}
+      >
+        {icon}
+        <span>{label}</span>
+      </motion.button>
+    );
+
+    // ── Method mini-tab (Email | Téléphone) ──────────────────────────────────
+    const MethodTab = ({ method, label }: { method: 'email' | 'phone'; label: string }) => (
+      <button
+        type="button"
+        onClick={() => { setAuthMethod(method); setAuthError(null); setOtpInput(''); setAuthStep('form'); }}
+        className={`flex-1 py-2 text-[12px] font-bold z-10 relative transition-colors rounded-[10px] ${authMethod === method
+          ? (isDark ? 'text-white' : 'text-stone-900')
+          : (isDark ? 'text-white/35' : 'text-stone-400')}`}
+      >
+        {label}
+      </button>
+    );
+
+    return (
+      <div className={`flex-1 flex flex-col min-h-screen relative overflow-hidden ${isDark ? 'bg-[#000000]' : 'bg-white'}`}>
+
+        {/* ── Decorative circles ── */}
+        <div className="absolute top-0 right-0 pointer-events-none select-none overflow-hidden" style={{ width: 220, height: 220 }}>
+          <div className="absolute rounded-full" style={{
+            width: 220, height: 220, top: -80, right: -60,
+            background: 'rgba(251,86,7,0.08)',
+          }} />
+          <div className="absolute rounded-full" style={{
+            width: 130, height: 130, top: -40, right: -30,
+            background: 'linear-gradient(135deg,#fb5607 0%,#e04e00 100%)',
+            boxShadow: '0 8px 32px rgba(251,86,7,0.35)',
+          }} />
+        </div>
+        <div className="absolute bottom-16 left-0 pointer-events-none select-none" style={{ width: 80, height: 80 }}>
+          <div className="absolute rounded-full" style={{
+            width: 80, height: 80, bottom: 0, left: -30, opacity: 0.7,
+            background: 'linear-gradient(135deg,#fb5607 0%,#e04e00 100%)',
+          }} />
         </div>
 
-        {/* Brand content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
-          <motion.div
-            initial={{ scale: 0.7, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 22, delay: 0.1 }}
-            className="relative"
-          >
-            {/* Glow ring behind logo */}
-            <div className="absolute inset-0 rounded-[32px] blur-2xl" style={{
-              background: isDark ? 'rgba(251,86,7,0.35)' : 'rgba(255,255,255,0.3)',
-              transform: 'scale(1.3)'
-            }} />
-            <div className={`relative w-24 h-24 rounded-[28px] flex items-center justify-center border ${isDark
-              ? 'bg-[#fb5607]/20 border-[#fb5607]/30 shadow-[0_12px_40px_rgba(251,86,7,0.3)]'
-              : 'bg-white/20 border-white/40 shadow-[0_12px_40px_rgba(0,0,0,0.15)] backdrop-blur-md'
-              }`}>
-              <img
-                src="/images/chef_icon_v2.png"
-                className={`w-16 h-16 object-contain ${isDark ? '' : 'brightness-0 invert'}`}
-                alt="AfroCuisto Logo"
-              />
-            </div>
-          </motion.div>
+        {/* ── Scrollable content ── */}
+        <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar px-7 pt-14 pb-10 w-full max-w-md mx-auto relative z-10">
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="text-center mt-4"
-          >
-            <h1 className="text-[30px] font-black tracking-tight leading-none text-white drop-shadow-sm">
-              Afro<span style={{ color: isDark ? '#fb8c60' : 'rgba(255,255,255,0.85)' }}>Cuisto</span>
-            </h1>
-            <p className="text-[11px] font-bold mt-1.5 tracking-[0.18em] uppercase" style={{
-              color: isDark ? 'rgba(251,86,7,0.7)' : 'rgba(255,255,255,0.65)'
-            }}>Le Goût de l'Excellence</p>
-          </motion.div>
-        </div>
+          {/* ── Brand / OTP header ── */}
+          <AnimatePresence mode="wait">
+            {authStep === 'form' ? (
+              <motion.div key="brand" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.32 }} className="mb-6">
+                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.05 }}
+                  className={`w-14 h-14 rounded-[16px] flex items-center justify-center mb-4 ${isDark ? 'bg-[#fb5607]/20 border border-[#fb5607]/30' : 'bg-[#fb5607]/10 border border-[#fb5607]/20'}`}>
+                  <img src="/images/chef_icon_v2.png" className="w-9 h-9 object-contain" alt="AfroCuisto" />
+                </motion.div>
+                <h1 className={`text-[26px] font-black tracking-tight leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                  {authMode === 'login' ? 'Se connecter' : 'Créer un compte'}
+                </h1>
+                <p className={`text-[12.5px] font-medium mt-1.5 leading-snug ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+                  {authMode === 'login'
+                    ? 'Heureux de vous revoir, vous avez été manqué !'
+                    : 'Renseignez vos informations pour rejoindre la communauté.'}
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div key="otp-header" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.32 }} className="mb-6">
+                <button
+                  onClick={() => { setAuthStep('form'); setAuthError(null); setOtpInput(''); }}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-5 border transition-colors ${isDark
+                    ? 'bg-white/8 border-white/10 text-white/60 hover:bg-white/14'
+                    : 'bg-stone-100 border-stone-200/60 text-stone-500 hover:bg-stone-200'}`}
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <h1 className={`text-[26px] font-black tracking-tight leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                  Vérifier le code
+                </h1>
+                <p className={`text-[12.5px] font-medium mt-1.5 leading-snug ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+                  Entrez le code envoyé à <span className="text-[#fb5607] font-bold">{authFormData.email}</span>
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        {/* Bottom curved edge */}
-        <div className="absolute bottom-0 left-0 right-0 overflow-hidden" style={{ height: 32 }}>
-          <div className={`absolute bottom-0 left-0 right-0 rounded-t-[30px] ${isDark ? 'bg-[#000000]' : 'bg-[#faf8f5]'}`}
-            style={{ height: 32 }} />
-        </div>
-      </div>
-
-      {/* ─── AUTH CARD SECTION ─── */}
-      <div className="flex-1 flex flex-col relative z-10 overflow-y-auto no-scrollbar">
-        <div className="px-6 pt-2 pb-10 w-full max-w-md mx-auto flex flex-col">
-
-          {/* ── TAB SWITCHER ── */}
+          {/* ── Main tab: Connexion / Inscription ── */}
           <AnimatePresence mode="wait">
             {authStep === 'form' && (
-              <motion.div
-                key="tabs"
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className={`p-1 rounded-[20px] flex mb-6 relative border ${isDark ? 'bg-white/5 border-white/8' : 'bg-stone-100/90 border-stone-200/40'
-                  }`}>
+              <motion.div key="mode-tabs" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
+                <div className={`p-1 rounded-[18px] flex mb-5 relative border ${isDark ? 'bg-white/5 border-white/8' : 'bg-stone-100 border-stone-200/50'}`}>
                   <motion.div
-                    className={`absolute inset-1 rounded-[16px] z-0 ${isDark
-                      ? 'shadow-[0_2px_12px_rgba(0,0,0,0.3)] border border-white/10'
-                      : 'bg-white shadow-[0_2px_12px_rgba(0,0,0,0.07)] border border-white'
-                      }`}
-                    style={{
-                      background: isDark ? 'rgba(255,255,255,0.1)' : 'white',
-                      width: 'calc(50% - 4px)',
-                      left: authMode === 'login' ? 4 : 'auto',
-                      right: authMode === 'signup' ? 4 : 'auto',
-                    }}
-                    layoutId="auth-tab-pill-v2"
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    className={`absolute inset-1 rounded-[13px] z-0 ${isDark ? 'bg-white/12 border border-white/12' : 'bg-white border border-stone-100 shadow-sm'}`}
+                    style={{ width: 'calc(50% - 4px)', left: authMode === 'login' ? 4 : 'auto', right: authMode === 'signup' ? 4 : 'auto' }}
+                    layoutId="auth-main-tab"
+                    transition={{ type: 'spring', stiffness: 520, damping: 36 }}
                   />
-                  <button
-                    onClick={() => { setAuthMode('login'); setAuthError(null); setOtpInput(''); }}
-                    className={`flex-1 py-3.5 text-[13px] font-bold z-10 relative transition-colors rounded-[16px] ${authMode === 'login'
-                      ? (isDark ? 'text-white' : 'text-stone-900')
-                      : (isDark ? 'text-white/35' : 'text-stone-400')
-                      }`}
-                  >
-                    Connexion
-                  </button>
-                  <button
-                    onClick={() => { setAuthMode('signup'); setAuthError(null); setOtpInput(''); }}
-                    className={`flex-1 py-3.5 text-[13px] font-bold z-10 relative transition-colors rounded-[16px] ${authMode === 'signup'
-                      ? (isDark ? 'text-white' : 'text-stone-900')
-                      : (isDark ? 'text-white/35' : 'text-stone-400')
-                      }`}
-                  >
-                    Inscription
-                  </button>
+                  {(['login', 'signup'] as const).map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => { setAuthMode(mode); setAuthError(null); setOtpInput(''); }}
+                      className={`flex-1 py-3 text-[13px] font-bold z-10 relative transition-colors rounded-[13px] ${authMode === mode
+                        ? (isDark ? 'text-white' : 'text-stone-900')
+                        : (isDark ? 'text-white/35' : 'text-stone-400')}`}
+                    >
+                      {mode === 'login' ? 'Connexion' : 'Inscription'}
+                    </button>
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -3194,320 +3449,267 @@ export default function App() {
           {/* ── FORM AREA ── */}
           <AnimatePresence mode="wait">
 
-            {/* ── LOGIN FORM ── */}
+            {/* ─── LOGIN FORM ─── */}
             {authMode === 'login' && authStep === 'form' && (
-              <motion.div
-                key="login-form"
-                initial={{ opacity: 0, x: -24 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -24 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <form onSubmit={handleLogin} className="space-y-3.5">
-                  {/* Email */}
-                  <div className="relative group">
-                    <Mail size={17} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'
-                      }`} />
-                    <input
-                      id="login-email"
-                      type="email"
-                      placeholder="Adresse email"
-                      required
-                      autoComplete="email"
-                      value={authFormData.email}
-                      onChange={e => { setAuthFormData({ ...authFormData, email: e.target.value }); setAuthError(null); }}
-                      className={`w-full rounded-[16px] border py-4 pl-11 pr-4 text-[14px] font-semibold focus:outline-none transition-all ${isDark
-                        ? 'bg-white/6 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/9'
-                        : 'bg-white border-stone-200/70 text-stone-900 placeholder:text-stone-400 focus:border-[#fb5607]/40 focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'
-                        }`}
-                    />
+              <motion.div key="login-form" initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -18 }} transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}>
+                <form onSubmit={handleLogin} className="space-y-4">
+
+                  {/* Single identifier field: email OR phone */}
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+                      Email ou téléphone
+                    </label>
+                    <div className="relative group">
+                      <Mail size={15} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'}`} />
+                      <input
+                        id="login-identifier"
+                        type="text"
+                        inputMode="email"
+                        placeholder="Email ou Téléphone"
+                        required
+                        autoComplete="username"
+                        value={authFormData.email}
+                        onChange={e => { setAuthFormData({ ...authFormData, email: e.target.value }); setAuthError(null); }}
+                        className={`w-full rounded-[14px] border py-3.5 pl-10 pr-4 text-[14px] font-semibold focus:outline-none transition-all ${isDark
+                          ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/8'
+                          : 'bg-stone-50 border-stone-200 text-stone-900 placeholder:text-stone-300 focus:border-[#fb5607]/50 focus:bg-white focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'}`}
+                      />
+                    </div>
                   </div>
 
                   {/* Password */}
-                  <div className="relative group">
-                    <Lock size={17} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'
-                      }`} />
-                    <input
-                      id="login-password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Mot de passe"
-                      required
-                      minLength={6}
-                      autoComplete="current-password"
-                      value={authFormData.password}
-                      onChange={e => { setAuthFormData({ ...authFormData, password: e.target.value }); setAuthError(null); }}
-                      className={`w-full rounded-[16px] border py-4 pl-11 pr-12 text-[14px] font-semibold focus:outline-none transition-all ${isDark
-                        ? 'bg-white/6 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/9'
-                        : 'bg-white border-stone-200/70 text-stone-900 placeholder:text-stone-400 focus:border-[#fb5607]/40 focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'
-                        }`}
-                    />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)}
-                      className={`absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${isDark ? 'text-white/25 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'
-                        }`}>
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-
-                  {/* Forgot password */}
-                  <div className="flex justify-end">
-                    <button type="button" className={`text-[11.5px] font-bold transition-colors py-1 ${isDark ? 'text-white/30 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'
-                      }`}>
-                      Mot de passe oublié ?
-                    </button>
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Mot de passe</label>
+                    <div className="relative group">
+                      <Lock size={15} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'}`} />
+                      <input
+                        id="login-password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••••••"
+                        required
+                        minLength={6}
+                        autoComplete="current-password"
+                        value={authFormData.password}
+                        onChange={e => { setAuthFormData({ ...authFormData, password: e.target.value }); setAuthError(null); }}
+                        className={`w-full rounded-[14px] border py-3.5 pl-10 pr-12 text-[14px] font-semibold focus:outline-none transition-all ${isDark
+                          ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/8'
+                          : 'bg-stone-50 border-stone-200 text-stone-900 placeholder:text-stone-300 focus:border-[#fb5607]/50 focus:bg-white focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'}`}
+                      />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                        className={`absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${isDark ? 'text-white/25 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'}`}>
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                    <div className="flex justify-end mt-1.5">
+                      <button type="button" className={`text-[11.5px] font-bold transition-colors ${isDark ? 'text-white/30 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'}`}>
+                        Mot de passe oublié ?
+                      </button>
+                    </div>
                   </div>
 
                   {/* Error */}
                   <AnimatePresence>
                     {authError && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className={`overflow-hidden rounded-[14px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'
-                          }`}
-                      >
-                        <AlertCircle size={15} className="text-rose-500 mt-0.5 shrink-0" />
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                        className={`overflow-hidden rounded-[12px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                        <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
                         <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {/* Submit */}
-                  <motion.button
-                    type="submit"
-                    disabled={isAuthLoading}
-                    whileTap={{ scale: 0.97 }}
-                    className="w-full bg-[#fb5607] text-white py-4 rounded-[16px] font-black text-[13px] uppercase tracking-[0.14em] flex justify-center items-center gap-2 transition-all mt-1"
-                    style={{ boxShadow: '0 12px 32px rgba(251,86,7,0.28)' }}
-                  >
-                    {isAuthLoading ? (
-                      <><Loader size={18} className="animate-spin" /><span>Connexion...</span></>
-                    ) : (
-                      <><span>Se connecter</span><ChevronRight size={16} /></>
-                    )}
+                  {/* CTA */}
+                  <motion.button type="submit" disabled={isAuthLoading} whileTap={{ scale: 0.97 }}
+                    className="w-full bg-[#fb5607] text-white py-4 rounded-[16px] font-black text-[14px] flex justify-center items-center gap-2 transition-all mt-1"
+                    style={{ boxShadow: '0 10px 28px rgba(251,86,7,0.28)' }}>
+                    {isAuthLoading
+                      ? <><Loader size={18} className="animate-spin" /><span>Connexion…</span></>
+                      : <span>Se connecter</span>}
                   </motion.button>
 
-                  {/* Switch to signup */}
-                  <p className={`text-center text-[12px] font-medium pt-1 ${isDark ? 'text-white/25' : 'text-stone-400'
-                    }`}>
+                  {/* Social divider */}
+                  <div className="flex items-center gap-3 my-1">
+                    <div style={{ flex: 1, height: 1, background: isDark ? 'rgba(255,255,255,0.08)' : '#e7e5e4' }} />
+                    <span className={`text-[11px] font-bold ${isDark ? 'text-white/25' : 'text-stone-400'}`}>Ou continuer avec</span>
+                    <div style={{ flex: 1, height: 1, background: isDark ? 'rgba(255,255,255,0.08)' : '#e7e5e4' }} />
+                  </div>
+
+                  {/* Google + Facebook */}
+                  <div className="flex gap-3">
+                    <OAuthBtn onClick={handleGoogleAuth} label="Google" icon={
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                      </svg>
+                    } />
+                    <OAuthBtn onClick={handleFacebookAuth} label="Facebook" icon={
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="#1877F2">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                      </svg>
+                    } />
+                  </div>
+
+                  <p className={`text-center text-[12.5px] font-medium pt-1 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
                     Pas encore de compte ?{' '}
-                    <button type="button"
-                      onClick={() => { setAuthMode('signup'); setAuthError(null); }}
-                      className="text-[#fb5607] font-bold hover:underline"
-                    >
-                      Créer un compte
-                    </button>
+                    <button type="button" onClick={() => { setAuthMode('signup'); setAuthError(null); }} className="text-[#fb5607] font-bold">S'inscrire</button>
                   </p>
                 </form>
               </motion.div>
             )}
 
-            {/* ── SIGNUP FORM (Step 1: Info) ── */}
+            {/* ─── SIGNUP FORM ─── */}
             {authMode === 'signup' && authStep === 'form' && (
-              <motion.div
-                key="signup-form"
-                initial={{ opacity: 0, x: 24 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 24 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <form onSubmit={handleSignup} className="space-y-3.5">
-                  {/* Step indicator */}
-                  <div className="flex items-center gap-2 mb-5">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-full bg-[#fb5607] flex items-center justify-center">
-                        <span className="text-white text-[10px] font-black">1</span>
-                      </div>
-                      <span className={`text-[11px] font-bold ${isDark ? 'text-white' : 'text-stone-700'}`}>Vos infos</span>
-                    </div>
-                    <div className={`h-px flex-1 ${isDark ? 'bg-white/10' : 'bg-stone-200'}`} />
-                    <div className="flex items-center gap-1.5">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${isDark ? 'border-white/15 bg-white/5' : 'border-stone-200 bg-stone-100'
-                        }`}>
-                        <span className={`text-[10px] font-black ${isDark ? 'text-white/30' : 'text-stone-400'
-                          }`}>2</span>
-                      </div>
-                      <span className={`text-[11px] font-bold ${isDark ? 'text-white/30' : 'text-stone-400'
-                        }`}>Vérification</span>
-                    </div>
-                  </div>
+              <motion.div key="signup-form" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 18 }} transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}>
+                <form onSubmit={handleSignup} className="space-y-4">
 
-                  {/* Full name */}
-                  <div className="relative group">
-                    <UserIcon size={17} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'
-                      }`} />
-                    <input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Nom complet"
-                      required
-                      minLength={2}
-                      autoComplete="name"
-                      value={authFormData.name}
-                      onChange={e => { setAuthFormData({ ...authFormData, name: e.target.value }); setAuthError(null); }}
-                      className={`w-full rounded-[16px] border py-4 pl-11 pr-4 text-[14px] font-semibold focus:outline-none transition-all ${isDark
-                        ? 'bg-white/6 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/9'
-                        : 'bg-white border-stone-200/70 text-stone-900 placeholder:text-stone-400 focus:border-[#fb5607]/40 focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'
-                        }`}
-                    />
+                  {/* Name (always) */}
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Nom complet</label>
+                    <div className="relative group">
+                      <UserIcon size={15} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'}`} />
+                      <input id="signup-name" type="text" placeholder="Jean Dupont" required minLength={2} autoComplete="name"
+                        value={authFormData.name} onChange={e => { setAuthFormData({ ...authFormData, name: e.target.value }); setAuthError(null); }}
+                        className={`w-full rounded-[14px] border py-3.5 pl-10 pr-4 text-[14px] font-semibold focus:outline-none transition-all ${isDark
+                          ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/8'
+                          : 'bg-stone-50 border-stone-200 text-stone-900 placeholder:text-stone-300 focus:border-[#fb5607]/50 focus:bg-white focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'}`} />
+                    </div>
                   </div>
 
                   {/* Email */}
-                  <div className="relative group">
-                    <Mail size={17} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'
-                      }`} />
-                    <input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Adresse email"
-                      required
-                      autoComplete="email"
-                      value={authFormData.email}
-                      onChange={e => { setAuthFormData({ ...authFormData, email: e.target.value }); setAuthError(null); }}
-                      className={`w-full rounded-[16px] border py-4 pl-11 pr-4 text-[14px] font-semibold focus:outline-none transition-all ${isDark
-                        ? 'bg-white/6 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/9'
-                        : 'bg-white border-stone-200/70 text-stone-900 placeholder:text-stone-400 focus:border-[#fb5607]/40 focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'
-                        }`}
-                    />
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Email</label>
+                    <div className="relative group">
+                      <Mail size={15} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'}`} />
+                      <input id="signup-email" type="email" placeholder="exemple@email.com" required autoComplete="email"
+                        value={authFormData.email} onChange={e => { setAuthFormData({ ...authFormData, email: e.target.value }); setAuthError(null); }}
+                        className={`w-full rounded-[14px] border py-3.5 pl-10 pr-4 text-[14px] font-semibold focus:outline-none transition-all ${isDark
+                          ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/8'
+                          : 'bg-stone-50 border-stone-200 text-stone-900 placeholder:text-stone-300 focus:border-[#fb5607]/50 focus:bg-white focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'}`} />
+                    </div>
+                  </div>
+
+                  {/* Phone (Optional, with country selector) */}
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Numéro de téléphone (optionnel)</label>
+                    <div className="flex gap-2 relative group">
+                      <div className="relative w-[110px] shrink-0">
+                        <select
+                          value={phoneCountry}
+                          onChange={e => setPhoneCountry(e.target.value)}
+                          className={`w-full appearance-none rounded-[14px] border py-3.5 pl-4 pr-8 text-[14px] font-semibold focus:outline-none transition-all ${isDark
+                            ? 'bg-white/5 border-white/10 text-white focus:border-[#fb5607]/50'
+                            : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-[#fb5607]/50 focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'}`}
+                        >
+                          <option value="+229">🇧🇯 +229</option>
+                          <option value="+225">🇨🇮 +225</option>
+                          <option value="+221">🇸🇳 +221</option>
+                          <option value="+228">🇹🇬 +228</option>
+                          <option value="+237">🇨🇲 +237</option>
+                          <option value="+241">🇬🇦 +241</option>
+                          <option value="+243">🇨🇩 +243</option>
+                          <option value="+33">🇫🇷 +33</option>
+                        </select>
+                        <ChevronDown size={14} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? 'text-white/40' : 'text-stone-400'}`} />
+                      </div>
+                      <div className="relative flex-1">
+                        <Phone size={15} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'}`} />
+                        <input id="signup-phone" type="tel" placeholder="01 23 45 67" autoComplete="tel-national"
+                          value={authFormData.phone} onChange={e => { setAuthFormData({ ...authFormData, phone: e.target.value }); setAuthError(null); }}
+                          className={`w-full rounded-[14px] border py-3.5 pl-10 pr-4 text-[14px] font-semibold focus:outline-none transition-all ${isDark
+                            ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/8'
+                            : 'bg-stone-50 border-stone-200 text-stone-900 placeholder:text-stone-300 focus:border-[#fb5607]/50 focus:bg-white focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'}`} />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Password */}
-                  <div className="relative group">
-                    <Lock size={17} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'
-                      }`} />
-                    <input
-                      id="signup-password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Mot de passe (min. 6 caractères)"
-                      required
-                      minLength={6}
-                      autoComplete="new-password"
-                      value={authFormData.password}
-                      onChange={e => { setAuthFormData({ ...authFormData, password: e.target.value }); setAuthError(null); }}
-                      className={`w-full rounded-[16px] border py-4 pl-11 pr-12 text-[14px] font-semibold focus:outline-none transition-all ${isDark
-                        ? 'bg-white/6 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/9'
-                        : 'bg-white border-stone-200/70 text-stone-900 placeholder:text-stone-400 focus:border-[#fb5607]/40 focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'
-                        }`}
-                    />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)}
-                      className={`absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${isDark ? 'text-white/25 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'
-                        }`}>
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Mot de passe</label>
+                    <div className="relative group">
+                      <Lock size={15} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'}`} />
+                      <input id="signup-password" type={showPassword ? 'text' : 'password'} placeholder="••••••••••••" required minLength={6} autoComplete="new-password"
+                        value={authFormData.password} onChange={e => { setAuthFormData({ ...authFormData, password: e.target.value }); setAuthError(null); }}
+                        className={`w-full rounded-[14px] border py-3.5 pl-10 pr-12 text-[14px] font-semibold focus:outline-none transition-all ${isDark
+                          ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/8'
+                          : 'bg-stone-50 border-stone-200 text-stone-900 placeholder:text-stone-300 focus:border-[#fb5607]/50 focus:bg-white focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'}`} />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                        className={`absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${isDark ? 'text-white/25 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'}`}>
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Error */}
                   <AnimatePresence>
                     {authError && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className={`overflow-hidden rounded-[14px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'
-                          }`}
-                      >
-                        <AlertCircle size={15} className="text-rose-500 mt-0.5 shrink-0" />
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                        className={`overflow-hidden rounded-[12px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                        <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
                         <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {/* Submit */}
-                  <motion.button
-                    type="submit"
-                    disabled={isAuthLoading}
-                    whileTap={{ scale: 0.97 }}
-                    className="w-full bg-[#fb5607] text-white py-4 rounded-[16px] font-black text-[13px] uppercase tracking-[0.14em] flex justify-center items-center gap-2 transition-all mt-1"
-                    style={{ boxShadow: '0 12px 32px rgba(251,86,7,0.28)' }}
-                  >
-                    {isAuthLoading ? (
-                      <><Loader size={18} className="animate-spin" /><span>Création en cours...</span></>
-                    ) : (
-                      <><span>Continuer</span><ChevronRight size={16} /></>
-                    )}
+                  {/* CTA */}
+                  <motion.button type="submit" disabled={isAuthLoading} whileTap={{ scale: 0.97 }}
+                    className="w-full bg-[#fb5607] text-white py-4 rounded-[16px] font-black text-[14px] flex justify-center items-center gap-2 transition-all mt-1"
+                    style={{ boxShadow: '0 10px 28px rgba(251,86,7,0.28)' }}>
+                    {isAuthLoading
+                      ? <><Loader size={18} className="animate-spin" /><span>Envoi en cours…</span></>
+                      : <span>S'inscrire</span>}
                   </motion.button>
 
-                  {/* Switch to login */}
-                  <p className={`text-center text-[12px] font-medium pt-1 ${isDark ? 'text-white/25' : 'text-stone-400'
-                    }`}>
+                  {/* Social divider */}
+                  <div className="flex items-center gap-3 my-1">
+                    <div style={{ flex: 1, height: 1, background: isDark ? 'rgba(255,255,255,0.08)' : '#e7e5e4' }} />
+                    <span className={`text-[11px] font-bold ${isDark ? 'text-white/25' : 'text-stone-400'}`}>Ou s'inscrire avec</span>
+                    <div style={{ flex: 1, height: 1, background: isDark ? 'rgba(255,255,255,0.08)' : '#e7e5e4' }} />
+                  </div>
+
+                  {/* Google + Facebook */}
+                  <div className="flex gap-3">
+                    <OAuthBtn onClick={handleGoogleAuth} label="Google" icon={
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                      </svg>
+                    } />
+                    <OAuthBtn onClick={handleFacebookAuth} label="Facebook" icon={
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="#1877F2">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                      </svg>
+                    } />
+                  </div>
+
+                  <p className={`text-center text-[12.5px] font-medium pt-1 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
                     Déjà un compte ?{' '}
-                    <button type="button"
-                      onClick={() => { setAuthMode('login'); setAuthError(null); }}
-                      className="text-[#fb5607] font-bold hover:underline"
-                    >
-                      Se connecter
-                    </button>
+                    <button type="button" onClick={() => { setAuthMode('login'); setAuthError(null); }} className="text-[#fb5607] font-bold">Se connecter</button>
                   </p>
                 </form>
               </motion.div>
             )}
 
-            {/* ── OTP VERIFICATION STEP (Step 2) ── */}
-            {authMode === 'signup' && authStep === 'otp' && (
-              <motion.div
-                key="otp-step"
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 40 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              >
-                {/* Step indicator */}
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="flex items-center gap-1.5">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${isDark ? 'bg-white/10' : 'bg-stone-100'
-                      }`}>
-                      <Check size={12} className="text-emerald-500" strokeWidth={3} />
-                    </div>
-                    <span className={`text-[11px] font-bold ${isDark ? 'text-white/30' : 'text-stone-400'
-                      }`}>Vos infos</span>
-                  </div>
-                  <div className="h-px flex-1 bg-[#fb5607]" />
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-6 h-6 rounded-full bg-[#fb5607] flex items-center justify-center">
-                      <span className="text-white text-[10px] font-black">2</span>
-                    </div>
-                    <span className={`text-[11px] font-bold ${isDark ? 'text-white' : 'text-stone-700'}`}>Vérification</span>
-                  </div>
-                </div>
-
-                {/* OTP prompt */}
-                <div className="text-center mb-8">
-                  <div className="w-16 h-16 rounded-[20px] bg-[#fb5607]/15 border border-[#fb5607]/25 flex items-center justify-center mx-auto mb-4">
-                    <Mail size={28} className="text-[#fb5607]" />
-                  </div>
-                  <h2 className={`text-[20px] font-black mb-2 ${isDark ? 'text-white' : 'text-stone-900'}`}>
-                    Vérification email
-                  </h2>
-                  <p className={`text-[13px] leading-relaxed ${isDark ? 'text-white/45' : 'text-stone-500'
-                    }`}>
-                    Un code à 4 chiffres a été envoyé à
-                  </p>
-                  <p className="text-[#fb5607] font-bold text-[13px] mt-0.5">{authFormData.email}</p>
-                </div>
-
-                {/* 4 OTP digit inputs */}
+            {/* ─── OTP STEP ─── */}
+            {authStep === 'otp' && (
+              <motion.div key="otp-step" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 28 }} transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}>
                 <form onSubmit={handleVerifyOtp}>
+                  {/* 4 OTP boxes */}
                   <div className="flex gap-3 justify-center mb-6">
                     {[0, 1, 2, 3].map(i => (
                       <input
-                        key={i}
-                        ref={otpRefs[i]}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
+                        key={i} ref={otpRefs[i]} type="text" inputMode="numeric" maxLength={1}
                         value={otpInput[i] || ''}
                         onChange={e => handleOtpDigitChange(i, e.target.value)}
                         onKeyDown={e => handleOtpKeyDown(i, e)}
                         onFocus={e => e.target.select()}
-                        className={`w-[60px] h-[68px] text-center text-[26px] font-black rounded-[16px] border-2 focus:outline-none transition-all ${otpInput[i]
-                          ? (isDark
-                            ? 'border-[#fb5607]/60 bg-[#fb5607]/15 text-white'
-                            : 'border-[#fb5607]/50 bg-[#fb5607]/8 text-stone-900')
-                          : (isDark
-                            ? 'border-white/12 bg-white/6 text-white'
-                            : 'border-stone-200 bg-white text-stone-900 focus:border-[#fb5607]/50 focus:shadow-[0_0_0_3px_rgba(251,86,7,0.1)]')
-                          }`}
-                        style={otpInput[i] && !isDark ? { boxShadow: '0 0 0 3px rgba(251,86,7,0.1)' } : {}}
+                        className={`w-[62px] h-[70px] text-center text-[28px] font-black rounded-[16px] border-2 focus:outline-none transition-all ${otpInput[i]
+                          ? (isDark ? 'border-[#fb5607]/70 bg-[#fb5607]/15 text-white' : 'border-[#fb5607] bg-[#fb5607]/8 text-stone-900')
+                          : (isDark ? 'border-white/12 bg-white/5 text-white focus:border-[#fb5607]/50' : 'border-stone-200 bg-stone-50 text-stone-900 focus:border-[#fb5607]/60 focus:bg-white focus:shadow-[0_0_0_3px_rgba(251,86,7,0.10)]')}`}
+                        style={otpInput[i] && !isDark ? { boxShadow: '0 0 0 3px rgba(251,86,7,0.10)' } : {}}
                       />
                     ))}
                   </div>
@@ -3515,91 +3717,58 @@ export default function App() {
                   {/* Error */}
                   <AnimatePresence>
                     {authError && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className={`overflow-hidden rounded-[14px] border flex items-start gap-2.5 p-3 mb-4 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'
-                          }`}
-                      >
-                        <AlertCircle size={15} className="text-rose-500 mt-0.5 shrink-0" />
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                        className={`overflow-hidden rounded-[12px] border flex items-start gap-2.5 p-3 mb-4 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                        <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
                         <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {/* Confirm button */}
-                  <motion.button
-                    type="submit"
-                    disabled={isAuthLoading || otpInput.length < 4}
-                    whileTap={{ scale: 0.97 }}
-                    className={`w-full py-4 rounded-[16px] font-black text-[13px] uppercase tracking-[0.14em] flex justify-center items-center gap-2 transition-all ${otpInput.length === 4 && !isAuthLoading
-                      ? 'bg-[#fb5607] text-white'
-                      : (isDark ? 'bg-white/8 text-white/25' : 'bg-stone-100 text-stone-300')
-                      }`}
-                    style={otpInput.length === 4 && !isAuthLoading ? { boxShadow: '0 12px 32px rgba(251,86,7,0.28)' } : {}}
-                  >
-                    {isAuthLoading
-                      ? <><Loader size={18} className="animate-spin" /><span>Vérification...</span></>
-                      : <><CheckCircle2 size={18} /><span>Confirmer mon compte</span></>}
-                  </motion.button>
+                  {/* Resend */}
+                  <p className={`text-center text-[12.5px] font-medium mb-5 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
+                    Vous n'avez pas reçu le code ?{' '}
+                    <button type="button" onClick={handleResendOtp} disabled={isAuthLoading} className="text-[#fb5607] font-bold hover:underline disabled:opacity-50">
+                      Renvoyer
+                    </button>
+                  </p>
 
-                  {/* Resend + back */}
-                  <div className="flex items-center justify-between mt-5">
-                    <button
-                      type="button"
-                      onClick={() => { setAuthStep('form'); setAuthError(null); setOtpInput(''); }}
-                      className={`text-[12px] font-bold flex items-center gap-1 transition-colors ${isDark ? 'text-white/30 hover:text-white/60' : 'text-stone-400 hover:text-stone-600'
-                        }`}
-                    >
-                      <ChevronLeft size={14} /> Modifier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      disabled={isAuthLoading}
-                      className={`text-[12px] font-bold flex items-center gap-1 transition-colors ${isDark ? 'text-[#fb5607]/70 hover:text-[#fb5607]' : 'text-[#fb5607]/80 hover:text-[#fb5607]'
-                        }`}
-                    >
-                      <RefreshCw size={13} /> Renvoyer le code
-                    </button>
-                  </div>
+                  {/* Confirm */}
+                  <motion.button type="submit" disabled={isAuthLoading || otpInput.length < 4} whileTap={{ scale: 0.97 }}
+                    className={`w-full py-4 rounded-[16px] font-black text-[14px] flex justify-center items-center gap-2 transition-all ${otpInput.length === 4 && !isAuthLoading
+                      ? 'bg-[#fb5607] text-white' : (isDark ? 'bg-white/8 text-white/25' : 'bg-stone-100 text-stone-300')}`}
+                    style={otpInput.length === 4 && !isAuthLoading ? { boxShadow: '0 10px 28px rgba(251,86,7,0.30)' } : {}}>
+                    {isAuthLoading
+                      ? <><Loader size={18} className="animate-spin" /><span>Vérification…</span></>
+                      : <><CheckCircle2 size={18} /><span>Vérifier le code</span></>}
+                  </motion.button>
                 </form>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ── FOOTER ── */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-10 text-center"
-          >
-            <div className="flex items-center justify-center gap-2 mb-3">
-              {['🇧🇯', '🇨🇮', '🇬🇭', '🇸🇳', '🇨🇲', '🇲🇱'].map((flag, i) => (
-                <span key={i} className="text-base" style={{ filter: 'grayscale(0.2)' }}>{flag}</span>
-              ))}
-            </div>
-            <p className={`text-[10.5px] font-medium ${isDark ? 'text-white/18' : 'text-stone-400'
-              }`}>
-              Rejoignez la communauté AfroCuisto 🍴
-            </p>
-          </motion.div>
+          {/* ── Footer ── */}
+          {authStep === 'form' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-8 text-center">
+              <div className="flex items-center justify-center gap-1.5 mb-2">
+                {['🇧🇯', '🇨🇮', '🇬🇭', '🇸🇳', '🇨🇲', '🇲🇱'].map((flag, i) => (
+                  <span key={i} className="text-base">{flag}</span>
+                ))}
+              </div>
+              <p className={`text-[10.5px] font-medium ${isDark ? 'text-white/18' : 'text-stone-400'}`}>
+                Rejoignez la communauté AfroCuisto 🍴
+              </p>
+            </motion.div>
+          )}
         </div>
       </div>
+    );
+  };
 
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes authFloat {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-12px) rotate(5deg); }
-            66% { transform: translateY(-6px) rotate(-3deg); }
-          }
-        `
-      }} />
-    </div>
-  );
+
+
+  // --- Return JSX ---
+
 
   // --- Return JSX ---
 

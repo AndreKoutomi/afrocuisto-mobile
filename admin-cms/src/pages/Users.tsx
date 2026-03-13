@@ -553,6 +553,13 @@ export function UsersPage() {
                                             <h4 style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>Informations de compte</h4>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                 <div style={{ fontSize: '14px' }}><strong>ID Unique:</strong> <code style={{ background: '#f9fafb', padding: '2px 6px', borderRadius: '6px' }}>{selectedUser.id}</code></div>
+                                                <div style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <strong>Statut du compte:</strong>
+                                                    {selectedUser.is_banned ?
+                                                        <span style={{ background: '#fee2e2', color: '#dc2626', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}><ShieldAlert size={14} /> Désactivé</span> :
+                                                        <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}><ShieldCheck size={14} /> Actif</span>
+                                                    }
+                                                </div>
                                                 <div style={{ fontSize: '14px' }}><strong>Inscrit le:</strong> {new Date(selectedUser.joined_date || '').toLocaleDateString('fr-FR', { dateStyle: 'long' })}</div>
                                                 <div style={{ fontSize: '14px' }}><strong>Dernière connexion:</strong> {selectedUser.last_sign_in ? new Date(selectedUser.last_sign_in).toLocaleString('fr-FR') : 'Jamais'}</div>
                                                 <div style={{ fontSize: '14px' }}><strong>Langue:</strong> {langLabel(selectedUser.language)}</div>

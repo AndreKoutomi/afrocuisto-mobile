@@ -78,6 +78,7 @@ export interface User {
   id: string;             // ID unique (vient souvent de la BDD ou auth)
   name: string;           // Prénom / Nom
   email: string;          // Adresse email
+  phone?: string;         // Numéro de téléphone optionnel
   password?: string;      // Mot de passe (jamais affiché en clair idéalement)
   avatar?: string;        // Photo de profil
   favorites: string[];    // Tableau contenant les IDs des recettes favorites

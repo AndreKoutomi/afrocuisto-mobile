@@ -132,6 +132,7 @@ export const dbService = {
 
         throw new Error('Internet connection required for initial data load.');
     },
+
     async getRemoteSections(): Promise<any[]> {
         const REMOTE_SECTIONS_KEY = 'afrocuisto_remote_sections';
         try {
@@ -158,16 +159,37 @@ export const dbService = {
         const cached = localStorage.getItem(REMOTE_SECTIONS_KEY);
         return cached ? JSON.parse(cached) : [];
     },
-    // Auth Configuration (Supabase)
-    async signUp(email: string, password: string, name: string) {
+
+    // ── Email/Password Auth ─────────────────────────────────────────────────
+    async signUp(email: string, password: string, name: string, phone?: string) {
         if (!supabase) throw new Error("Serveur indisponible");
-        const { data, error } = await supabase.auth.signUp({
+
+        // Use the Admin API to create the user with auto-confirmation.
+        // This is necessary because we already verified the email manually via EmailJS OTP,
+        // and we want to bypass the native Supabase "Email not confirmed" block.
+        const url = import.meta.env.VITE_SUPABASE_URL || 'https://ewoiqbhqtcdatpzhdaef.supabase.co';
+        const serviceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3b2lxYmhxdGNkYXRwemhkYWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIxNzk5MSwiZXhwIjoyMDg3NzkzOTkxfQ.7tYsh8vXStkJqhk4T-IA6rYgONJ7evPEFbbpfHR1fDc';
+        const adminClient = createClient(url, serviceKey);
+
+        const { data: adminData, error: createError } = await adminClient.auth.admin.createUser({
             email: email.trim().toLowerCase(),
             password: password.trim(),
-            options: { data: { full_name: name.trim() } }
+            email_confirm: true, // Bypass verification!
+            user_metadata: { full_name: name.trim(), phone: phone ? phone.trim() : null }
         });
-        if (error) throw error;
-        return data;
+
+        if (createError) throw createError;
+
+        // The user is created and confirmed, now we immediately sign them in
+        // to return the standard session object to the app (just like original signUp).
+        const { data: sessionData, error: signError } = await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password: password.trim()
+        });
+
+        if (signError) throw signError;
+
+        return sessionData;
     },
 
     async signIn(email: string, password: string) {
@@ -177,7 +199,41 @@ export const dbService = {
             password: password.trim()
         });
         if (error) throw error;
+
+        // Check Ban Status
+        if (data.user?.user_metadata?.banned) {
+            await supabase.auth.signOut();
+            dbService.setCurrentUser(null);
+            throw new Error("account_disabled");
+        }
+
         return data;
+    },
+
+    /** Sign in with phone number + password (no OTP required) */
+    async signInWithPhonePassword(phone: string, password: string) {
+        if (!supabase) throw new Error("Serveur indisponible");
+        const { data, error } = await supabase.auth.signInWithPassword({
+            phone: phone.trim(),
+            password: password.trim()
+        });
+        if (error) throw error;
+
+        // Check Ban Status
+        if (data.user?.user_metadata?.banned) {
+            await supabase.auth.signOut();
+            dbService.setCurrentUser(null);
+            throw new Error("account_disabled");
+        }
+
+        return data;
+    },
+
+    /** Detect whether a string looks like a phone number */
+    isPhoneNumber(value: string): boolean {
+        const cleaned = value.replace(/[\s\-\.\(\)]/g, '');
+        // Must be mostly digits, optionally starting with +
+        return /^\+?[0-9]{7,15}$/.test(cleaned);
     },
 
     async signOut() {
@@ -186,7 +242,94 @@ export const dbService = {
         if (error) throw error;
     },
 
-    // User Management (Local Sync Fallback for Favorites/Settings)
+    // ── Phone Auth (SMS OTP via Supabase) ───────────────────────────────────
+    /** Normalize a phone number to E.164 format (e.g. +22901234567) */
+    formatPhone(raw: string): string {
+        let cleaned = raw.replace(/[\s\-\.\(\)]/g, '');
+        // If starts with a single 0, prepend Bénin country code (+229)
+        // Users can always type the full +XXX prefix themselves
+        if (cleaned.startsWith('0') && !cleaned.startsWith('00')) {
+            cleaned = '+229' + cleaned.slice(1);
+        }
+        if (!cleaned.startsWith('+')) cleaned = '+' + cleaned;
+        return cleaned;
+    },
+
+    /** Send OTP via SMS — works for both signup and sign-in on Supabase */
+    async sendPhoneOtp(phone: string) {
+        if (!supabase) throw new Error('Serveur indisponible');
+        const { error } = await supabase.auth.signInWithOtp({
+            phone,
+            options: { channel: 'sms' }
+        });
+        if (error) throw error;
+    },
+
+    /** Verify the SMS OTP token received by the user */
+    async verifyPhoneOtp(phone: string, token: string) {
+        if (!supabase) throw new Error('Serveur indisponible');
+        const { data, error } = await supabase.auth.verifyOtp({
+            phone,
+            token,
+            type: 'sms'
+        });
+        if (error) throw error;
+        return data;
+    },
+
+    /** Start a phone number update explicitly (triggers an SMS if configured) */
+    async updateUserPhone(phone: string) {
+        if (!supabase) throw new Error("Serveur indisponible");
+        const { data, error } = await supabase.auth.updateUser({ phone });
+        if (error) throw error;
+        return data;
+    },
+
+    /** Verify the new phone number change with the OTP */
+    async verifyUserPhoneChange(phone: string, token: string) {
+        if (!supabase) throw new Error("Serveur indisponible");
+        const { data, error } = await supabase.auth.verifyOtp({ phone, token, type: 'phone_change' });
+        if (error) throw error;
+        return data;
+    },
+
+    // ── OAuth (Google, Facebook) ────────────────────────────────────────────
+    async signInWithGoogle() {
+        if (!supabase) throw new Error('Serveur indisponible');
+        // Use the current page origin as redirect — works for web & Capacitor webview
+        const redirectTo = window.location.origin || 'http://localhost:3000';
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo,
+                queryParams: { prompt: 'select_account', access_type: 'offline' },
+                skipBrowserRedirect: false,
+            }
+        });
+        if (error) throw error;
+        // Open the OAuth URL in a new tab/window if it was returned (fallback)
+        if (data?.url) {
+            window.location.href = data.url;
+        }
+    },
+
+    async signInWithFacebook() {
+        if (!supabase) throw new Error('Serveur indisponible');
+        const redirectTo = window.location.origin || 'http://localhost:3000';
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'facebook',
+            options: {
+                redirectTo,
+                skipBrowserRedirect: false,
+            }
+        });
+        if (error) throw error;
+        if (data?.url) {
+            window.location.href = data.url;
+        }
+    },
+
+    // ── User Management (Local Sync Fallback for Favorites/Settings) ────────
     getUsers: (): User[] => {
         const data = localStorage.getItem(USERS_KEY);
         return data ? JSON.parse(data) : [];
@@ -396,6 +539,7 @@ export const dbService = {
                     language: user.settings?.language ?? 'fr',
                     unit_system: user.settings?.unitSystem ?? 'metric',
                     dark_mode: user.settings?.darkMode ?? false,
+                    phone: user.phone || null,
                     updated_at: new Date().toISOString(),
                     joined_date: user.joinedDate,
                     favorites: user.favorites || [],
@@ -424,6 +568,7 @@ export const dbService = {
                     id: data.id,
                     name: data.name,
                     email: data.email,
+                    phone: data.phone || undefined,
                     joinedDate: data.joined_date,
                     favorites: data.favorites || [],
                     shoppingList: data.shopping_list || [],
@@ -512,9 +657,59 @@ export const dbService = {
             });
             if (signError) throw signError;
 
+            // Check Ban Status
+            if (sessionData.user?.user_metadata?.banned) {
+                await supabase!.auth.signOut();
+                dbService.setCurrentUser(null);
+                throw new Error("account_disabled");
+            }
+
             return sessionData;
         } catch (e) {
             console.error('Failed to recreate ghost account:', e);
+            throw e;
+        }
+    },
+
+    async adminForceConfirmEmail(email: string): Promise<boolean> {
+        try {
+            const url = import.meta.env.VITE_SUPABASE_URL || 'https://ewoiqbhqtcdatpzhdaef.supabase.co';
+            const serviceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3b2lxYmhxdGNkYXRwemhkYWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIxNzk5MSwiZXhwIjoyMDg3NzkzOTkxfQ.7tYsh8vXStkJqhk4T-IA6rYgONJ7evPEFbbpfHR1fDc';
+            const adminClient = createClient(url, serviceKey);
+
+            const { data: usersData } = await adminClient.auth.admin.listUsers();
+            const user = (usersData?.users as any[])?.find(u => u.email === email);
+            if (user && !user.email_confirmed_at) {
+                // Update the user to confirm the email unconditionally
+                const { error } = await adminClient.auth.admin.updateUserById(user.id, {
+                    email_confirm: true
+                });
+                if (error) throw error;
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error('Failed to auto-confirm email:', e);
+            return false;
+        }
+    },
+
+    async adminUpdateUserPhone(userId: string, phone: string): Promise<boolean> {
+        try {
+            const url = import.meta.env.VITE_SUPABASE_URL || 'https://ewoiqbhqtcdatpzhdaef.supabase.co';
+            const serviceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3b2lxYmhxdGNkYXRwemhkYWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIxNzk5MSwiZXhwIjoyMDg3NzkzOTkxfQ.7tYsh8vXStkJqhk4T-IA6rYgONJ7evPEFbbpfHR1fDc';
+            const adminClient = createClient(url, serviceKey);
+
+            // Directly update the user's phone, skipping SMS verification
+            const { error } = await adminClient.auth.admin.updateUserById(userId, {
+                phone: phone,
+                phone_confirm: true,
+                user_metadata: { phone: phone }
+            });
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Failed to update phone as admin:', e);
             throw e;
         }
     },
@@ -541,6 +736,8 @@ export const dbService = {
                     user_id: publicKey,
                     template_params: {
                         to_email,
+                        user_email: to_email, // Fallback if template uses user_email
+                        email: to_email, // Fallback if template uses email
                         to_name,
                         otp_code,
                         app_name: 'AfroCuisto'
@@ -565,4 +762,3 @@ export const dbService = {
         }
     }
 };
-
