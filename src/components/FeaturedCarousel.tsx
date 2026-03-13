@@ -91,7 +91,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
     const isFav = (id: string) => currentUser?.favorites?.includes(id) ?? false;
 
     return (
-        <section style={{ marginBottom: '32px', marginLeft: '-20px' }}>
+        <section style={{ marginBottom: '12px', marginLeft: '-20px' }}>
             {/* Section header */}
             {section?.title && (
                 <div style={{ padding: '0 32px 16px ', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -123,7 +123,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                     display: 'flex',
                     gap: 16,
                     overflowX: 'auto',
-                    padding: '20px 32px 40px 50px',
+                    padding: '20px 32px 15px 50px',
                     // scrollSnapType: 'x mandatory',
                     WebkitOverflowScrolling: 'touch',
                 }}

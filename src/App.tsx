@@ -869,7 +869,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
               </div>
             </div>
 
-            <p className="text-[10px] text-stone-400 dark:text-stone-500 italic transition-colors">
+            <p className="text-[10px] text-stone-400 dark:text-stone-500 italic transition-colors mt-8">
               &copy; {new Date().getFullYear()} AfroCuisto. Tous droits réservés.
             </p>
           </div>
@@ -1834,17 +1834,17 @@ export default function App() {
           }
           if (section.type === 'horizontal_list_v2') {
             return (
-              <section key={section.id} className="mb-10">
+              <section key={section.id} className="mb-2">
                 {/* Section header */}
-                <div className="px-8 flex justify-between items-end mb-4">
+                <div className="px-8 flex justify-between items-end mb-1">
                   <div className="flex flex-col">
-                    <h2 style={{ paddingTop: '20px' }} className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                    {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
+                    <h2 style={{ paddingTop: '0px' }} className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
+                    {section.subtitle && <p className="text-[10px] text-stone-400 font-bold tracking-widest mt-1">{section.subtitle}</p>}
                   </div>
                 </div>
 
                 {/* Horizontal scroll tray v2 — styled like 'Nos suggestions' */}
-                <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '32px', paddingTop: '20px' }} className="no-scrollbar">
+                <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '32px', paddingTop: '10px' }} className="no-scrollbar">
                   {sectionRecipes.map((recipe) => {
                     const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                     return (
@@ -1926,18 +1926,18 @@ export default function App() {
 
           if (section.type === 'horizontal_list') {
             return (
-              <section key={section.id} className="mb-10">
+              <section key={section.id} className="mb-1">
                 {/* Section header */}
-                <div className="px-8 flex justify-between items-end mb-4">
+                <div className="px-8 flex justify-between items-end mb-1">
                   <div className="flex flex-col">
                     <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                    {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
+                    {section.subtitle && <p className="text-[10px] text-stone-400 font-bold  tracking-widest mt-1">{section.subtitle}</p>}
                   </div>
 
                 </div>
 
                 {/* Horizontal scroll tray — styled like 'Recettes Populaires' */}
-                <div style={{ display: 'flex', overflowX: 'auto', gap: '24px', paddingBottom: '40px', paddingTop: '78px', paddingLeft: '32px', paddingRight: '32px' }} className="no-scrollbar">
+                <div style={{ display: 'flex', overflowX: 'auto', gap: '24px', paddingBottom: '40px', paddingTop: '68px', paddingLeft: '32px', paddingRight: '32px' }} className="no-scrollbar">
                   {sectionRecipes.map((recipe, ridx) => {
                     const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                     return (
@@ -2018,7 +2018,7 @@ export default function App() {
                 <div className="px-8 flex justify-between items-end mb-4">
                   <div className="flex flex-col">
                     <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                    {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
+                    {section.subtitle && <p className="text-[10px] text-stone-400 font-bold tracking-widest mt-1">{section.subtitle}</p>}
                   </div>
                 </div>
 
@@ -2119,7 +2119,7 @@ export default function App() {
               <div className="px-8 flex justify-between items-end mb-4">
                 <div className="flex flex-col">
                   <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                  {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
+                  {section.subtitle && <p className="text-[10px] text-stone-400 font-bold tracking-widest mt-1">{section.subtitle}</p>}
                 </div>
               </div>
               <div className="px-8 flex flex-col gap-3">
@@ -2761,6 +2761,18 @@ export default function App() {
           <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
         </button>
 
+        <a href="https://wa.me/+2290151455072" target="_blank" rel="noopener noreferrer" className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all outline-none ${isDark ? 'bg-[#111111] border-[#25D366]/20 hover:bg-[#1a1a1a]' : 'bg-white border-green-100/50 hover:bg-stone-50'}`}>
+          <div className="flex items-center gap-4">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-[#25D366]/20 text-[#25D366]' : 'bg-[#25D366]/10 text-[#25D366]'}`}>
+              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+            </div>
+            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>Contacter le support</span>
+          </div>
+          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
+        </a>
+
 
         <button onClick={handleLogout} className={`w-full flex items-center gap-3 p-4 rounded-3xl font-bold mt-6 ${isDark ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-rose-50 text-rose-600'}`}><LogOut size={20} /> {t.logout}</button>
       </section>
@@ -2913,6 +2925,43 @@ export default function App() {
             {/* Old top bar intentionally removed to allow the new layout */}
           </div>
 
+          {/* Sticky floating menu (moved outside scroll view) */}
+          <div className="absolute left-6 top-8 flex flex-col gap-3 z-[800] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
+            backgroundColor: isDark ? 'rgba(31, 41, 55, 0.65)' : 'rgba(243, 244, 246, 0.85)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)'
+          }}>
+            <button onClick={goBack} className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center text-[#fb5607] shadow-sm transition-transform active:scale-95 pointer-events-auto shrink-0">
+              <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
+            </button>
+
+            <button
+              onClick={async () => {
+                const shareData = {
+                  title: `AfroCuisto - ${recipe.name}`,
+                  text: `Découvrez la recette de ${recipe.name} sur AfroCuisto !`,
+                  url: window.location.origin + `/?recipe=${recipe.id}`
+                };
+                try {
+                  if (navigator.share) {
+                    await navigator.share(shareData);
+                  } else {
+                    await navigator.clipboard.writeText(shareData.text + " " + shareData.url);
+                    showAlertProp('Lien copié dans le presse-papiers !');
+                  }
+                } catch (err) {
+                  console.log('Partage annulé ou erreur', err);
+                }
+              }}
+              className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center shadow-sm text-[#fb5607] transition-transform active:scale-95 pointer-events-auto shrink-0"
+            >
+              <Share2 size={18} strokeWidth={2.5} />
+            </button>
+
+            <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center shadow-sm transition-transform active:scale-95 pointer-events-auto shrink-0">
+              <Heart size={18} color={currentUser?.favorites.includes(recipe.id) ? '#ef4444' : '#fb5607'} fill={currentUser?.favorites.includes(recipe.id) ? '#ef4444' : 'none'} strokeWidth={currentUser?.favorites.includes(recipe.id) ? 0 : 2.5} />
+            </button>
+          </div>
+
           <div ref={detailScrollRef} className="flex-1 overflow-y-auto no-scrollbar pb-36 relative min-h-0 bg-white">
             <AnimatePresence mode="wait">
               <motion.div
@@ -2930,41 +2979,6 @@ export default function App() {
                     <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/10 pointer-events-none"></div>
                   </div>
 
-                  <div className="fixed left-6 top-8 flex flex-col gap-3 z-[80] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
-                    backgroundColor: isDark ? 'rgba(31, 41, 55, 0.65)' : 'rgba(243, 244, 246, 0.75)',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.6)'
-                  }}>
-                    <button onClick={goBack} className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center text-[#fb5607] shadow-sm transition-transform active:scale-95 pointer-events-auto shrink-0">
-                      <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
-                    </button>
-
-                    <button
-                      onClick={async () => {
-                        const shareData = {
-                          title: `AfroCuisto - ${recipe.name}`,
-                          text: `Découvrez la recette de ${recipe.name} sur AfroCuisto !`,
-                          url: window.location.origin + `/?recipe=${recipe.id}`
-                        };
-                        try {
-                          if (navigator.share) {
-                            await navigator.share(shareData);
-                          } else {
-                            await navigator.clipboard.writeText(shareData.text + " " + shareData.url);
-                            showAlertProp('Lien copié dans le presse-papiers !');
-                          }
-                        } catch (err) {
-                          console.log('Partage annulé ou erreur', err);
-                        }
-                      }}
-                      className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center shadow-sm text-[#fb5607] transition-transform active:scale-95 pointer-events-auto shrink-0"
-                    >
-                      <Share2 size={18} strokeWidth={2.5} />
-                    </button>
-
-                    <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center shadow-sm transition-transform active:scale-95 pointer-events-auto shrink-0">
-                      <Heart size={18} color={currentUser?.favorites.includes(recipe.id) ? '#ef4444' : '#fb5607'} fill={currentUser?.favorites.includes(recipe.id) ? '#ef4444' : 'none'} strokeWidth={currentUser?.favorites.includes(recipe.id) ? 0 : 2.5} />
-                    </button>
-                  </div>
                 </div>
 
                 <div className="px-8 py-8 -mt-16 bg-white rounded-t-[40px] relative z-20 min-h-screen shadow-[0_-15px_40px_rgba(0,0,0,0.04)]">
