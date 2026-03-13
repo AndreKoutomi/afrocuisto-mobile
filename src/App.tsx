@@ -1728,7 +1728,7 @@ export default function App() {
             // LOGIN PAGE: Solid color matching the gradient top to merge seamlessly
             await StatusBar.setOverlaysWebView({ overlay: false });
             await StatusBar.setBackgroundColor({ color: isDark ? '#1a0a02' : '#ffffffff' });
-            await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+            await StatusBar.setStyle({ style: Style.Light });
             // Style.Dark = White icons
             await StatusBar.setStyle({ style: Style.Dark });
           } else {
