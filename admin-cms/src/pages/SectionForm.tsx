@@ -228,7 +228,7 @@ export function SectionForm() {
     };
 
     return (
-        <div style={{ maxWidth: '1400px' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
             {/* AI Prefill Banner */}
             {isAIPrefilled && (
                 <div style={{
@@ -264,9 +264,7 @@ export function SectionForm() {
                         <p style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
                             Sections
                         </p>
-                        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#111827', margin: 0, lineHeight: 1.2 }}>
-                            {id ? 'Modifier la Section' : 'Nouvelle Section'}
-                        </h1>
+
                     </div>
                 </div>
                 <button

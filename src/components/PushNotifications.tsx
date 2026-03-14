@@ -291,14 +291,6 @@ export function NotifCenter({ notifications, onMarkAllRead, onClose, onViewMore,
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: textMain }}>Notifications</h2>
                     <div style={{ display: 'flex', gap: 8 }}>
-                        {notifications.length > 0 && (
-                            <button
-                                onClick={onMarkAllRead}
-                                style={{ padding: '6px 12px', borderRadius: 20, border: 'none', background: '#F94D00' + '22', color: '#F94D00', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                            >
-                                Tout lire
-                            </button>
-                        )}
                         <button
                             onClick={onClose}
                             style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: textSub, fontSize: 18, fontWeight: 300 }}

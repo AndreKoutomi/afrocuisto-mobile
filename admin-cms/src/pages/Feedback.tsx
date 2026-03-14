@@ -142,7 +142,7 @@ export function Feedback() {
     );
 
     return (
-        <div style={{ paddingBottom: 60 }}>
+        <div style={{ width: '100%', boxSizing: 'border-box', paddingBottom: 60 }}>
 
             {/* ══ HERO STATS ══════════════════════════════════════════════════ */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 20, marginBottom: 28 }}>

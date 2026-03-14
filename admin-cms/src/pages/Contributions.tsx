@@ -69,11 +69,11 @@ export function Contributions() {
     );
 
     return (
-        <div style={{ paddingBottom: 60 }}>
+        <div style={{ width: '100%', boxSizing: 'border-box', paddingBottom: 60 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
                 <div>
                     <p style={{ margin: 0, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9ca3af' }}>Communauté AfroCuisto</p>
-                    <h2 style={{ margin: '6px 0 0', fontSize: 24, fontWeight: 900, color: '#111827' }}>Suggestions de la communauté</h2>
+
                 </div>
                 <button
                     onClick={fetchSuggestions}

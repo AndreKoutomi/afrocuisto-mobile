@@ -203,7 +203,7 @@ export function RecipeForm() {
     if (initialLoading) return <div className="center-content"><div className="loader"></div></div>;
 
     return (
-        <div style={{ maxWidth: '1200px' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
 
             {/* ── Header ── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
@@ -218,9 +218,8 @@ export function RecipeForm() {
                     </Link>
                     <div>
                         <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recettes</p>
-                        <h1 style={{ margin: '2px 0 0', fontSize: '24px', fontWeight: 800, color: '#111827' }}>
-                            {id ? 'Modifier la Recette' : 'Nouvelle Recette'}
-                        </h1>
+
+
                     </div>
                 </div>
                 <button
@@ -546,6 +545,6 @@ export function RecipeForm() {
                 </div>
 
             </form>
-        </div>
+        </div >
     );
 }

@@ -143,14 +143,11 @@ export function Notifications() {
     };
 
     return (
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
                 <div>
-                    <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                        Notifications Push
-                    </h1>
                     <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 0' }}>
                         Envoyez des alertes directement dans l'application AfroCuisto
                     </p>

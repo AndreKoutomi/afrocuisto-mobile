@@ -29,12 +29,6 @@ class AIService {
 
     // Récupère la clé secrète (API Key) pour parler à l'IA
     private getApiKey(provider: 'gemini' | 'openai' | 'anthropic'): string {
-        // On regarde d'abord si l'utilisateur a enregistré sa propre clé dans son navigateur
-        // Note: On utilise 'gemini_api_key' comme stockage universel par simplicité pour l'admin
-        const userKey = localStorage.getItem('gemini_api_key');
-        if (userKey) return userKey;
-
-        // Sinon on regarde les clés spécifiques dans l'env
         const env = (import.meta as any).env;
         if (provider === 'anthropic') return env.VITE_ANTHROPIC_API_KEY || '';
         if (provider === 'openai') return env.VITE_OPENAI_API_KEY || '';
@@ -43,53 +37,9 @@ class AIService {
         return '';
     }
 
-    // Fonction pour tester si une clé API est valide
-    async testKey(key: string, model: string, baseUrl?: string): Promise<{ success: boolean; message: string }> {
-        const isOpenAI = model.startsWith('gpt');
-        const isAnthropic = model.startsWith('claude');
-        try {
-            if (isAnthropic) {
-                const endpoint = `${baseUrl?.replace(/\/$/, '') || 'https://api.anthropic.com/v1'}/messages`;
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'dangerously-allow-browser': 'true' },
-                    body: JSON.stringify({ model, messages: [{ role: 'user', content: 'hi' }], max_tokens: 5 })
-                });
-                const text = await response.text();
-                if (!response.ok) return { success: false, message: `Erreur Claude (${response.status}): ${text.slice(0, 100)}` };
-                return { success: true, message: 'Connexion Claude réussie !' };
-            } else if (isOpenAI) {
-                const endpoint = `${baseUrl?.replace(/\/$/, '') || 'https://api.openai.com/v1'}/chat/completions`;
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-                    body: JSON.stringify({ model, messages: [{ role: 'user', content: 'hi' }], max_tokens: 5 })
-                });
-                const text = await response.text();
-                if (!response.ok) {
-                    if (text.trim().startsWith('<!doctype')) return { success: false, message: `Erreur: Le serveur OpenAI a renvoyé du HTML. Vérifiez votre Base URL.` };
-                    return { success: false, message: `Erreur OpenAI (${response.status}): ${text.slice(0, 100)}` };
-                }
-                return { success: true, message: 'Connexion OpenAI réussie !' };
-            } else {
-                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: 'hi' }] }], generationConfig: { maxOutputTokens: 5 } })
-                });
-                const text = await response.text();
-                if (!response.ok) return { success: false, message: `Erreur Gemini (${response.status}): ${text.slice(0, 100)}` };
-                return { success: true, message: 'Connexion Gemini réussie !' };
-            }
-        } catch (err: any) {
-            return { success: false, message: `Erreur de connexion: ${err.message}` };
-        }
-    }
-
     // Récupère le nom du modèle IA à utiliser
     private getModel(): string {
-        let model = localStorage.getItem('gemini_model') || (import.meta as any).env.VITE_AI_MODEL || DEFAULT_MODEL;
+        let model = (import.meta as any).env.VITE_AI_MODEL || DEFAULT_MODEL;
 
         // Vérification si le modèle est supporté
         const isSupported = model.startsWith('gemini') || model.startsWith('gpt') || model.startsWith('claude');
@@ -98,11 +48,6 @@ class AIService {
             return DEFAULT_MODEL;
         }
         return model;
-    }
-
-    // Enregistre le choix du modèle IA
-    setModel(modelId: string) {
-        localStorage.setItem('gemini_model', modelId);
     }
 
     // MÉTHODE INTERNE : Envoie une requête à l'IA et récupère la réponse brute
@@ -114,12 +59,12 @@ class AIService {
 
         // Détection du fournisseur (fallback sur OpenAI si inconnu avec custom Base URL)
         const env = (import.meta as any).env;
-        const customBaseUrl = localStorage.getItem('ai_base_url') || env.VITE_AI_BASE_URL;
+        const customBaseUrl = env.VITE_AI_BASE_URL;
 
         const provider = isAnthropic ? 'anthropic' : (isGemini ? 'gemini' : 'openai');
         const key = this.getApiKey(provider);
 
-        if (!key) throw new Error(`Clé API ${provider.toUpperCase()} manquante. Configurez-la dans les Réglages.`);
+        if (!key) throw new Error(`Clé API ${provider.toUpperCase()} manquante. Configurez-la dans le fichier .env (VITE_${provider.toUpperCase()}_API_KEY).`);
 
         if (isAnthropic) {
             // Logique pour Anthropic (Claude)

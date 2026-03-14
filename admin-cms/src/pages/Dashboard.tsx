@@ -104,9 +104,7 @@ export function Dashboard() {
 
     // Rendu visuel de la page
     return (
-        <div>
-            {/* Titre de la page */}
-            <h2 className="mb-6 font-bold text-2xl">Aperçu</h2>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
 
             {/* Grille de 3 colonnes pour afficher les KPI (chiffres clés) */}
             <div className="grid grid-cols-3 grid-gap-6 mb-8">

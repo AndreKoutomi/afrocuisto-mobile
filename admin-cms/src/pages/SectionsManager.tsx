@@ -201,11 +201,11 @@ export function SectionsManager() {
     const explorerSections = sections.filter(s => s.config?.page === 'explorer');
 
     return (
-        <div style={{ maxWidth: '1100px', padding: '0 20px' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
                 <div>
-                    <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#111827', margin: 0 }}>Gestion des Sections</h1>
+
                     <p style={{ color: '#9ca3af', margin: '4px 0 0' }}>Organisez le contenu de votre application mobile</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>

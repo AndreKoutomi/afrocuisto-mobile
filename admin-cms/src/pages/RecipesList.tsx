@@ -127,17 +127,12 @@ export function RecipesList() {
 
     // --- RENDU VISUEL (HTML) ---
     return (
-        <div style={{ maxWidth: '1200px', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
 
             {/* En-tête de la page */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' }}>
                 <div>
-                    <p style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
-                        Administration
-                    </p>
-                    <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#111827', margin: '2px 0 6px' }}>
-                        Gestion des Recettes
-                    </h1>
+
                     <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>
                         Ajoutez, modifiez et organisez le catalogue de plats de l'application.
                     </p>

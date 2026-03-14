@@ -78,11 +78,11 @@ export function Transactions() {
     };
 
     return (
-        <div style={{ padding: '0 0 40px' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box', padding: '0 0 40px' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#111827' }}>Transactions</h2>
+
                     <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#9ca3af' }}>Gérez les paiements, abonnements et dons</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>

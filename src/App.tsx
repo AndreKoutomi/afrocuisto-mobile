@@ -249,6 +249,119 @@ const benineseJuices = [
 
 // --- Deep Views ---
 
+const ShoppingAddModal = ({ isOpen, onClose, onAdd, t, isDark }: any) => {
+  const [name, setName] = useState('');
+  const [qty, setQty] = useState('');
+  const [unit, setUnit] = useState('g');
+  const [price, setPrice] = useState('');
+  const UNITS = ['g', 'kg', 'L', 'mL', 'cl', 'pcs', 'tbsp', 'tsp', 'pinch'];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onAdd({
+      id: `custom_${Date.now()}`,
+      item: name,
+      quantity: qty,
+      unit: unit,
+      priceXOF: price,
+      isPurchased: false
+    });
+    setName(''); setQty(''); setPrice('');
+    onClose();
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-end justify-center">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className={`relative w-full max-w-lg rounded-t-[32px] p-6 pb-12 shadow-2xl ${isDark ? 'bg-[#121212] border-t border-white/10' : 'bg-white'}`}
+          >
+            <div className="w-12 h-1.5 bg-stone-300/40 rounded-full mx-auto mb-8" />
+
+            <div className="flex items-center justify-between mb-8">
+              <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>Nouvel Ingrédient</h2>
+              <button onClick={onClose} className="p-2 rounded-full bg-stone-100 text-stone-400">
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Nom de l'ingrédient</label>
+                <input
+                  autoFocus
+                  type="text"
+                  required
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Ex: Tomates fraîches"
+                  className={`w-full py-4 px-5 rounded-2xl font-bold text-sm focus:outline-none focus:ring-4 focus:ring-[#fb5607]/10 transition-all ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-stone-50 border border-stone-100 text-stone-900'}`}
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Quantité</label>
+                  <input
+                    type="number"
+                    value={qty}
+                    onChange={e => setQty(e.target.value)}
+                    placeholder="Ex: 500"
+                    className={`w-full py-4 px-5 rounded-2xl font-bold text-sm focus:outline-none focus:ring-4 focus:ring-[#fb5607]/10 transition-all ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-stone-50 border border-stone-100 text-stone-900'}`}
+                  />
+                </div>
+                <div className="w-32">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Unité</label>
+                  <select
+                    value={unit}
+                    onChange={e => setUnit(e.target.value)}
+                    className={`w-full py-4 px-5 rounded-2xl font-bold text-sm focus:outline-none focus:ring-4 focus:ring-[#fb5607]/10 transition-all ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-stone-50 border border-stone-100 text-stone-900'}`}
+                  >
+                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Prix estimé (XOF)</label>
+                <input
+                  type="number"
+                  value={price}
+                  onChange={e => setPrice(e.target.value)}
+                  placeholder="Ex: 1500"
+                  className={`w-full py-4 px-5 rounded-2xl font-bold text-sm focus:outline-none focus:ring-4 focus:ring-[#fb5607]/10 transition-all ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-stone-50 border border-stone-100 text-stone-900'}`}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-5 bg-[#fb5607] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-[#fb5607]/30 active:scale-95 transition-all mt-4"
+              >
+                Ajouter à ma liste
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// --- Deep Views ---
+
 const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, showAlert }: any) => {
   const [showSuccess, setShowSuccess] = useState(false); // Affiche un message de succès après modification
   const [formData, setFormData] = useState({ current: '', new: '', confirm: '', email: currentUser?.email || '', phone: currentUser?.phone || '', otp: '' }); // Formulaire temporaire
@@ -1004,6 +1117,114 @@ const ModernAlertComponent = ({
   </AnimatePresence>
 );
 
+// --- Constants & Components for Shopping List ---
+const SHOPPING_UNITS = ['g', 'kg', 'L', 'mL', 'cl', 'pcs', 'tbsp', 'tsp', 'pinch'];
+const STORE_PRODUCTS = [
+  { id: 'p1', name: 'Huile de Palme Bio', brand: 'NaturAfrik', price: 2800, unit: '1L', emoji: '🫙', badge: 'Populaire', color: '#fb5607' },
+  { id: 'p2', name: 'Riz Parfumé Long Grain', brand: 'Goldenrice', price: 4500, unit: '5kg', emoji: '🌾', badge: 'Promo -15%', color: '#10b981' },
+  { id: 'p3', name: 'Ndolé Séché Premium', brand: 'TasteOfCMR', price: 1800, unit: '200g', emoji: '🍃', badge: 'Nouveau', color: '#6366f1' },
+  { id: 'p4', name: 'Gingembre Frais Moulu', brand: 'SpiceLab', price: 750, unit: '100g', emoji: '🫚', badge: null, color: '#f59e0b' },
+  { id: 'p5', name: 'Piment Scotch Bonnet', brand: 'AfroSpice', price: 950, unit: '250g', emoji: '🌶️', badge: 'Best-seller', color: '#ef4444' },
+  { id: 'p6', name: 'Plantains Mûrs', brand: 'FruitDirect', price: 1200, unit: '1kg', emoji: '🍌', badge: null, color: '#f59e0b' },
+];
+
+const SHOPPING_BANNERS = [
+  { id: 1, title: 'Livraison Express Abidjan', sub: 'Recevez vos ingrédients en moins de 2h !', emoji: '🛵', bg: 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)', tag: 'OFFRE' },
+  { id: 2, title: 'Bio & Équitable', sub: 'Soutenez les producteurs locaux avec NaturAfrik.', emoji: '🌿', bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', tag: 'ÉCO' },
+  { id: 3, title: 'Promo Semaine', sub: '-20% sur tout le rayon épices ce weekend.', emoji: '✨', bg: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', tag: 'SOLDE' },
+];
+
+const ShoppingItemRow: React.FC<{
+  item: any;
+  dimmed?: boolean;
+  list: any[];
+  updateShoppingList: (nl: any[]) => void;
+  UNITS: string[];
+}> = ({ item, dimmed, list, updateShoppingList, UNITS }) => {
+  const [editQty, setEditQty] = useState(item.quantity ?? '');
+  const [editUnit, setEditUnit] = useState(item.unit ?? 'g');
+  const [editPrice, setEditPrice] = useState(item.priceXOF ?? '');
+  const [isEditing, setIsEditing] = useState(false);
+
+  const save = () => {
+    const newList = list.map(i => i.id === item.id
+      ? { ...i, quantity: editQty, unit: editUnit, priceXOF: editPrice }
+      : i);
+    updateShoppingList(newList);
+    setIsEditing(false);
+  };
+
+  return (
+    <motion.div layout key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      className={`bg-white rounded-[24px] border shadow-sm overflow-hidden ${dimmed ? 'opacity-60 border-emerald-100' : 'border-stone-100'}`}
+    >
+      <div className="p-4 flex items-center gap-3">
+        <button
+          onClick={() => {
+            const newList = list.map(i => i.id === item.id ? { ...i, isPurchased: !i.isPurchased } : i);
+            updateShoppingList(newList);
+          }}
+          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${item.isPurchased ? 'bg-emerald-500 border-emerald-500 shadow-sm' : 'border-stone-200 hover:border-[#fb5607]'}`}
+        >
+          {item.isPurchased && <Check size={13} className="text-white" />}
+        </button>
+        <div className="flex-1 min-w-0">
+          <p className={`text-[13px] font-bold leading-tight ${item.isPurchased ? 'line-through text-stone-400' : 'text-stone-800'}`}>{item.item}</p>
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            {item.quantity && <span className="text-[11px] font-black text-[#fb5607]">{item.quantity} {item.unit}</span>}
+            {item.priceXOF && <span className="text-[10px] font-bold text-stone-400">{parseInt(item.priceXOF).toLocaleString()} XOF</span>}
+            {!item.quantity && !item.priceXOF && <span className="text-[11px] text-stone-300 italic">Appuyez ✎ pour ajouter qté &amp; prix</span>}
+            {item.recipeName && <><span className="w-1 h-1 rounded-full bg-stone-200 inline-block" /><span className="text-[10px] text-stone-400 truncate max-w-[90px]">↳ {item.recipeName}</span></>}
+          </div>
+        </div>
+        <button onClick={() => setIsEditing(!isEditing)}
+          className="w-8 h-8 rounded-full bg-stone-50 text-stone-400 flex items-center justify-center hover:bg-[#fb5607]/10 hover:text-[#fb5607] transition-all"
+        >
+          <Edit2 size={13} />
+        </button>
+        <button onClick={() => { const nl = list.filter(i => i.id !== item.id); updateShoppingList(nl); }}
+          className="w-8 h-8 rounded-full bg-stone-50 text-stone-300 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+      <AnimatePresence>
+        {isEditing && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-stone-100 bg-stone-50"
+          >
+            <div className="p-4 space-y-3">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Quantité</label>
+                  <input type="number" value={editQty} onChange={e => setEditQty(e.target.value)} placeholder="Ex: 500"
+                    className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20" />
+                </div>
+                <div className="w-28">
+                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Unité</label>
+                  <select value={editUnit} onChange={e => setEditUnit(e.target.value)}
+                    className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20"
+                  >
+                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Prix estimé (XOF)</label>
+                <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="Ex: 1500"
+                  className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20" />
+              </div>
+              <button onClick={save} className="w-full py-3 bg-[#fb5607] text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-sm">
+                Enregistrer
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
 // --- Main Application ---
 
 // --- APPLICATION PRINCIPALE (COMPOSANT RACINE) ---
@@ -1161,6 +1382,14 @@ export default function App() {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>(recipes); // Use static data as first fallback
   const [isSyncing, setIsSyncing] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  // ── Shopping page tabs & modals ──
+  const [storeTab, setStoreTab] = useState<'store' | 'mylist'>('mylist');
+  const [showAddShoppingModal, setShowAddShoppingModal] = useState(false);
+  const [bannerIdx, setBannerIdx] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setBannerIdx(i => (i + 1) % SHOPPING_BANNERS.length), 4000);
+    return () => clearInterval(timer);
+  }, []);
   const [alertConfig, setAlertConfig] = useState<{
     show: boolean;
     message: string;
@@ -1370,6 +1599,8 @@ export default function App() {
   const goBackRef = useRef<() => void>(() => { });
 
   const goBack = () => {
+    // -2.5 Si le modal d'ajout de course est ouvert
+    if (showAddShoppingModal) { setShowAddShoppingModal(false); return; }
     // -2. Si le détail d'une notification est ouvert
     if (selectedNotifDetail) { setSelectedNotifDetail(null); return; }
     // -1. Si le centre de notifications est ouvert
@@ -1682,7 +1913,11 @@ export default function App() {
   const updateShoppingList = (newList: ShoppingItem[]) => {
     if (!currentUser) return;
     const updatedUser = dbService.updateShoppingList(currentUser.id, newList);
-    if (updatedUser) setCurrentUser({ ...updatedUser });
+    if (updatedUser) {
+      setCurrentUser({ ...updatedUser });
+      // Sync to cloud for persistence
+      dbService.syncUserToCloud(updatedUser);
+    }
   };
 
   useEffect(() => {
@@ -3163,190 +3398,222 @@ export default function App() {
   }
   const RecipeDetail = RecipeDetailRef.current!;
 
+  // --- Shopping List Logic ---
+
   const renderShoppingList = () => {
     const list = currentUser?.shoppingList || [];
     const purchased = list.filter(i => i.isPurchased);
     const toBuy = list.filter(i => !i.isPurchased);
-    const UNITS = ['g', 'kg', 'L', 'mL', 'cl', 'pcs', 'tbsp', 'tsp', 'pinch'];
 
-    const ShoppingItemRow: React.FC<{ item: any; dimmed?: boolean }> = ({ item, dimmed }) => {
-      const [editQty, setEditQty] = React.useState(item.quantity ?? '');
-      const [editUnit, setEditUnit] = React.useState(item.unit ?? 'g');
-      const [editPrice, setEditPrice] = React.useState(item.priceXOF ?? '');
-      const [isEditing, setIsEditing] = React.useState(false);
+    const banner = SHOPPING_BANNERS[bannerIdx];
 
-      const save = () => {
-        const newList = list.map(i => i.id === item.id
-          ? { ...i, quantity: editQty, unit: editUnit, priceXOF: editPrice }
-          : i);
-        updateShoppingList(newList);
-        setIsEditing(false);
-      };
-
-      return (
-        <motion.div layout key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          className={`bg-white rounded-[24px] border shadow-sm overflow-hidden ${dimmed ? 'opacity-60 border-emerald-100' : 'border-stone-100'}`}
-        >
-          <div className="p-4 flex items-center gap-3">
-            {/* Checkbox */}
-            <button
-              onClick={() => {
-                const newList = list.map(i => i.id === item.id ? { ...i, isPurchased: !i.isPurchased } : i);
-                updateShoppingList(newList);
-              }}
-              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${item.isPurchased ? 'bg-emerald-500 border-emerald-500 shadow-sm' : 'border-stone-200 hover:border-[#fb5607]'
-                }`}
-            >
-              {item.isPurchased && <Check size={13} className="text-white" />}
-            </button>
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <p className={`text-[13px] font-bold leading-tight ${item.isPurchased ? 'line-through text-stone-400' : 'text-stone-800'}`}>{item.item}</p>
-              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                {item.quantity && <span className="text-[11px] font-black text-[#fb5607]">{item.quantity} {item.unit}</span>}
-                {item.priceXOF && <span className="text-[10px] font-bold text-stone-400">{parseInt(item.priceXOF).toLocaleString()} XOF</span>}
-                {!item.quantity && !item.priceXOF && <span className="text-[11px] text-stone-300 italic">Appuyez ✎ pour ajouter qté &amp; prix</span>}
-                {item.recipeName && <><span className="w-1 h-1 rounded-full bg-stone-200 inline-block" /><span className="text-[10px] text-stone-400 truncate max-w-[90px]">↳ {item.recipeName}</span></>}
-              </div>
-            </div>
-            {/* Edit btn */}
-            <button onClick={() => setIsEditing(!isEditing)}
-              className="w-8 h-8 rounded-full bg-stone-50 text-stone-400 flex items-center justify-center hover:bg-[#fb5607]/10 hover:text-[#fb5607] transition-all"
-            >
-              <Edit2 size={13} />
-            </button>
-            {/* Delete btn */}
-            <button onClick={() => { const nl = list.filter(i => i.id !== item.id); updateShoppingList(nl); }}
-              className="w-8 h-8 rounded-full bg-stone-50 text-stone-300 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all"
-            >
-              <Trash2 size={13} />
-            </button>
-          </div>
-
-          {/* Inline edit panel */}
-          <AnimatePresence>
-            {isEditing && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden border-t border-stone-100 bg-stone-50"
-              >
-                <div className="p-4 space-y-3">
-                  {/* Qty + Unit row */}
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Quantité</label>
-                      <input
-                        type="number"
-                        value={editQty}
-                        onChange={e => setEditQty(e.target.value)}
-                        placeholder="Ex: 500"
-                        className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20"
-                      />
-                    </div>
-                    <div className="w-28">
-                      <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Unité</label>
-                      <select
-                        value={editUnit}
-                        onChange={e => setEditUnit(e.target.value)}
-                        className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20"
-                      >
-                        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  {/* Price */}
-                  <div>
-                    <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Prix estimé (XOF)</label>
-                    <input
-                      type="number"
-                      value={editPrice}
-                      onChange={e => setEditPrice(e.target.value)}
-                      placeholder="Ex: 1500"
-                      className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20"
-                    />
-                  </div>
-                  <button onClick={save}
-                    className="w-full py-3 bg-[#fb5607] text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-sm"
-                  >
-                    Enregistrer
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      );
-    };
-
-    // Compute total estimated cost
     const totalXOF = list.reduce((acc, i) => acc + (parseFloat(i.priceXOF ?? '0') || 0), 0);
 
     return (
-      <div className={`flex-1 flex flex-col pb-44 animate-in fade-in slide-in-from-bottom-4 duration-700 ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>
-        <header className={`px-6 pt-10 pb-6 sticky top-0 z-[100] flex flex-col gap-1 transition-all duration-500 ${isDark ? 'bg-[#000000]/95' : 'bg-[#f3f4f6] backdrop-blur-2xl'}`}>
-          <div className="flex items-center justify-between">
-            <h2 className={`text-[24px] font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-stone-900'}`}>{t.myShoppingList}</h2>
-            {isOffline && (
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
-                <WifiOff size={22} />
-              </motion.div>
-            )}
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">{list.length} {t.ingredients}</p>
-            {totalXOF > 0 && <p className="text-[11px] font-black text-[#fb5607]">≈ {totalXOF.toLocaleString()} XOF</p>}
-          </div>
-        </header>
+      <div className={`flex-1 flex flex-col pb-44 ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>
 
-        <div className="p-6 space-y-8">
-          {list.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center px-10">
-              <div className="w-20 h-20 bg-stone-100 rounded-[32px] flex items-center justify-center text-stone-300 mb-6 border-4 border-white shadow-sm">
-                <ShoppingBag size={32} />
-              </div>
-              <h3 className="text-lg font-black text-stone-800 mb-2">{t.noShoppingItems}</h3>
-              <p className="text-sm font-medium text-stone-400 leading-relaxed mb-8">{t.noShoppingItemsDesc}</p>
-              <button onClick={() => navigateTo('home')}
-                className="bg-stone-900 text-white px-8 py-3.5 rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-stone-900/20 active:scale-95 transition-all"
-              >
-                {t.discover}
-              </button>
+        {/* ── Promo Banner ── */}
+        <div className="mx-4 mt-4 mb-2 rounded-[24px] overflow-hidden relative" style={{ background: banner.bg, minHeight: 150 }}>
+          <div className="p-7 flex items-center gap-4 relative z-10">
+            <div className="w-14 h-14 rounded-[18px] bg-white/20 flex items-center justify-center text-3xl flex-shrink-0 backdrop-blur-sm">
+              {banner.emoji}
             </div>
-          ) : (
-            <>
-              {toBuy.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase text-[#fb5607] tracking-widest flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#fb5607]"></span> {t.toBuy}
-                  </h3>
-                  <div className="space-y-3">
-                    {toBuy.map(item => <ShoppingItemRow key={item.id} item={item} />)}
-                  </div>
-                </div>
-              )}
-
-              {purchased.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase text-emerald-500 tracking-widest flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> {t.purchased}
-                  </h3>
-                  <div className="space-y-3">
-                    {purchased.map(item => <ShoppingItemRow key={item.id} item={item} dimmed />)}
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={() => { if (window.confirm(t.clearList + "?")) { updateShoppingList([]); } }}
-                className="w-full py-4 rounded-full border-2 border-stone-100 text-stone-400 font-black text-[10px] uppercase tracking-widest hover:bg-stone-50 hover:text-stone-600 transition-all active:scale-95 mt-4"
-              >
-                {t.clearList}
-              </button>
-            </>
-          )}
+            <div className="flex-1 min-w-0">
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/60">{banner.tag}</span>
+              <p className="text-[16px] font-black text-white leading-tight">{banner.title}</p>
+              <p className="text-[11px] font-semibold text-white/75 mt-0.5 truncate">{banner.sub}</p>
+            </div>
+            <button className="flex-shrink-0 bg-white/20 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-full transition-all active:scale-95">
+              Boutique
+            </button>
+          </div>
+          {/* Decorative circles */}
+          <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
+          <div className="absolute -right-2 bottom-0 w-14 h-14 rounded-full bg-white/05 pointer-events-none" />
+          {/* Dots indicator */}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+            {SHOPPING_BANNERS.map((_, i) => (
+              <div key={i} className={`rounded-full transition-all ${i === bannerIdx ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40'}`} />
+            ))}
+          </div>
         </div>
+
+        {/* ── Tab Switcher ── */}
+        <div className={`mx-4 mt-3 mb-0 flex gap-1 p-1 rounded-[40px] ${isDark ? 'bg-white/5' : 'bg-white/80'} backdrop-blur-sm`}>
+          {[
+            { key: 'mylist', label: 'Ma Liste', count: list.length },
+            { key: 'store', label: 'Store', count: null },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setStoreTab(tab.key as any)}
+              className={`flex-1 py-2.5 rounded-[40px] text-[12px] font-black transition-all flex items-center justify-center gap-1.5 ${storeTab === tab.key
+                ? 'bg-[#fb5607] text-white shadow-sm shadow-[#fb5607]/30'
+                : isDark ? 'text-white/50' : 'text-stone-500'
+                }`}
+            >
+              {tab.label}
+              {tab.count !== null && tab.count > 0 && (
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${storeTab === tab.key ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-500'}`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <AnimatePresence mode="wait">
+
+          {/* ════════════ MA LISTE ════════════ */}
+          {storeTab === 'mylist' && (
+            <motion.div key="mylist" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} transition={{ duration: 0.22 }}
+              className="flex-1"
+            >
+              {/* Sub-header */}
+              <div className="px-8 pt-7 pb-5 flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-black text-stone-400 tracking-widest">{list.length} {t.ingredients}</p>
+                  {totalXOF > 0 && <p className="text-[13px] font-black text-[#fb5607]">≈ {totalXOF.toLocaleString()} XOF</p>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowAddShoppingModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fb5607]/10 text-[#fb5607] rounded-full active:scale-90 transition-all shadow-md shadow-[#111111]/10 border-[#fd5e1bs]/10 border-1"
+                  >
+                    <Plus size={16} strokeWidth={3} />
+                    <span className="text-[11px] font-black uppercase tracking-wider">Créer</span>
+                  </button>
+                  {isOffline && (
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
+                      <WifiOff size={20} />
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+
+              <div className="px-4 pb-4 space-y-8">
+                {list.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center px-10">
+                    <div className={`w-20 h-20 rounded-[32px] flex items-center justify-center text-stone-300 mb-6 border-4 shadow-sm ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-100 border-white'}`}>
+                      <ShoppingBag size={32} />
+                    </div>
+                    <h3 className={`text-lg font-black mb-2 ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.noShoppingItems}</h3>
+                    <p className="text-sm font-medium text-stone-400 leading-relaxed mb-8">{t.noShoppingItemsDesc}</p>
+                    <button onClick={() => navigateTo('home')}
+                      className="bg-[#fb5607] text-white px-8 py-3.5 rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-[#fb5607]/25 active:scale-95 transition-all"
+                    >
+                      {t.discover}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {toBuy.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-[10px] font-black uppercase text-[#fb5607] tracking-widest flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#fb5607]" /> {t.toBuy}
+                        </h3>
+                        <div className="space-y-3">
+                          {toBuy.map(item => <ShoppingItemRow key={item.id} item={item} list={list} updateShoppingList={updateShoppingList} UNITS={SHOPPING_UNITS} />)}
+                        </div>
+                      </div>
+                    )}
+                    {purchased.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-[10px] font-black uppercase text-emerald-500 tracking-widest flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {t.purchased}
+                        </h3>
+                        <div className="space-y-3">
+                          {purchased.map(item => <ShoppingItemRow key={item.id} item={item} dimmed list={list} updateShoppingList={updateShoppingList} UNITS={SHOPPING_UNITS} />)}
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { if (window.confirm(t.clearList + "?")) { updateShoppingList([]); } }}
+                      className="w-full py-4 rounded-full border-2 border-stone-100 text-stone-400 font-black text-[10px] uppercase tracking-widest hover:bg-stone-50 hover:text-stone-600 transition-all active:scale-95 mt-4"
+                    >
+                      {t.clearList}
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ════════════ STORE ════════════ */}
+          {storeTab === 'store' && (
+            <motion.div key="store" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.22 }}
+              className="flex-1 px-4 pt-4 pb-4"
+            >
+              {/* Partners label */}
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[13px] font-black text-stone-400 tracking-widest pl-2">Produits Partenaires</p>
+                <span className={`text-[13px] font-black px-2 py-1 rounded-full ${isDark ? 'bg-white/10 text-white/60' : 'bg-stone-100 text-stone-400'}`}>Livraison 24h</span>
+              </div>
+
+              {/* Product Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {STORE_PRODUCTS.map(product => (
+                  <motion.div key={product.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    className={`rounded-[22px] overflow-hidden border shadow-sm px-4 py-3 flex flex-col ${isDark ? 'bg-white/5 border-white/8' : 'bg-white border-stone-100'}`}
+                  >
+                    {/* Product top */}
+                    <div className="relative p-4 pb-2 flex flex-col items-center">
+                      {product.badge && (
+                        <span className="absolute top-2.5 right-2.5 text-[8px] font-black px-2 py-0.5 rounded-full text-white"
+                          style={{ background: product.color }}>
+                          {product.badge}
+                        </span>
+                      )}
+                      <div className="w-14 h-14 rounded-[18px] flex items-center justify-center text-[28px] mb-2"
+                        style={{ background: product.color + '15' }}>
+                        {product.emoji}
+                      </div>
+                      <p className={`text-[12px] font-black text-center leading-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{product.name}</p>
+                      <p className="text-[10px] font-semibold text-stone-400 mt-0.5">{product.brand}</p>
+                    </div>
+                    {/* Price + CTA */}
+                    <div className="px-3 pb-3 mt-auto">
+                      <div className="flex items-baseline justify-between mb-2">
+                        <span className="text-[15px] font-black" style={{ color: product.color }}>{product.price.toLocaleString()}</span>
+                        <span className="text-[9px] font-bold text-stone-400">XOF / {product.unit}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newItem = { id: `store_${product.id}_${Date.now()}`, item: product.name, quantity: '1', unit: product.unit, priceXOF: String(product.price), isPurchased: false, recipeName: product.brand };
+                          updateShoppingList([...list, newItem]);
+                          setStoreTab('mylist');
+                        }}
+                        className="w-full py-2 rounded-full text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+                        style={{ background: product.color }}
+                      >
+                        + Ma liste
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* CTA more partners */}
+              <div className={`mt-4 p-4 rounded-[20px] text-center border border-dashed ${isDark ? 'border-white/10' : 'border-stone-200'}`}>
+                <p className="text-[11px] font-black text-stone-400">Plus de partenaires arrivent bientôt 🚀</p>
+              </div>
+            </motion.div>
+          )}
+
+        </AnimatePresence>
+
+        <ShoppingAddModal
+          isOpen={showAddShoppingModal}
+          onClose={() => setShowAddShoppingModal(false)}
+          onAdd={(newItem: any) => updateShoppingList([...list, newItem])}
+          isDark={isDark}
+          t={t}
+        />
       </div>
     );
   };
+
+
 
 
   const handleOtpDigitChange = (index: number, value: string) => {
@@ -3866,7 +4133,7 @@ export default function App() {
             style={{ background: isDark ? '#000000' : 'rgba(255,255,255,0.98)', backdropFilter: 'blur(20px)' }}
           >
             {/* Search Header */}
-            <div className="px-5 pb-4 pt-10 flex items-center gap-3">
+            <div className="px-5 pb-4 pt-20 flex items-center gap-3">
               <button
                 onClick={() => { setIsSearchExpanded(false); setSearchQuery(''); }}
                 className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${isDark ? 'bg-white/10 text-white border-white/10' : 'bg-stone-100 text-stone-600 border-stone-200/50'}`}
@@ -3886,7 +4153,7 @@ export default function App() {
                   placeholder={t.searchPlaceholder}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-full rounded-full py-3.5 pl-11 pr-5 focus:outline-none font-bold text-[15px] transition-all ${isDark ? 'bg-white/10 border border-white/10 text-white placeholder:text-white/30 focus:border-[#fb5607]/60 focus:bg-white/15' : 'bg-stone-50 border border-stone-200/40 text-stone-900 placeholder:text-stone-400 focus:ring-2 focus:ring-[#fb5607]/10'}`}
+                  className={`w-full rounded-full py-3.5 pl-11 pr-5 focus:outline-none font-medium text-[15px] transition-all ${isDark ? 'bg-white/10 border border-white/10 text-white placeholder:text-white/30 focus:border-[#fb5607]/60 focus:bg-white/15' : 'bg-stone-50 border border-stone-200/40 text-stone-900 placeholder:text-stone-400 focus:ring-2 focus:ring-[#fb5607]/10'}`}
                 />
               </motion.div>
             </div>
@@ -3895,7 +4162,7 @@ export default function App() {
             <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-20">
               {searchQuery.length > 0 ? (
                 <div className="space-y-2.5 mt-2">
-                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
+                  <p className={`text-[10px] font-black tracking-[0.2em] mb-4 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
                     {allRecipes.filter(r => normalizeString(r.name).includes(normalizeString(searchQuery)) || normalizeString(r.region).includes(normalizeString(searchQuery))).length} résultat(s)
                   </p>
                   {allRecipes

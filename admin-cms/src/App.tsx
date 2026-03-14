@@ -22,7 +22,6 @@ import { SectionForm } from './pages/SectionForm';
 import { Feedback } from './pages/Feedback';
 import { Contributions } from './pages/Contributions';
 import { UsersPage } from './pages/Users';
-import { Settings } from './pages/Settings';
 import { Transactions } from './pages/Transactions';
 import { Notifications } from './pages/Notifications';
 
@@ -38,18 +37,20 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     if (location.pathname === '/feedback') return 'Retours Clients';
     if (location.pathname === '/contributions') return 'Contributions Utilisateur';
     if (location.pathname === '/dashboard') return 'Tableau de bord';
+    if (location.pathname === '/recipes') return 'Gestion des Recettes';
+    if (location.pathname.startsWith('/recipes/create')) return 'Nouvelle Recette';
+    if (location.pathname.startsWith('/recipes/edit')) return 'Modifier la Recette';
     if (location.pathname === '/users') return 'Utilisateurs';
     if (location.pathname === '/transactions') return 'Transactions';
-    if (location.pathname === '/settings') return 'Réglages IA';
     if (location.pathname === '/notifications') return 'Notifications Push';
     return 'Bienvenue sur AfroCuisto';
   };
 
   const getBreadcrumb = () => {
+    if (location.pathname.startsWith('/recipes')) return 'Pages / Recettes';
     if (location.pathname.startsWith('/sections')) return 'Pages / Sections';
     if (location.pathname.startsWith('/users')) return 'Pages / Utilisateurs';
     if (location.pathname.startsWith('/transactions')) return 'Pages / Transactions';
-    if (location.pathname.startsWith('/settings')) return 'Réglages / IA';
     if (location.pathname.startsWith('/contributions')) return 'Pages / Contributions';
     if (location.pathname.startsWith('/notifications')) return 'Pages / Notifications';
     return 'Pages / Tableau de bord';
@@ -119,7 +120,6 @@ function App() {
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/contributions" element={<Contributions />} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/settings" element={<Settings />} />
         </Routes>
       </AppLayout>
     </Router>

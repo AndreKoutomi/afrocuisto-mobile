@@ -12,7 +12,7 @@
  */
 
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users, Settings, Heart, CreditCard, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users, Heart, CreditCard, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SidebarProps {
     isCollapsed: boolean;
@@ -140,14 +140,6 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                     <span className="badge badge-primary text-[10px] ml-auto">NEW</span>
                 </NavLink>
 
-                {/* Lien vers les réglages de l'Intelligence Artificielle */}
-                <NavLink
-                    to="/settings"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Settings size={20} style={{ marginRight: '8px' }} />
-                    <span>Réglages IA</span>
-                </NavLink>
             </nav>
 
         </aside> // Fin du composant Sidebar
