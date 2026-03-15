@@ -809,5 +809,51 @@ export const dbService = {
             // Re-throw so the UI can adapt (e.g., bypass OTP for spam)
             throw err;
         }
+    },
+
+    // --- Order Management ---
+    async createOrder(orderData: any): Promise<{ data: any; error: any }> {
+        if (!supabase) return { data: null, error: new Error('Supabase client not initialized') };
+        const { data, error } = await supabase
+            .from('orders')
+            .insert([{
+                ...orderData,
+                created_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+        return { data, error };
+    },
+
+    async getUserOrders(userId: string): Promise<any[]> {
+        try {
+            if (!supabase) return [];
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+            if (error) {
+                if (error.code === '42P01') return []; // Table may not exist yet
+                throw error;
+            }
+            return data || [];
+        } catch (err) {
+            console.error('Error fetching user orders:', err);
+            return [];
+        }
+    },
+
+    async updateOrderStatus(orderId: string, status: string): Promise<boolean> {
+        if (!supabase) return false;
+        const { error } = await supabase
+            .from('orders')
+            .update({ status })
+            .eq('id', orderId);
+        if (error) {
+            console.error('Error updating order status:', error);
+            return false;
+        }
+        return true;
     }
 };

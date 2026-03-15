@@ -12,7 +12,7 @@
  */
 
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users, Sparkles, CreditCard, Bell, ChevronLeft, ChevronRight, Store, ShoppingBag, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users, Sparkles, CreditCard, Bell, ChevronLeft, ChevronRight, Store, ShoppingBag, ShoppingBasket, LogOut } from 'lucide-react';
 import logoAdmin from '../assets/logo_admin.png';
 
 interface SidebarProps {
@@ -112,6 +112,15 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }:
                 >
                     <Store size={20} style={{ marginRight: '8px' }} />
                     <span>Marchands</span>
+                </NavLink>
+
+                {/* Lien vers la gestion des Commandes */}
+                <NavLink
+                    to="/orders"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <ShoppingBasket size={20} style={{ marginRight: '8px' }} />
+                    <span>Commandes</span>
                 </NavLink>
 
                 {/* Lien vers la gestion des Produits du Store */}

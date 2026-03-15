@@ -77,7 +77,9 @@ import {
   Loader2,
   Navigation,
   Edit3,
-  Maximize2
+  Maximize2,
+  ClipboardList,
+  Calendar
 } from 'lucide-react';
 import { recipes } from './data';
 import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product } from './types';
@@ -759,6 +761,147 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
           Vos informations sont stockées en toute sécurité et synchronisées sur tous vos appareils.
         </p>
       )}
+    </div>
+  );
+};
+
+const OrdersHistoryView = ({ currentUser, t, isDark }: { currentUser: any; t: any; isDark: boolean }) => {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchOrders = async () => {
+      try {
+        const data = await dbService.getUserOrders(currentUser.id);
+        if (data) setOrders(data);
+      } catch (err) {
+        console.error("Error fetching user orders:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+
+    // Real-time synchronization for order updates (status, etc.)
+    const channel = dbService.supabase
+      ?.channel(`public:orders:user_id=eq.${currentUser.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+        filter: `user_id=eq.${currentUser.id}`
+      }, (payload) => {
+        if (payload.eventType === 'UPDATE') {
+          setOrders(current => current.map(o => o.id === payload.new.id ? payload.new : o));
+        } else if (payload.eventType === 'INSERT') {
+          setOrders(current => [payload.new, ...current]);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      if (channel) dbService.supabase?.removeChannel(channel);
+    };
+  }, [currentUser?.id]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return { bg: 'bg-amber-500/10', text: 'text-amber-600', label: 'En attente' };
+      case 'processing': return { bg: 'bg-blue-500/10', text: 'text-blue-600', label: 'En préparation' };
+      case 'shipped': return { bg: 'bg-indigo-500/10', text: 'text-indigo-600', label: 'Expédiée' };
+      case 'delivered': return { bg: 'bg-emerald-500/10', text: 'text-emerald-600', label: 'Livrée' };
+      case 'cancelled': return { bg: 'bg-rose-500/10', text: 'text-rose-600', label: 'Annulée' };
+      default: return { bg: 'bg-stone-500/10', text: 'text-stone-600', label: status };
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <Loader className="animate-spin text-[#38b000]" size={32} />
+        <p className={`font-bold text-xs uppercase tracking-widest ${isDark ? 'text-[#38b000]/80' : 'text-[#38b000]'}`}>Chargement de vos commandes...</p>
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+        <div className={`w-24 h-24 rounded-[40px] flex items-center justify-center mb-6 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100 shadow-inner'}`}>
+          <ShoppingBag size={48} className="text-stone-200" />
+        </div>
+        <h3 className={`text-xl font-black mb-2 tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.noOrders || 'Aucune commande'}</h3>
+        <p className="text-sm font-medium text-stone-400 leading-relaxed max-w-[240px]">
+          {t.noOrdersDesc || "Vous n'avez pas encore passé de commande. Vos délices apparaîtront ici !"}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {orders.map((order) => {
+        const s = getStatusColor(order.status);
+        return (
+          <motion.div
+            key={order.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`p-6 rounded-[32px] border shadow-sm ${isDark ? 'bg-[#111111] border-white/8' : 'bg-white border-stone-100 shadow-stone-200/20'}`}
+          >
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Commande</span>
+                <p className={`font-black tracking-tight text-sm ${isDark ? 'text-white' : 'text-stone-800'}`}>#{order.id.toString().slice(-8).toUpperCase()}</p>
+              </div>
+              <div className={`px-4 py-1.5 rounded-full ${s.bg} ${s.text} text-[10px] font-black uppercase tracking-widest border border-current opacity-80`}>
+                {s.label}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/5' : 'bg-stone-50'}`}>
+                    <Calendar size={18} className="text-stone-400" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Date</span>
+                    <p className={`text-xs font-bold ${isDark ? 'text-white/80' : 'text-stone-600'}`}>{new Date(order.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Total</span>
+                  <p className="text-lg font-black text-[#fb5607]">{order.total_amount?.toLocaleString()} XOF</p>
+                </div>
+              </div>
+
+              <div className={`h-px w-full ${isDark ? 'bg-white/5' : 'bg-stone-50'}`} />
+
+              <div className="flex items-center justify-between">
+                <div className="flex -space-x-3 overflow-hidden">
+                  {(order.items || []).slice(0, 4).map((item: any, idx: number) => (
+                    <div key={idx} className={`w-10 h-10 rounded-xl border-2 ${isDark ? 'border-[#111111] bg-stone-800' : 'border-white bg-stone-100'} flex items-center justify-center text-xs shadow-sm overflow-hidden`}>
+                      {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : '📦'}
+                    </div>
+                  ))}
+                  {order.items?.length > 4 && (
+                    <div className={`w-10 h-10 rounded-xl border-2 ${isDark ? 'border-[#111111] bg-stone-800' : 'border-white bg-stone-200'} flex items-center justify-center text-[10px] font-black text-stone-500`}>
+                      +{order.items.length - 4}
+                    </div>
+                  )}
+                </div>
+                <button className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${isDark ? 'bg-white/5 text-white/60 border border-white/10' : 'bg-stone-900 text-white shadow-lg shadow-stone-900/10'}`}>
+                  {t.orderDetail || 'Détails'} <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };
@@ -1462,6 +1605,87 @@ const MapPickerModal = ({ isOpen, onClose, onSelect, initialCoords, isDark }: an
 // --- Main Application ---
 
 // --- APPLICATION PRINCIPALE (COMPOSANT RACINE) ---
+const StoreProductCard = ({
+  product,
+  list,
+  updateShoppingList,
+  isDark,
+  allMerchants,
+  setSelectedProduct
+}: {
+  product: Product;
+  list: ShoppingItem[];
+  updateShoppingList: (nl: ShoppingItem[]) => void;
+  isDark: boolean;
+  allMerchants: any[];
+  setSelectedProduct: (p: Product) => void;
+}) => {
+  const [isAdded, setIsAdded] = useState(false);
+  const shopItem = list.find(i => i.id.startsWith(`store_${product.id}`));
+  const isInList = !!shopItem;
+  const isInCart = shopItem?.isInCart;
+  const mName = product.merchant_id ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand) : product.brand;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+      className={`rounded-[32px] overflow-hidden p-3 flex flex-col ${isDark ? 'bg-white/5' : 'bg-white shadow-sm border border-stone-50'}`}
+    >
+      <div
+        onClick={() => setSelectedProduct(product)}
+        className={`relative aspect-square rounded-[26px] flex items-center justify-center text-[54px] mb-4 cursor-pointer active:scale-95 transition-all ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}
+      >
+        {isInList && (
+          <div className={`absolute top-2 left-2 right-2 py-1.5 rounded-full border flex items-center justify-center gap-1.5 z-10 backdrop-blur-sm ${isInCart ? 'bg-[#38b000]/10 border-[#38b000]/20 text-[#38b000]' : 'bg-orange-500/10 border-orange-500/20 text-orange-500'}`}>
+            <Check size={10} strokeWidth={4} />
+            <span className="text-[9px] font-black uppercase tracking-wide">
+              {isInCart ? 'Au panier' : 'Dans la liste'}
+            </span>
+          </div>
+        )}
+        <div className="hover:scale-110 transition-transform duration-500 w-full h-full flex items-center justify-center overflow-hidden rounded-[22px]">
+          {product.image_url ? (
+            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-[54px]">{product.emoji || '📦'}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="px-2 pb-1.5">
+        <h4
+          onClick={() => setSelectedProduct(product)}
+          className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}
+        >
+          {product.name}
+        </h4>
+        <p className="text-[11px] font-bold text-stone-400 mt-1 truncate">
+          {mName}
+        </p>
+
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-[13px] font-bold text-stone-400">XOF</span>
+            <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{product.price.toLocaleString()}</span>
+          </div>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const newItem = { id: `store_${product.id}_${Date.now()}`, item: product.name, amount: '1', quantity: '1', unit: product.unit, priceXOF: String(product.price), isPurchased: false, recipeName: mName };
+              updateShoppingList([...list, newItem]);
+              setIsAdded(true);
+              setTimeout(() => setIsAdded(false), 2000);
+            }}
+            className={`w-[42px] h-[42px] rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-lg ${isAdded ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-[#38b000] shadow-[#38b000]/25'}`}
+          >
+            {isAdded ? <Check size={20} strokeWidth={3} className="text-white" /> : <Plus size={20} strokeWidth={3} className="text-white" />}
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function App() {
   // --- ÉTATS (MÉMOIRE) DE L'APPLICATION ---
   const [currentUser, setCurrentUser] = useState<User | null>(dbService.getCurrentUser()); // Utilisateur actuellement connecté
@@ -1629,10 +1853,11 @@ export default function App() {
     accent: '#9ef01a'
   };
   // ── Shopping page tabs & modals ──
-  const [storeTab, setStoreTab] = useState<'store' | 'mylist'>('mylist');
+  const [storeTab, setStoreTab] = useState<'store' | 'mylist'>('store');
   const [selectedStoreItemIds, setSelectedStoreItemIds] = useState<string[]>([]);
   const [showAddShoppingModal, setShowAddShoppingModal] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [bannerIdx, setBannerIdx] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setBannerIdx(i => (i + 1) % SHOPPING_BANNERS.length), 4000);
@@ -1898,26 +2123,23 @@ export default function App() {
   const goBackRef = useRef<() => void>(() => { });
 
   const goBack = () => {
-    // -3. Si le panier est ouvert
-    if (isCartOpen) { setIsCartOpen(false); return; }
-    // -2.5 Si le modal d'ajout de course est ouvert
-    if (showAddShoppingModal) { setShowAddShoppingModal(false); return; }
-    // -2. Si le détail d'une notification est ouvert
+    // Top-most overlays (z-index 2000+)
     if (selectedNotifDetail) { setSelectedNotifDetail(null); return; }
-    // -1. Si le centre de notifications est ouvert
     if (isNotifCenterOpen) { setIsNotifCenterOpen(false); return; }
-    // 0. Si la recherche plein écran est ouverte, on la ferme
-    if (isSearchExpanded) { setIsSearchExpanded(false); return; }
-    // 1. Si une recette est ouverte, on la ferme
-    if (selectedRecipe) { setSelectedRecipe(null); return; }
-    // 1.5 Si un produit est ouvert, on le ferme
+    if (isCartOpen) { setIsCartOpen(false); return; }
+    if (isOrdersOpen) { setIsOrdersOpen(false); return; }
+    if (showAddShoppingModal) { setShowAddShoppingModal(false); return; }
+
+    // Middle overlays
     if (selectedProduct) { setSelectedProduct(null); return; }
-    // 2. Si on est dans une sous-vue de sécurité, on revient au menu sécurité principal
+    if (selectedRecipe) { setSelectedRecipe(null); return; }
+    if (isSearchExpanded) { setIsSearchExpanded(false); return; }
+
+    // Profile sub-views
     if (profileSubView === 'security' && securitySubView !== 'main') {
       setSecuritySubView('main');
       return;
     }
-    // 3. Si on est dans une sous-vue de profil (paramètres, à propos, etc.), on revient au profil
     if (profileSubView) { setProfileSubView(null); return; }
     // 4. Si des filtres de catégorie / région / recherche sont actifs, on les efface
     if (selectedCategory || selectedRegion || searchQuery) {
@@ -2018,16 +2240,24 @@ export default function App() {
 
   // Déconnexion de l'utilisateur
   const handleLogout = async () => {
-    // Sauvegarde du mode sombre avant de partir
-    const currentDarkMode = currentUser?.settings?.darkMode === true;
+    // 1. Sauvegarde du mode sombre avant de partir
+    const currentDarkMode = isDark;
     localStorage.setItem('afrocuisto_dark_mode', String(currentDarkMode));
 
-    await dbService.signOut(); // Appel de la déconnexion Supabase
-    dbService.setCurrentUser(null);
+    // 2. Déconnexion immédiate de l'UI (Etat local)
     setCurrentUser(null);
-    setActiveTab('home'); // Retour à l'accueil
-    setHistory(['home']);
+    dbService.setCurrentUser(null);
+
+    // 3. Nettoyage des états de navigation pour éviter les flashs
     setSelectedRecipe(null);
+    setSelectedProduct(null);
+    setProfileSubView(null);
+    setActiveTab('home');
+    setHistory(['home']);
+
+    // 4. Déconnexion distante (Supabase) sans bloquer l'interface
+    dbService.signOut().catch(err => console.error("SignOut error:", err));
+
     showAlert("Vous êtes maintenant déconnecté", "success");
   };
 
@@ -3311,7 +3541,6 @@ export default function App() {
           <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
         </button>
 
-        {/* New Shopping List Menu */}
 
         <button onClick={() => setProfileSubView('settings')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
           <div className="flex items-center gap-4">
@@ -3475,6 +3704,7 @@ export default function App() {
       setSelectedRecipe: (r: Recipe) => void;
     }) => {
       const [selectedIngs, setSelectedIngs] = useState<number[]>([]);
+      const [isAdded, setIsAdded] = useState(false);
       const charCodeSum = recipe.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
       const fakeCalories = 250 + (charCodeSum % 300);
       const fakeProtein = 10 + (charCodeSum % 30);
@@ -3679,7 +3909,6 @@ export default function App() {
             </AnimatePresence>
           </div>
 
-          {/* Persistent Footer for Recipe Add to List */}
           <div className={`absolute bottom-0 inset-x-0 p-6 pb-10 flex items-center gap-4 z-[850] ${isDark ? 'bg-black/80 backdrop-blur-xl' : 'bg-white/80 backdrop-blur-xl border-t border-stone-100'}`}>
             <button
               onClick={() => {
@@ -3696,14 +3925,26 @@ export default function App() {
 
                 const currentList = currentUser?.shoppingList || [];
                 updateShoppingList([...currentList, ...selectedList]);
-                showAlertProp(`${selectedList.length} ingrédients ajoutés !`);
-                setSelectedIngs([]);
+                setIsAdded(true);
+                setTimeout(() => {
+                  setIsAdded(false);
+                  setSelectedIngs([]);
+                }, 1500);
               }}
-              disabled={selectedIngs.length === 0}
-              className={`w-full h-14 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl ${selectedIngs.length > 0 ? 'bg-[#fb5607] text-white shadow-[#fb5607]/20 active:scale-95' : 'bg-stone-100 text-stone-400 opacity-60 grayscale cursor-not-allowed hidden'}`}
+              disabled={selectedIngs.length === 0 || isAdded}
+              className={`w-full h-14 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl ${isAdded ? 'bg-emerald-500 shadow-emerald-500/20' : (selectedIngs.length > 0 ? 'bg-[#fb5607] text-white shadow-[#fb5607]/20 active:scale-95' : 'bg-stone-100 text-stone-400 opacity-60 grayscale cursor-not-allowed hidden')}`}
             >
-              <Plus size={20} />
-              Ajouter à ma liste de courses ({selectedIngs.length})
+              {isAdded ? (
+                <>
+                  <Check size={20} className="text-white" strokeWidth={3} />
+                  <span>Ingrédients Ajoutés !</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={20} />
+                  <span>Ajouter à ma liste de courses ({selectedIngs.length})</span>
+                </>
+              )}
             </button>
           </div>
         </motion.div>
@@ -3734,8 +3975,9 @@ export default function App() {
     }) => {
       const [qty, setQty] = useState(1);
       const merchantName = product.merchant_id
-        ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand)
+        ? (allMerchants.find((m: any) => m.id === product.merchant_id)?.name || product.brand)
         : product.brand;
+      const [isAdded, setIsAdded] = useState(false);
 
       return (
         <motion.div
@@ -3745,8 +3987,8 @@ export default function App() {
           transition={{ type: 'spring', damping: 26, stiffness: 380, mass: 0.8 }}
           className={`absolute inset-0 z-[700] overflow-hidden w-full flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.15)] ${isDark ? 'bg-[#000000]' : 'bg-[#F9F9F9]'}`}
         >
-          {/* Floating Back Button */}
-          <div className="absolute left-6 top-8 z-[800] p-2 rounded-full backdrop-blur-xl border" style={{
+          {/* Floating Back Button - Style matched with RecipeDetail */}
+          <div className="absolute left-6 top-8 flex flex-col gap-3 z-[800] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
             backgroundColor: isDark ? 'rgba(31, 41, 55, 0.65)' : 'rgba(243, 244, 246, 0.85)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)'
           }}>
@@ -3772,7 +4014,7 @@ export default function App() {
             </div>
 
             {/* Overlapping Content Area */}
-            <div className={`px-8 pt-8 pb-12 -mt-16 rounded-t-[40px] relative z-20 min-h-screen shadow-[0_-15px_40px_rgba(0,0,0,0.04)] ${isDark ? 'bg-black' : 'bg-white'}`}>
+            <div className={`px-8 pt-8 pb-12 -mt-16 rounded-t-[40px] relative z-20 shadow-[0_-15px_40px_rgba(0,0,0,0.04)] ${isDark ? 'bg-black' : 'bg-white'}`}>
               <div className="w-12 h-1.5 bg-stone-200 rounded-full mx-auto mb-8" />
 
               <div className="flex items-center justify-between gap-4">
@@ -3852,6 +4094,7 @@ export default function App() {
                 const newItem = {
                   id: `store_${product.id}_${Date.now()}`,
                   item: product.name,
+                  amount: String(qty),
                   quantity: String(qty),
                   unit: product.unit,
                   priceXOF: String(product.price * qty),
@@ -3859,13 +4102,26 @@ export default function App() {
                   recipeName: merchantName
                 };
                 updateShoppingList([...(currentUser?.shoppingList || []), newItem]);
-                showAlertProp(`${qty} ${product.name} ajouté(s) à votre liste !`, 'success');
-                goBack();
+                setIsAdded(true);
+                setTimeout(() => {
+                  setIsAdded(false);
+                  goBack();
+                }, 1200);
               }}
-              className="flex-1 h-14 bg-[#38b000] rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-[#38b000]/20 active:scale-95 transition-all"
+              disabled={isAdded}
+              className={`flex-1 h-14 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all ${isAdded ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-[#38b000] shadow-[#38b000]/20'} shadow-lg`}
             >
-              <Plus size={20} className="text-white" />
-              <span className="text-white font-black text-sm uppercase tracking-widest">Ma liste de course</span>
+              {isAdded ? (
+                <>
+                  <Check size={20} className="text-white" />
+                  <span className="text-white font-black text-sm uppercase tracking-widest">Produit Ajouté !</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={20} className="text-white" />
+                  <span className="text-white font-black text-sm uppercase tracking-widest">Ma liste de course</span>
+                </>
+              )}
             </button>
           </div>
         </motion.div>
@@ -3945,17 +4201,52 @@ export default function App() {
         updateShoppingList(newList);
       };
 
-      const handlePlaceOrder = () => {
+      const handlePlaceOrder = async () => {
         try {
           const totalAmount = Math.round(total);
-          console.log("Tentative de commande FedaPay...", { totalAmount, currentUser });
+          console.log("Tentative de commande...", { totalAmount, paymentMethod, currentUser });
 
           if (totalAmount <= 0) {
             alert("Erreur: Le montant doit être supérieur à 0.");
             return;
           }
 
-          // Validation FedaPay
+          // --- LOGIQUE CASH ON DELIVERY (COD) ---
+          if (paymentMethod === 'cod') {
+            setStep('success');
+            if (currentUser) {
+              await dbService.createOrder({
+                user_id: currentUser.id,
+                customer_name: currentUser.name,
+                customer_email: currentUser.email,
+                customer_phone: currentUser.phone || '',
+                customer_address: locationText,
+                items: cartItems,
+                total_amount: totalAmount,
+                status: 'pending',
+                status_color: '#fb5607',
+                payment_status: 'unpaid',
+                payment_method: 'cod',
+                delivery_coords: coords
+              });
+
+              const newList = (currentUser?.shoppingList || []).map(i => {
+                if (i.id.startsWith('store_') && i.isInCart) {
+                  return { ...i, isPurchased: true, isInCart: false };
+                }
+                return i;
+              });
+              updateShoppingList(newList);
+
+              setTimeout(() => {
+                goBack();
+                showAlert("Commande enregistrée (Cash à la livraison) !", "success");
+              }, 2000);
+            }
+            return;
+          }
+
+          // --- LOGIQUE FEDAPAY ---
           if (typeof (window as any).FedaPay === 'undefined') {
             alert("Erreur: Le script FedaPay n'est pas chargé. Veuillez vérifier votre connexion.");
             return;
@@ -3978,11 +4269,29 @@ export default function App() {
                 country: 'BJ'
               }
             },
-            onComplete: (resp: any) => {
+            onComplete: async (resp: any) => {
               console.log("FedaPay onComplete:", resp);
               const status = resp.reason?.status || resp.status;
               if (status === 'approved' || status === 'captured' || resp.transaction) {
                 setStep('success');
+
+                // Enregistrer en DB via Supabase
+                if (currentUser) {
+                  await dbService.createOrder({
+                    user_id: currentUser.id,
+                    customer_name: currentUser.name,
+                    customer_email: currentUser.email,
+                    customer_phone: currentUser.phone || '',
+                    customer_address: locationText,
+                    items: cartItems,
+                    total_amount: totalAmount,
+                    status: 'pending',
+                    payment_status: 'paid',
+                    payment_method: paymentMethod,
+                    delivery_coords: coords
+                  });
+                }
+
                 const newList = (currentUser?.shoppingList || []).map(i => {
                   if (i.id.startsWith('store_') && i.isInCart) {
                     return { ...i, isPurchased: true, isInCart: false };
@@ -3999,26 +4308,19 @@ export default function App() {
             }
           };
 
-          // --- LOGIQUE DE LANCEMENT ROBUSTE (v1.1.7+) ---
           try {
             let checkoutInstance: any = null;
-
             if (fp.Checkout && typeof fp.Checkout.init === 'function') {
               checkoutInstance = fp.Checkout.init(config);
             } else if (typeof fp.init === 'function') {
               checkoutInstance = fp.init(config);
             }
 
-            // Tentative d'ouverture via l'instance (Recommandé pour v1.1.7+)
             if (checkoutInstance && typeof checkoutInstance.open === 'function') {
               checkoutInstance.open();
-            }
-            // Fallback 1: FedaPay.Checkout.open()
-            else if (fp.Checkout && typeof fp.Checkout.open === 'function') {
+            } else if (fp.Checkout && typeof fp.Checkout.open === 'function') {
               fp.Checkout.open();
-            }
-            // Fallback 2: FedaPay.open()
-            else if (typeof fp.open === 'function') {
+            } else if (typeof fp.open === 'function') {
               fp.open();
             } else {
               throw new Error("Aucune méthode d'ouverture (open) trouvée dans le SDK FedaPay.");
@@ -4028,8 +4330,8 @@ export default function App() {
             alert("Erreur d'ouverture FedaPay : " + e.message);
           }
         } catch (error: any) {
-          alert("Erreur lors du lancement du paiement : " + error.message);
-          console.error("FedaPay Error:", error);
+          alert("Erreur lors du lancement de la commande : " + error.message);
+          console.error("Order Error:", error);
         }
       };
 
@@ -4310,6 +4612,7 @@ export default function App() {
 
   // --- Shopping List Logic ---
 
+
   const renderShoppingList = () => {
     const list = currentUser?.shoppingList || [];
     const purchased = list.filter(i => i.isPurchased);
@@ -4401,8 +4704,8 @@ export default function App() {
         {/* ── Tab Switcher ── */}
         <div className={`mx-4 mt-3 mb-0 flex gap-1 p-1 rounded-[40px] ${isDark ? 'bg-white/5' : 'bg-white/80'} backdrop-blur-sm`}>
           {[
-            { key: 'mylist', label: 'Liste de Course', count: list.length },
             { key: 'store', label: 'Boutiques', count: null },
+            { key: 'mylist', label: 'Liste de Course', count: list.length },
           ].map(tab => (
             <button
               key={tab.key}
@@ -4436,6 +4739,13 @@ export default function App() {
                   {totalXOF > 0 && <p className="text-[13px] font-black text-[#38b000]">≈ {totalXOF.toLocaleString()} XOF</p>}
                 </div>
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setIsOrdersOpen(true)}
+                    className={`flex items-center justify-center w-[42px] h-[42px] rounded-full transition-all active:scale-95 shadow-md shadow-[#38b000]/10 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-stone-200 text-[#38b000]'}`}
+                    title="Mes Commandes"
+                  >
+                    <ClipboardList size={20} />
+                  </button>
                   <button
                     onClick={() => setIsCartOpen(true)}
                     className={`flex items-center justify-center w-[42px] h-[42px] rounded-full transition-all active:scale-95 shadow-md shadow-[#38b000]/10 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-stone-200 text-[#38b000]'}`}
@@ -4571,7 +4881,6 @@ export default function App() {
                                 );
                                 updateShoppingList(newList);
                                 setSelectedStoreItemIds([]);
-                                showAlert(`${selectedStoreItemIds.length} article(s) ajouté(s) au panier !`, 'success');
                               }}
                               className="bg-[#38b000] text-white h-12 px-7 rounded-[20px] font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#38b000]/30 active:scale-95 transition-all flex items-center justify-center"
                             >
@@ -4647,72 +4956,17 @@ export default function App() {
               {/* Product Grid */}
               <div className="px-5 grid grid-cols-2 gap-4">
                 {filteredProducts.length > 0 ? (
-                  filteredProducts.map(product => {
-                    const shopItem = list.find(i => i.id.startsWith(`store_${product.id}`));
-                    const isInList = !!shopItem;
-                    const isInCart = shopItem?.isInCart;
-
-                    const mName = product.merchant_id ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand) : product.brand;
-
-                    return (
-                      <motion.div key={product.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
-                        className={`rounded-[32px] overflow-hidden p-3 flex flex-col ${isDark ? 'bg-white/5' : 'bg-white shadow-sm border border-stone-50'}`}
-                      >
-                        {/* Image/Emoji Container */}
-                        <div
-                          onClick={() => setSelectedProduct(product)}
-                          className={`relative aspect-square rounded-[26px] flex items-center justify-center text-[54px] mb-4 cursor-pointer active:scale-95 transition-all ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}
-                        >
-                          {isInList && (
-                            <div className={`absolute top-2 left-2 right-2 py-1.5 rounded-full border flex items-center justify-center gap-1.5 z-10 backdrop-blur-sm ${isInCart ? 'bg-[#38b000]/10 border-[#38b000]/20 text-[#38b000]' : 'bg-orange-500/10 border-orange-500/20 text-orange-500'}`}>
-                              <Check size={10} strokeWidth={4} />
-                              <span className="text-[9px] font-black uppercase tracking-wide">
-                                {isInCart ? 'Au panier' : 'Dans la liste'}
-                              </span>
-                            </div>
-                          )}
-                          <div className="hover:scale-110 transition-transform duration-500 w-full h-full flex items-center justify-center overflow-hidden rounded-[22px]">
-                            {product.image_url ? (
-                              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-[54px]">{product.emoji || '📦'}</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Details */}
-                        <div className="px-2 pb-1.5">
-                          <h4
-                            onClick={() => setSelectedProduct(product)}
-                            className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}
-                          >
-                            {product.name}
-                          </h4>
-                          <p className="text-[11px] font-bold text-stone-400 mt-1 truncate">
-                            {mName}
-                          </p>
-
-                          <div className="flex items-center justify-between mt-4">
-                            <div className="flex items-baseline gap-0.5">
-                              <span className="text-[13px] font-bold text-stone-400">XOF</span>
-                              <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{product.price.toLocaleString()}</span>
-                            </div>
-
-                            <button
-                              onClick={() => {
-                                const newItem = { id: `store_${product.id}_${Date.now()}`, item: product.name, quantity: '1', unit: product.unit, priceXOF: String(product.price), isPurchased: false, recipeName: mName };
-                                updateShoppingList([...list, newItem]);
-                                showAlert(`${product.name} ajouté à votre liste !`, 'success');
-                              }}
-                              className="w-[42px] h-[42px] rounded-2xl bg-[#38b000] text-white flex items-center justify-center shadow-lg shadow-[#38b000]/25 active:scale-90 transition-all"
-                            >
-                              <Plus size={20} strokeWidth={3} />
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })
+                  filteredProducts.map(product => (
+                    <StoreProductCard
+                      key={product.id}
+                      product={product}
+                      list={list}
+                      updateShoppingList={updateShoppingList}
+                      isDark={isDark}
+                      allMerchants={allMerchants}
+                      setSelectedProduct={setSelectedProduct}
+                    />
+                  ))
                 ) : (
                   <div className="col-span-2 py-20 text-center">
                     <div className={`w-20 h-20 mx-auto rounded-[32px] flex items-center justify-center mb-6 ${isDark ? 'bg-white/5' : 'bg-stone-50'}`}>
@@ -5219,15 +5473,12 @@ export default function App() {
 
   // --- Return JSX ---
 
-
-  // --- Return JSX ---
-
   if (!currentUser) return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-      className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl pt-[env(safe-area-inset-top,4px)] transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-stone-50'}`}
+      className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl ${Capacitor.isNativePlatform() ? 'pt-[44px]' : 'pt-[env(safe-area-inset-top,4px)]'} transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-stone-50'}`}
     >
       {renderAuth()}
       <ModernAlertComponent
@@ -5245,7 +5496,7 @@ export default function App() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top,4px)] ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
+      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${Capacitor.isNativePlatform() ? 'pt-[44px]' : 'pt-[env(safe-area-inset-top,4px)]'} ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
     >
       <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
@@ -5523,6 +5774,33 @@ export default function App() {
       <AnimatePresence>
         {selectedNotifDetail && (
           <NotifDetail notif={selectedNotifDetail} onClose={() => setSelectedNotifDetail(null)} isDark={isDark} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isOrdersOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className={`fixed inset-0 z-[2000] flex flex-col ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}
+          >
+            <div className={`p-6 pb-2 pt-12 flex items-center justify-between shrink-0 ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>
+              <div className="flex items-center gap-4">
+                <button onClick={goBack} className={`p-2 rounded-full transition-all active:scale-95 border ${isDark ? 'bg-white/10 text-white border-white/10' : 'bg-white text-stone-800 border-stone-200'}`}>
+                  <ChevronLeft size={20} />
+                </button>
+                <h3 className={`text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                  Mes Commandes
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto w-full mx-auto px-6 pb-20 pt-4">
+              <OrdersHistoryView currentUser={currentUser} t={t} isDark={isDark} />
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

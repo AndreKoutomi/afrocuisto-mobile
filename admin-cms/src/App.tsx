@@ -27,6 +27,7 @@ import { Transactions } from './pages/Transactions';
 import { Notifications } from './pages/Notifications';
 import { Merchants } from './pages/Merchants';
 import { Products } from './pages/Products';
+import { Orders } from './pages/Orders';
 import { Login } from './pages/Login';
 import { supabase } from './lib/supabase';
 
@@ -60,6 +61,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
     if (location.pathname === '/notifications') return 'Notifications Push';
     if (location.pathname === '/merchants') return 'Partenaires Marchands';
     if (location.pathname === '/products') return 'Gestion des Produits Store';
+    if (location.pathname === '/orders') return 'Gestion des Commandes';
     return 'Bienvenue sur AfroCuisto';
   };
 
@@ -72,6 +74,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
     if (location.pathname.startsWith('/notifications')) return 'Pages / Notifications';
     if (location.pathname.startsWith('/merchants')) return 'Pages / Marchands';
     if (location.pathname.startsWith('/products')) return 'Pages / Produits';
+    if (location.pathname.startsWith('/orders')) return 'Pages / Commandes';
     return 'Pages / Tableau de bord';
   };
 
@@ -220,6 +223,7 @@ function App() {
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/merchants" element={<Merchants />} />
                 <Route path="/products" element={<Products />} />
+                <Route path="/orders" element={<Orders />} />
               </Routes>
             </AppLayout>
           }
