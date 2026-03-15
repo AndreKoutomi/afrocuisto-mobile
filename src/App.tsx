@@ -2502,9 +2502,9 @@ export default function App() {
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
       if (!currentUser) {
-        metaThemeColor.setAttribute('content', '#fb5607');
+        metaThemeColor.setAttribute('content', isDark ? '#000000' : '#fafaf9');
       } else {
-        metaThemeColor.setAttribute('content', isDark ? '#000000' : '#ffffff');
+        metaThemeColor.setAttribute('content', isDark ? '#000000' : '#f3f4f6');
       }
     }
 
@@ -2512,21 +2512,16 @@ export default function App() {
     if (Capacitor.isNativePlatform()) {
       const applyStatusBar = async () => {
         try {
-          // Always disable overlay so the background color takes effect
+          // Désactiver 'overlay' oblige la vue native à décaler tout le document web DANS l'écran utilisable.
+          // Les iframes système (comme FedaPay) respecteront ainsi ces limites système et la barre d'état restera au-dessus.
           await StatusBar.setOverlaysWebView({ overlay: false });
 
-          if (!currentUser) {
-            // LOGIN PAGE: Orange background → light (white) icons for contrast
-            await StatusBar.setBackgroundColor({ color: '#fb5607' });
-            await StatusBar.setStyle({ style: Style.Dark }); // Dark style = Light text
-          } else if (isDark) {
-            // DARK MODE: Black background → light (white) icons
+          if (isDark) {
             await StatusBar.setBackgroundColor({ color: '#000000' });
-            await StatusBar.setStyle({ style: Style.Dark }); // Dark style = Light text
+            await StatusBar.setStyle({ style: Style.Dark });
           } else {
-            // LIGHT MODE: White background → dark (black) icons
             await StatusBar.setBackgroundColor({ color: '#ffffff' });
-            await StatusBar.setStyle({ style: Style.Light }); // Light style = Dark text
+            await StatusBar.setStyle({ style: Style.Light });
           }
         } catch (error) {
           console.error('StatusBar error:', error);
@@ -4260,6 +4255,9 @@ export default function App() {
               amount: totalAmount,
               description: `Commande AfroCuisto - ${cartItems.length} articles`
             },
+            currency: {
+              iso: 'XOF'
+            },
             customer: {
               email: currentUser?.email || 'client@afrocuisto.com',
               lastname: currentUser?.name || 'Client',
@@ -5478,7 +5476,7 @@ export default function App() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-      className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl ${Capacitor.isNativePlatform() ? 'pt-[44px]' : 'pt-[env(safe-area-inset-top,4px)]'} transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-stone-50'}`}
+      className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl pt-[env(safe-area-inset-top,0px)] transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-white'}`}
     >
       {renderAuth()}
       <ModernAlertComponent
@@ -5496,7 +5494,7 @@ export default function App() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${Capacitor.isNativePlatform() ? 'pt-[44px]' : 'pt-[env(safe-area-inset-top,4px)]'} ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
+      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top,0px)] ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
     >
       <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
