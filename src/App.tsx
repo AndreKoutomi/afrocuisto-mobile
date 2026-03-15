@@ -3798,56 +3798,53 @@ export default function App() {
             return;
           }
 
-          const fp = (window as any).FedaPay;
-          const config = {
-            public_key: 'pk_sandbox_bNP8mCo0fgEzfNu6XILHxi-T',
-            transaction: {
-              amount: totalAmount,
-              description: `Commande AfroCuisto - ${cartItems.length} articles`
-            },
-            customer: {
-              email: currentUser?.email || 'client@afrocuisto.com',
-              lastname: currentUser?.name || 'Client AfroCuisto',
-              firstname: '',
-              phone_number: {
-                number: currentUser?.phone || '',
-                country: 'BJ'
-              }
-            },
-            onComplete: (resp: any) => {
-              console.log("FedaPay onComplete:", resp);
-              const status = resp.reason?.status || resp.status;
-              if (status === 'approved' || status === 'captured' || resp.transaction) {
-                setStep('success');
-                const newList = (currentUser?.shoppingList || []).map(i => {
-                  if (i.id.startsWith('store_') && i.isInCart) {
-                    return { ...i, isPurchased: true, isInCart: false };
-                  }
-                  return i;
-                });
-                updateShoppingList(newList);
+          const FedaPay = (window as any).FedaPay;
 
-                setTimeout(() => {
-                  goBack();
-                  showAlert("Paiement réussi !", "success");
-                }, 2000);
-              }
-            }
-          };
+          // La version Checkout.js utilise FedaPay.Checkout
+          if (FedaPay.Checkout) {
+            FedaPay.Checkout.init({
+              public_key: 'pk_sandbox_bNP8mCo0fgEzfNu6XILHxi-T',
+              transaction: {
+                amount: totalAmount,
+                description: `Commande AfroCuisto - ${cartItems.length} articles`
+              },
+              customer: {
+                email: currentUser?.email || 'client@afrocuisto.com',
+                lastname: currentUser?.name || 'Client',
+                firstname: 'AfroCuisto',
+                phone_number: {
+                  number: currentUser?.phone || '',
+                  country: 'BJ'
+                }
+              },
+              onComplete: (resp: any) => {
+                console.log("FedaPay onComplete:", resp);
+                // Le statut peut être dans resp.reason.status ou resp.status
+                const status = resp.reason?.status || resp.status;
+                if (status === 'approved' || status === 'captured' || resp.transaction) {
+                  setStep('success');
+                  const newList = (currentUser?.shoppingList || []).map(i => {
+                    if (i.id.startsWith('store_') && i.isInCart) {
+                      return { ...i, isPurchased: true, isInCart: false };
+                    }
+                    return i;
+                  });
+                  updateShoppingList(newList);
 
-          // Essayer différentes méthodes d'initialisation selon la version du script
-          if (fp.Checkout) {
-            fp.Checkout.init(config);
-            fp.Checkout.open();
-          } else if (fp.init) {
-            fp.init(config);
-            fp.open();
+                  setTimeout(() => {
+                    goBack();
+                    showAlert("Paiement réussi !", "success");
+                  }, 2000);
+                }
+              }
+            });
+            FedaPay.Checkout.open();
           } else {
-            alert("Erreur: Méthode d'initialisation FedaPay non trouvée.");
+            alert("Erreur: Le module FedaPay.Checkout est introuvable. Veuillez recharger la page.");
           }
         } catch (error: any) {
-          alert("Erreur lors de l'ouverture du paiement: " + error.message);
-          console.error(error);
+          alert("Erreur lors du lancement du paiement : " + error.message);
+          console.error("FedaPay Error:", error);
         }
       };
 
@@ -4029,7 +4026,7 @@ export default function App() {
                 <div className={`p-6 pb-10 ${isDark ? 'bg-black' : 'bg-white shadow-[0_-20px_40px_rgba(0,0,0,0.02)]'}`}>
                   <button
                     onClick={handlePlaceOrder}
-                    className="w-full h-16 bg-[#006837] text-white rounded-[24px] font-black text-sm uppercase tracking-[0.1em] shadow-xl shadow-green-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                    className="w-full h-16 bg-[#006837] text-white rounded-[50px] font-black text-sm uppercase tracking-[0.1em] shadow-xl shadow-green-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                   >
                     Valider la commande
                   </button>
