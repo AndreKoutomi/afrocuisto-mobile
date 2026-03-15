@@ -3798,49 +3798,55 @@ export default function App() {
             return;
           }
 
-          const FedaPay = (window as any).FedaPay;
+          const fp = (window as any).FedaPay;
 
-          // La version Checkout.js utilise FedaPay.Checkout
-          if (FedaPay.Checkout) {
-            FedaPay.Checkout.init({
-              public_key: 'pk_sandbox_bNP8mCo0fgEzfNu6XILHxi-T',
-              transaction: {
-                amount: totalAmount,
-                description: `Commande AfroCuisto - ${cartItems.length} articles`
-              },
-              customer: {
-                email: currentUser?.email || 'client@afrocuisto.com',
-                lastname: currentUser?.name || 'Client',
-                firstname: 'AfroCuisto',
-                phone_number: {
-                  number: currentUser?.phone || '',
-                  country: 'BJ'
-                }
-              },
-              onComplete: (resp: any) => {
-                console.log("FedaPay onComplete:", resp);
-                // Le statut peut être dans resp.reason.status ou resp.status
-                const status = resp.reason?.status || resp.status;
-                if (status === 'approved' || status === 'captured' || resp.transaction) {
-                  setStep('success');
-                  const newList = (currentUser?.shoppingList || []).map(i => {
-                    if (i.id.startsWith('store_') && i.isInCart) {
-                      return { ...i, isPurchased: true, isInCart: false };
-                    }
-                    return i;
-                  });
-                  updateShoppingList(newList);
-
-                  setTimeout(() => {
-                    goBack();
-                    showAlert("Paiement réussi !", "success");
-                  }, 2000);
-                }
+          const config = {
+            public_key: 'pk_sandbox_bNP8mCo0fgEzfNu6XILHxi-T',
+            transaction: {
+              amount: totalAmount,
+              description: `Commande AfroCuisto - ${cartItems.length} articles`
+            },
+            customer: {
+              email: currentUser?.email || 'client@afrocuisto.com',
+              lastname: currentUser?.name || 'Client',
+              firstname: 'AfroCuisto',
+              phone_number: {
+                number: currentUser?.phone || '',
+                country: 'BJ'
               }
-            });
-            FedaPay.Checkout.open();
+            },
+            onComplete: (resp: any) => {
+              console.log("FedaPay onComplete:", resp);
+              const status = resp.reason?.status || resp.status;
+              if (status === 'approved' || status === 'captured' || resp.transaction) {
+                setStep('success');
+                const newList = (currentUser?.shoppingList || []).map(i => {
+                  if (i.id.startsWith('store_') && i.isInCart) {
+                    return { ...i, isPurchased: true, isInCart: false };
+                  }
+                  return i;
+                });
+                updateShoppingList(newList);
+
+                setTimeout(() => {
+                  goBack();
+                  showAlert("Paiement réussi !", "success");
+                }, 2000);
+              }
+            }
+          };
+
+          // --- LOGIQUE DE LANCEMENT FLEXIBLE ---
+          if (fp.Checkout && typeof fp.Checkout.init === 'function') {
+            fp.Checkout.init(config);
+            fp.Checkout.open();
+          } else if (typeof fp.init === 'function') {
+            fp.init(config);
+            if (typeof fp.open === 'function') fp.open();
+            else if (fp.Checkout && typeof fp.Checkout.open === 'function') fp.Checkout.open();
+            else alert("Erreur d'ouverture FedaPay.");
           } else {
-            alert("Erreur: Le module FedaPay.Checkout est introuvable. Veuillez recharger la page.");
+            alert("Erreur: Le service FedaPay n'est pas prêt. Essayez de recharger.");
           }
         } catch (error: any) {
           alert("Erreur lors du lancement du paiement : " + error.message);
