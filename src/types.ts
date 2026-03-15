@@ -71,6 +71,7 @@ export interface ShoppingItem {
   isPurchased: boolean;   // Déjà acheté ou pas (case à cocher)
   recipeName?: string;    // Nom de la recette d'où vient l'ingrédient
   recipeId?: string;      // ID de la recette reliée
+  isInCart?: boolean;     // Si l'article est actuellement dans le panier (pour les produits Store)
 }
 
 // Structure de l'Utilisateur Connecté

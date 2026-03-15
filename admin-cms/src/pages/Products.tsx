@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import {
     Plus, Search, RefreshCw, ShoppingBag,
-    Edit3, Trash2, X
+    Edit3, Trash2, X, Camera, Loader2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -19,6 +18,7 @@ interface Product {
     category: string;
     created_at: string;
     merchant_id?: string;
+    description?: string;
 }
 
 interface Merchant {
@@ -52,18 +52,19 @@ export function Products() {
     const [minPrice, setMinPrice] = useState('');
     const [maxPrice, setMaxPrice] = useState('');
     const [sortBy, setSortBy] = useState('newest');
+    const [uploading, setUploading] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
         brand: '',
         price: '',
         unit: '',
-        emoji: '📦',
         image_url: '',
         badge: '',
         color: '#fb5607',
         category: 'Alimentation',
-        merchant_id: ''
+        merchant_id: '',
+        description: ''
     });
 
     const [merchants, setMerchants] = useState<Merchant[]>([]);
@@ -158,12 +159,12 @@ export function Products() {
             brand: product.brand,
             price: product.price.toString(),
             unit: product.unit,
-            emoji: product.emoji || '📦',
             image_url: product.image_url || '',
             badge: product.badge || '',
             color: product.color || '#fb5607',
             category: product.category || 'Alimentation',
-            merchant_id: product.merchant_id || ''
+            merchant_id: product.merchant_id || '',
+            description: product.description || ''
         });
         setIsModalOpen(true);
     };
@@ -174,9 +175,9 @@ export function Products() {
         setSelectedProduct(null);
         setFormData({
             name: '', brand: '', price: '', unit: '',
-            emoji: '📦', image_url: '', badge: '',
+            image_url: '', badge: '',
             color: '#fb5607', category: 'Alimentation',
-            merchant_id: ''
+            merchant_id: '', description: ''
         });
     };
 
@@ -198,6 +199,34 @@ export function Products() {
         if (sortBy === 'price_desc') return b.price - a.price;
         return 0;
     });
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+            const filePath = `product-images/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('product-images')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('product-images')
+                .getPublicUrl(filePath);
+
+            setFormData({ ...formData, image_url: publicUrl });
+        } catch (err: any) {
+            alert('Erreur upload: ' + err.message);
+        } finally {
+            setUploading(false);
+        }
+    };
 
     return (
         <div style={{ width: '100%', boxSizing: 'border-box' }}>
@@ -369,9 +398,13 @@ export function Products() {
                                 width: '56px', height: '56px', borderRadius: '16px',
                                 background: (product.color || '#fb5607') + '15',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '28px', flexShrink: 0, position: 'relative'
+                                overflow: 'hidden', flexShrink: 0, position: 'relative'
                             }}>
-                                {product.emoji || '📦'}
+                                {product.image_url ? (
+                                    <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <ShoppingBag size={24} color={product.color || '#fb5607'} />
+                                )}
                             </div>
 
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -473,9 +506,47 @@ export function Products() {
                                     <input required style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #e5e7eb', fontSize: '15px' }} value={formData.unit} onChange={e => setFormData({ ...formData, unit: e.target.value })} placeholder="Ex: 1kg, 500g, 1L" />
                                 </div>
 
-                                <div className="mobile-full-width">
-                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Emoji / Icône</label>
-                                    <input style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #e5e7eb', fontSize: '15px', textAlign: 'center' }} value={formData.emoji} onChange={e => setFormData({ ...formData, emoji: e.target.value })} maxLength={2} />
+                                <div className="grid-full-width">
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Photo du Produit</label>
+                                    <div style={{
+                                        border: '2px dashed #e5e7eb',
+                                        borderRadius: '16px',
+                                        padding: '24px',
+                                        textAlign: 'center',
+                                        position: 'relative',
+                                        background: formData.image_url ? '#f8fafc' : '#fff',
+                                        transition: 'all 0.2s'
+                                    }}>
+                                        {formData.image_url ? (
+                                            <div style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto' }}>
+                                                <img src={formData.image_url} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, image_url: '' })}
+                                                    style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div style={{ cursor: 'pointer' }} onClick={() => document.getElementById('image-upload')?.click()}>
+                                                <div style={{ width: '48px', height: '48px', background: '#f3f4f6', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', color: '#9ca3af' }}>
+                                                    {uploading ? <Loader2 size={24} className="animate-spin" /> : <Camera size={24} />}
+                                                </div>
+                                                <p style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', margin: 0 }}>
+                                                    {uploading ? 'Chargement...' : 'Cliquer pour choisir une photo'}
+                                                </p>
+                                                <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>PNG, JPG jusqu'à 5MB</p>
+                                            </div>
+                                        )}
+                                        <input
+                                            id="image-upload"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            style={{ display: 'none' }}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="mobile-full-width">
                                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Badge (Optionnel)</label>
@@ -499,21 +570,13 @@ export function Products() {
                                 </div>
 
                                 <div className="grid-full-width">
-                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Thème Couleur</label>
-                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                        {PRESET_COLORS.map(c => (
-                                            <button
-                                                key={c}
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, color: c })}
-                                                style={{
-                                                    width: '32px', height: '32px', borderRadius: '50%', background: c,
-                                                    border: formData.color === c ? '3px solid #111' : 'none', cursor: 'pointer',
-                                                    transform: formData.color === c ? 'scale(1.1)' : 'scale(1)', transition: 'all 0.2s'
-                                                }}
-                                            />
-                                        ))}
-                                    </div>
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Description du Produit</label>
+                                    <textarea
+                                        style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #e5e7eb', fontSize: '15px', minHeight: '100px', resize: 'vertical', background: '#fff' }}
+                                        value={formData.description}
+                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                        placeholder="Décrivez les caractéristiques, bienfaits ou conseils d'utilisation du produit..."
+                                    />
                                 </div>
 
                                 <button disabled={processing} type="submit" className="grid-full-width" style={{ background: 'var(--primary)', color: '#fff', padding: '16px', borderRadius: '16px', border: 'none', fontWeight: 800, fontSize: '15px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(251, 86, 7, 0.25)', marginTop: '12px' }}>

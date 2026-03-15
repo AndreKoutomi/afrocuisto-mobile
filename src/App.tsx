@@ -70,7 +70,10 @@ import {
   CreditCard,
   Truck,
   Wallet,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Minus,
+  ArrowLeft,
+  Tag
 } from 'lucide-react';
 import { recipes } from './data';
 import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product } from './types';
@@ -1131,7 +1134,7 @@ const STORE_PRODUCTS = [
     brand: 'NaturAfrik',
     price: 2800,
     unit: '1L',
-    emoji: '🫙',
+    image_url: 'https://images.unsplash.com/photo-1490818387583-1baba5e638af?q=80&w=400',
     category: 'Huiles',
     badge: 'Populaire',
     color: '#38b000',
@@ -1145,7 +1148,7 @@ const STORE_PRODUCTS = [
     brand: 'Goldenrice',
     price: 4500,
     unit: '5kg',
-    emoji: '🌾',
+    image_url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?q=80&w=400',
     category: 'Féculents',
     badge: 'Promo -15%',
     color: '#10b981',
@@ -1159,7 +1162,7 @@ const STORE_PRODUCTS = [
     brand: 'TasteOfCMR',
     price: 1800,
     unit: '200g',
-    emoji: '🍃',
+    image_url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=400',
     category: 'Légumes',
     badge: 'Nouveau',
     color: '#6366f1',
@@ -1173,7 +1176,7 @@ const STORE_PRODUCTS = [
     brand: 'SpiceLab',
     price: 750,
     unit: '100g',
-    emoji: '🫚',
+    image_url: 'https://images.unsplash.com/photo-1615485240318-10f4889b9ba9?q=80&w=400',
     category: 'Épices',
     badge: null,
     color: '#f59e0b',
@@ -1187,7 +1190,7 @@ const STORE_PRODUCTS = [
     brand: 'AfroSpice',
     price: 950,
     unit: '250g',
-    emoji: '🌶️',
+    image_url: 'https://images.unsplash.com/photo-1588165171080-c89acfa5ee83?q=80&w=400',
     category: 'Épices',
     badge: 'Best-seller',
     color: '#ef4444',
@@ -1197,11 +1200,11 @@ const STORE_PRODUCTS = [
   },
   {
     id: 'p6',
-    name: 'Bangla Tomato',
-    brand: 'Deshi Product',
+    name: 'Tomates Fraîches',
+    brand: 'Maraîcher Local',
     price: 3650,
     unit: '1kg',
-    emoji: '🍅',
+    image_url: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=400',
     category: 'Légumes',
     badge: 'Frais',
     color: '#ef4444',
@@ -1212,22 +1215,27 @@ const STORE_PRODUCTS = [
 ];
 
 const SHOPPING_BANNERS = [
-  { id: 1, title: 'Livraison Express Abidjan', sub: 'Recevez vos ingrédients en moins de 2h !', emoji: '🛵', bg: 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)', tag: 'OFFRE' },
-  { id: 2, title: 'Bio & Équitable', sub: 'Soutenez les producteurs locaux avec NaturAfrik.', emoji: '🌿', bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', tag: 'ÉCO' },
-  { id: 3, title: 'Promo Semaine', sub: '-20% sur tout le rayon épices ce weekend.', emoji: '✨', bg: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', tag: 'SOLDE' },
+  { id: 1, title: 'Livraison Express Abidjan', sub: 'Recevez vos ingrédients en moins de 2h !', image_url: 'https://images.unsplash.com/photo-1526367790999-0150786486a9?q=80&w=400', bg: 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)', tag: 'OFFRE' },
+  { id: 2, title: 'Bio & Équitable', sub: 'Soutenez les producteurs locaux avec NaturAfrik.', image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=400', bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', tag: 'ÉCO' },
+  { id: 3, title: 'Promo Semaine', sub: '-20% sur tout le rayon épices ce weekend.', image_url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=400', bg: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', tag: 'SOLDE' },
 ];
 
 const ShoppingItemRow: React.FC<{
-  item: any;
+  item: ShoppingItem;
   dimmed?: boolean;
-  list: any[];
-  updateShoppingList: (nl: any[]) => void;
+  list: ShoppingItem[];
+  updateShoppingList: (nl: ShoppingItem[]) => void;
   UNITS: string[];
-}> = ({ item, dimmed, list, updateShoppingList, UNITS }) => {
+  isSelected?: boolean;
+  onToggleSelection?: (id: string) => void;
+  isDark?: boolean;
+}> = ({ item, dimmed, list, updateShoppingList, UNITS, isSelected, onToggleSelection, isDark }) => {
   const [editQty, setEditQty] = useState(item.quantity ?? '');
   const [editUnit, setEditUnit] = useState(item.unit ?? 'g');
   const [editPrice, setEditPrice] = useState(item.priceXOF ?? '');
   const [isEditing, setIsEditing] = useState(false);
+
+  const isStoreItem = item.id.startsWith('store_');
 
   const save = () => {
     const newList = list.map(i => i.id === item.id
@@ -1237,38 +1245,47 @@ const ShoppingItemRow: React.FC<{
     setIsEditing(false);
   };
 
+  const active = isStoreItem ? isSelected : item.isPurchased;
+
   return (
     <motion.div layout key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className={`bg-white rounded-[24px] border shadow-sm overflow-hidden ${dimmed ? 'opacity-60 border-emerald-100' : 'border-stone-100'}`}
+      className={`rounded-[24px] border shadow-sm overflow-hidden transition-all ${isDark ? (active ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/5') : (active ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-stone-100')}`}
     >
       <div className="p-4 flex items-center gap-3">
         <button
           onClick={() => {
-            const newList = list.map(i => i.id === item.id ? { ...i, isPurchased: !i.isPurchased } : i);
-            updateShoppingList(newList);
+            if (isStoreItem) {
+              onToggleSelection?.(item.id);
+            } else {
+              const newList = list.map(i => i.id === item.id ? { ...i, isPurchased: !i.isPurchased } : i);
+              updateShoppingList(newList);
+            }
           }}
-          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${item.isPurchased ? 'bg-[#38b000] border-[#38b000] shadow-sm' : 'border-stone-200 hover:border-[#38b000]'}`}
+          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${active ? 'bg-[#38b000] border-[#38b000] shadow-sm' : (isDark ? 'border-white/20 hover:border-[#38b000]' : 'border-stone-200 hover:border-[#38b000]')}`}
         >
-          {item.isPurchased && <Check size={13} className="text-white" />}
+          {active && <Check size={13} className="text-white" />}
         </button>
         <div className="flex-1 min-w-0">
-          <p className={`text-[13px] font-bold leading-tight ${item.isPurchased ? 'line-through text-stone-400' : 'text-stone-800'}`}>{item.item}</p>
+          <p className={`text-[13px] font-bold leading-tight ${active && !isStoreItem ? 'line-through text-stone-400' : (isDark ? 'text-white/90' : 'text-stone-800')}`}>{item.item}</p>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             {item.quantity && <span className="text-[11px] font-black text-[#38b000]">{item.quantity} {item.unit}</span>}
-            {item.priceXOF && <span className="text-[10px] font-bold text-stone-400">{parseInt(item.priceXOF).toLocaleString()} XOF</span>}
+            {item.priceXOF && <span className={`text-[10px] font-bold ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{parseInt(item.priceXOF).toLocaleString()} XOF</span>}
             {!item.quantity && !item.priceXOF && <span className="text-[11px] text-stone-300 italic">Appuyez ✎ pour ajouter qté &amp; prix</span>}
-            {item.recipeName && <><span className="w-1 h-1 rounded-full bg-stone-200 inline-block" /><span className="text-[10px] text-stone-400 truncate max-w-[90px]">↳ {item.recipeName}</span></>}
+            {item.recipeName && <><span className={`w-1 h-1 rounded-full inline-block ${isDark ? 'bg-white/10' : 'bg-stone-200'}`} /><span className={`text-[10px] truncate max-w-[90px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>↳ {item.recipeName}</span></>}
+            {isStoreItem && item.isInCart && (
+              <span className="text-[8px] font-black uppercase bg-[#38b000]/20 text-[#38b000] px-1.5 py-0.5 rounded-full">Panier</span>
+            )}
           </div>
         </div>
-        {!item.id.startsWith('store_') && (
+        {!isStoreItem && (
           <button onClick={() => setIsEditing(!isEditing)}
-            className="w-8 h-8 rounded-full bg-stone-50 text-stone-400 flex items-center justify-center hover:bg-[#38b000]/10 hover:text-[#38b000] transition-all"
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isDark ? 'bg-white/5 text-white/40 hover:bg-[#38b000]/20 hover:text-[#38b000]' : 'bg-stone-50 text-stone-400 hover:bg-[#38b000]/10 hover:text-[#38b000]'}`}
           >
             <Edit2 size={13} />
           </button>
         )}
         <button onClick={() => { const nl = list.filter(i => i.id !== item.id); updateShoppingList(nl); }}
-          className="w-8 h-8 rounded-full bg-stone-50 text-stone-300 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all"
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isDark ? 'bg-white/5 text-white/20 hover:bg-rose-500/20 hover:text-rose-500' : 'bg-stone-50 text-stone-300 hover:bg-rose-50 hover:text-rose-500'}`}
         >
           <Trash2 size={13} />
         </button>
@@ -1276,28 +1293,28 @@ const ShoppingItemRow: React.FC<{
       <AnimatePresence>
         {isEditing && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-stone-100 bg-stone-50"
+            className={`overflow-hidden border-t ${isDark ? 'border-white/5 bg-white/2' : 'border-stone-100 bg-stone-50'}`}
           >
             <div className="p-4 space-y-3">
               <div className="flex gap-2">
                 <div className="flex-1">
                   <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Quantité</label>
                   <input type="number" value={editQty} onChange={e => setEditQty(e.target.value)} placeholder="Ex: 500"
-                    className={`w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#38b000]/20`} />
+                    className={`w-full border rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#38b000]/20 ${isDark ? 'bg-white/8 border-white/10 text-white' : 'bg-white border-stone-200'}`} />
                 </div>
                 <div className="w-28">
                   <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Unité</label>
                   <select value={editUnit} onChange={e => setEditUnit(e.target.value)}
-                    className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#38b000]/20"
+                    className={`w-full border rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#38b000]/20 ${isDark ? 'bg-white/8 border-white/10 text-white' : 'bg-white border-stone-200'}`}
                   >
-                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                    {UNITS.map(u => <option key={u} value={u} className={isDark ? 'bg-stone-900' : ''}>{u}</option>)}
                   </select>
                 </div>
               </div>
               <div>
                 <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Prix estimé (XOF)</label>
                 <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="Ex: 1500"
-                  className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#38b000]/20" />
+                  className={`w-full border rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#38b000]/20 ${isDark ? 'bg-white/8 border-white/10 text-white' : 'bg-white border-stone-200'}`} />
               </div>
               <button onClick={save} className="w-full py-3 bg-[#38b000] text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-sm">
                 Enregistrer
@@ -1481,6 +1498,7 @@ export default function App() {
   };
   // ── Shopping page tabs & modals ──
   const [storeTab, setStoreTab] = useState<'store' | 'mylist'>('mylist');
+  const [selectedStoreItemIds, setSelectedStoreItemIds] = useState<string[]>([]);
   const [showAddShoppingModal, setShowAddShoppingModal] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [bannerIdx, setBannerIdx] = useState(0);
@@ -2230,6 +2248,9 @@ export default function App() {
             sectionRecipes = allRecipes.filter(r => (parseInt(r.prep_time) || 60) <= maxTime);
           } else if (section.type === 'all') {
             sectionRecipes = [...allRecipes];
+          } else if (section.type === 'advertising') {
+            const productIds = section.config?.merchant_ids || section.merchant_ids || [];
+            sectionRecipes = allProducts.filter(p => productIds.includes(p.id));
           } else {
             // Default to manual selection or 'query' (backwards compatibility)
             sectionRecipes = allRecipes.filter(r => section.recipe_ids?.includes(r.id));
@@ -2245,8 +2266,9 @@ export default function App() {
               <FeaturedCarousel
                 key={section.id}
                 section={section}
-                recipes={sectionRecipes}
+                recipes={section.type === 'advertising' ? [] : sectionRecipes}
                 merchants={allMerchants}
+                products={section.type === 'advertising' ? sectionRecipes : allProducts}
                 setSelectedRecipe={setSelectedRecipe}
                 currentUser={currentUser}
                 toggleFavorite={toggleFavorite}
@@ -2701,6 +2723,9 @@ export default function App() {
                 sectionRecipes = allRecipes.filter(r => (parseInt(r.prep_time) || 60) <= maxTime);
               } else if (section.type === 'all') {
                 sectionRecipes = [...allRecipes];
+              } else if (section.type === 'advertising') {
+                const productIds = section.config?.merchant_ids || section.merchant_ids || [];
+                sectionRecipes = allProducts.filter(p => productIds.includes(p.id));
               } else {
                 sectionRecipes = allRecipes.filter(r => section.recipe_ids?.includes(r.id));
               }
@@ -2715,7 +2740,9 @@ export default function App() {
                   <FeaturedCarousel
                     key={section.id}
                     section={section}
-                    recipes={sectionRecipes}
+                    recipes={section.type === 'advertising' ? [] : sectionRecipes}
+                    merchants={allMerchants}
+                    products={section.type === 'advertising' ? sectionRecipes : allProducts}
                     setSelectedRecipe={setSelectedRecipe}
                     currentUser={currentUser}
                     toggleFavorite={toggleFavorite}
@@ -3380,9 +3407,6 @@ export default function App() {
               <Share2 size={18} strokeWidth={2.5} />
             </button>
 
-            <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center shadow-sm transition-transform active:scale-95 pointer-events-auto shrink-0">
-              <Heart size={18} color={currentUser?.favorites.includes(recipe.id) ? '#ef4444' : '#fb5607'} fill={currentUser?.favorites.includes(recipe.id) ? '#ef4444' : 'none'} strokeWidth={currentUser?.favorites.includes(recipe.id) ? 0 : 2.5} />
-            </button>
           </div>
 
           <div ref={detailScrollRef} className="flex-1 overflow-y-auto no-scrollbar pb-36 relative min-h-0 bg-white">
@@ -3455,30 +3479,6 @@ export default function App() {
                     })}
                   </div>
 
-                  <button
-                    onClick={() => {
-                      const selectedList = (recipe.ingredients || [])
-                        .filter((_, i) => selectedIngs.includes(i))
-                        .map(ing => ({
-                          id: Math.random().toString(36).substr(2, 9),
-                          item: ing.item,
-                          amount: ing.amount,
-                          isPurchased: false,
-                          recipeName: recipe.name,
-                          recipeId: recipe.id
-                        }));
-
-                      const currentList = currentUser?.shoppingList || [];
-                      updateShoppingList([...currentList, ...selectedList]);
-                      showAlertProp(`${selectedList.length} ingrédients ajoutés !`);
-                      setSelectedIngs([]);
-                    }}
-                    disabled={selectedIngs.length === 0}
-                    className={`w-full py-4 rounded-3xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl mb-12 ${selectedIngs.length > 0 ? 'bg-[#fb5607] text-white shadow-[#fb5607]/20 active:scale-95' : 'bg-stone-100 text-stone-400 opacity-60 grayscale cursor-not-allowed'}`}
-                  >
-                    <Plus size={20} />
-                    Ajouter à ma liste de courses ({selectedIngs.length})
-                  </button>
 
                   <div className="h-px bg-stone-100 my-8" />
 
@@ -3546,6 +3546,34 @@ export default function App() {
               </motion.div>
             </AnimatePresence>
           </div>
+
+          {/* Persistent Footer for Recipe Add to List */}
+          <div className={`absolute bottom-0 inset-x-0 p-6 pb-10 flex items-center gap-4 z-[850] ${isDark ? 'bg-black/80 backdrop-blur-xl' : 'bg-white/80 backdrop-blur-xl border-t border-stone-100'}`}>
+            <button
+              onClick={() => {
+                const selectedList = (recipe.ingredients || [])
+                  .filter((_, i) => selectedIngs.includes(i))
+                  .map(ing => ({
+                    id: Math.random().toString(36).substr(2, 9),
+                    item: ing.item,
+                    amount: ing.amount,
+                    isPurchased: false,
+                    recipeName: recipe.name,
+                    recipeId: recipe.id
+                  }));
+
+                const currentList = currentUser?.shoppingList || [];
+                updateShoppingList([...currentList, ...selectedList]);
+                showAlertProp(`${selectedList.length} ingrédients ajoutés !`);
+                setSelectedIngs([]);
+              }}
+              disabled={selectedIngs.length === 0}
+              className={`w-full h-14 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl ${selectedIngs.length > 0 ? 'bg-[#fb5607] text-white shadow-[#fb5607]/20 active:scale-95' : 'bg-stone-100 text-stone-400 opacity-60 grayscale cursor-not-allowed hidden'}`}
+            >
+              <Plus size={20} />
+              Ajouter à ma liste de courses ({selectedIngs.length})
+            </button>
+          </div>
         </motion.div>
       );
     };
@@ -3585,36 +3613,46 @@ export default function App() {
           transition={{ type: 'spring', damping: 26, stiffness: 380, mass: 0.8 }}
           className={`absolute inset-0 z-[700] overflow-hidden w-full flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.15)] ${isDark ? 'bg-[#000000]' : 'bg-[#F9F9F9]'}`}
         >
-          {/* Header */}
-          <div className="px-6 pt-12 pb-4 flex items-center justify-between relative z-50">
+          {/* Floating Back Button */}
+          <div className="absolute left-6 top-8 z-[800] p-2 rounded-full backdrop-blur-xl border" style={{
+            backgroundColor: isDark ? 'rgba(31, 41, 55, 0.65)' : 'rgba(243, 244, 246, 0.85)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)'
+          }}>
             <button
               onClick={goBack}
-              className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center text-[#38b000] shadow-sm transition-transform active:scale-95 shrink-0"
+              className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center text-[#38b000] shadow-sm transition-transform active:scale-95"
             >
               <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
-            {/* Product Image section */}
-            <div className="flex justify-center py-8 relative">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className={`w-64 h-64 rounded-full flex items-center justify-center text-[120px] shadow-2xl ${isDark ? 'bg-white/5' : 'bg-white'}`}
-              >
-                {product.emoji}
-                {/* Visual shadow effect */}
-                <div className="absolute bottom-4 w-48 h-8 bg-black/5 blur-xl rounded-full translate-y-8" />
-              </motion.div>
+            {/* Header Image */}
+            <div className="relative h-[48vh] w-full shrink-0 overflow-hidden bg-stone-100">
+              {product.image_url ? (
+                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[120px] bg-stone-50">
+                  {product.emoji || '📦'}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/10 pointer-events-none" />
             </div>
 
-            {/* Info Section */}
-            <div className="px-8 pt-6">
-              <h1 className={`text-[28px] font-black leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>
-                {product.name}
-              </h1>
+            {/* Overlapping Content Area */}
+            <div className={`px-8 pt-8 pb-12 -mt-16 rounded-t-[40px] relative z-20 min-h-screen shadow-[0_-15px_40px_rgba(0,0,0,0.04)] ${isDark ? 'bg-black' : 'bg-white'}`}>
+              <div className="w-12 h-1.5 bg-stone-200 rounded-full mx-auto mb-8" />
+
+              <div className="flex items-center justify-between gap-4">
+                <h1 className={`text-[28px] font-black leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                  {product.name}
+                </h1>
+                {currentUser?.shoppingList.some(i => i.id.startsWith(`store_${product.id}`)) && (
+                  <span className="shrink-0 px-3 py-1 bg-orange-500/10 text-orange-500 text-[10px] font-black rounded-full border border-orange-500/20 uppercase">
+                    Dans la liste
+                  </span>
+                )}
+              </div>
               <p className={`text-sm font-semibold mt-1 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
                 {merchantName}
               </p>
@@ -3666,7 +3704,7 @@ export default function App() {
               {/* Description */}
               <div className="mt-10">
                 <h3 className={`text-base font-black mb-3 ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                  About the product
+                  Description
                 </h3>
                 <p className={`text-[13px] leading-relaxed font-medium ${isDark ? 'text-white/50' : 'text-stone-500'}`}>
                   {product.description || "Un produit de qualité supérieure sélectionné avec soin par nos partenaires pour garantir fraîcheur et saveur authentique à chaque bouchée."}
@@ -3676,10 +3714,7 @@ export default function App() {
           </div>
 
           {/* Footer Actions */}
-          <div className="absolute bottom-8 inset-x-0 px-6 flex items-center gap-4">
-            <button className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all active:scale-90 ${isDark ? 'bg-white/5 border-white/10 text-white/40' : 'bg-white border-stone-200 text-stone-300'}`}>
-              <Heart size={22} />
-            </button>
+          <div className={`absolute bottom-0 inset-x-0 p-6 pb-10 flex items-center gap-4 z-50 ${isDark ? 'bg-[#000000]/80 backdrop-blur-xl' : 'bg-white/80 backdrop-blur-xl border-t border-stone-100'}`}>
             <button
               onClick={() => {
                 const newItem = {
@@ -3715,53 +3750,121 @@ export default function App() {
       goBack,
       currentUser,
       updateShoppingList,
-      showAlert
+      showAlert,
+      allProducts,
+      allMerchants
     }: {
       isDark: boolean;
       goBack: () => void;
       currentUser: User | null;
       updateShoppingList: (nl: any[]) => void;
       showAlert: (msg: string, type?: any) => void;
+      allProducts: Product[];
+      allMerchants: any[];
     }) => {
       const [step, setStep] = useState<'cart' | 'checkout' | 'success'>('cart');
       const [paymentMethod, setPaymentMethod] = useState<'cod' | 'momo' | 'card'>('momo');
       const [address] = useState("Rue des Jardins, Cocody, Abidjan");
 
-      const cartItems = (currentUser?.shoppingList || []).filter(i => i.id.startsWith('store_') && !i.isPurchased);
-      const subtotal = cartItems.reduce((acc, i) => acc + (parseFloat(i.priceXOF || '0')), 0);
-      const deliveryFee = subtotal > 0 ? 1500 : 0;
-      const total = subtotal + deliveryFee;
+      const cartItems = (currentUser?.shoppingList || []).filter(i => i.id.startsWith('store_') && i.isInCart);
+      const subtotal = cartItems.reduce((acc, i) => acc + (parseFloat(i.priceXOF || '0') * (parseInt(i.quantity || '1'))), 0);
+      const total = subtotal;
 
-      const handlePlaceOrder = () => {
-        setStep('success');
+      const updateQty = (id: string, delta: number) => {
         const newList = (currentUser?.shoppingList || []).map(i => {
-          if (i.id.startsWith('store_') && !i.isPurchased) {
-            return { ...i, isPurchased: true };
+          if (i.id === id) {
+            const currentQ = parseInt(i.quantity || '1');
+            const newQ = Math.max(1, currentQ + delta);
+            return { ...i, quantity: String(newQ) };
           }
           return i;
         });
         updateShoppingList(newList);
+      };
 
-        setTimeout(() => {
-          goBack();
-          showAlert("Votre commande a été enregistrée avec succès !", "success");
-        }, 2500);
+      const handlePlaceOrder = () => {
+        try {
+          const totalAmount = Math.round(total);
+          console.log("Tentative de commande FedaPay...", { totalAmount, currentUser });
+
+          if (totalAmount <= 0) {
+            alert("Erreur: Le montant doit être supérieur à 0.");
+            return;
+          }
+
+          // Validation FedaPay
+          if (typeof (window as any).FedaPay === 'undefined') {
+            alert("Erreur: Le script FedaPay n'est pas chargé. Veuillez vérifier votre connexion.");
+            return;
+          }
+
+          const fp = (window as any).FedaPay;
+          const config = {
+            public_key: 'pk_sandbox_bNP8mCo0fgEzfNu6XILHxi-T',
+            transaction: {
+              amount: totalAmount,
+              description: `Commande AfroCuisto - ${cartItems.length} articles`
+            },
+            customer: {
+              email: currentUser?.email || 'client@afrocuisto.com',
+              lastname: currentUser?.name || 'Client AfroCuisto',
+              firstname: '',
+              phone_number: {
+                number: currentUser?.phone || '',
+                country: 'BJ'
+              }
+            },
+            onComplete: (resp: any) => {
+              console.log("FedaPay onComplete:", resp);
+              const status = resp.reason?.status || resp.status;
+              if (status === 'approved' || status === 'captured' || resp.transaction) {
+                setStep('success');
+                const newList = (currentUser?.shoppingList || []).map(i => {
+                  if (i.id.startsWith('store_') && i.isInCart) {
+                    return { ...i, isPurchased: true, isInCart: false };
+                  }
+                  return i;
+                });
+                updateShoppingList(newList);
+
+                setTimeout(() => {
+                  goBack();
+                  showAlert("Paiement réussi !", "success");
+                }, 2000);
+              }
+            }
+          };
+
+          // Essayer différentes méthodes d'initialisation selon la version du script
+          if (fp.Checkout) {
+            fp.Checkout.init(config);
+            fp.Checkout.open();
+          } else if (fp.init) {
+            fp.init(config);
+            fp.open();
+          } else {
+            alert("Erreur: Méthode d'initialisation FedaPay non trouvée.");
+          }
+        } catch (error: any) {
+          alert("Erreur lors de l'ouverture du paiement: " + error.message);
+          console.error(error);
+        }
       };
 
       return (
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 30 }}
+          initial={{ opacity: 0, scale: 0.98, y: 40 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 30 }}
-          transition={{ type: 'spring', damping: 26, stiffness: 380, mass: 0.8 }}
-          className={`absolute inset-0 z-[850] overflow-hidden w-full flex flex-col ${isDark ? 'bg-[#000000]' : 'bg-[#F9F9F9]'}`}
+          exit={{ opacity: 0, scale: 0.98, y: 40 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 400, mass: 0.9 }}
+          className={`absolute inset-0 z-[850] overflow-hidden w-full flex flex-col ${isDark ? 'bg-[#000000]' : 'bg-[#FFFFFF]'}`}
         >
-          {/* Header */}
-          <div className="px-6 pt-12 pb-4 flex items-center justify-between border-b border-stone-100/10">
-            <button onClick={goBack} className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center text-[#38b000] shadow-sm transition-transform active:scale-95 shrink-0">
-              <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
+          {/* Header Custom design */}
+          <div className="px-6 pt-12 pb-6 flex items-center justify-between">
+            <button onClick={goBack} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 ${isDark ? 'bg-white/5 text-white' : 'text-stone-800'}`}>
+              <ArrowLeft size={22} strokeWidth={2.5} />
             </button>
-            <h2 className={`text-lg font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>
+            <h2 className={`text-[20px] font-black ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>
               {step === 'cart' ? 'Mon Panier' : step === 'checkout' ? 'Paiement' : 'Terminé'}
             </h2>
             <div className="w-10" />
@@ -3777,57 +3880,161 @@ export default function App() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
-                <section>
-                  <h3 className={`text-[10px] font-black uppercase tracking-widest mb-4 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>Articles ({cartItems.length})</h3>
-                  <div className="space-y-3">
-                    {cartItems.map(item => (
-                      <div key={item.id} className={`flex items-center gap-4 p-4 rounded-2xl ${isDark ? 'bg-white/5' : 'bg-white shadow-sm border border-stone-55'}`}>
-                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-xl">📦</div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-[13px] font-black truncate ${isDark ? 'text-white/90' : 'text-stone-800'}`}>{item.item}</p>
-                          <p className="text-[10px] font-bold text-stone-400">{item.quantity} {item.unit} • {item.recipeName}</p>
-                        </div>
-                        <p className={`text-[13px] font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{parseFloat(item.priceXOF || '0').toLocaleString()} XOF</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <MapPin size={16} className="text-[#38b000]" />
-                      <span className={`text-xs font-black ${isDark ? 'text-white' : 'text-stone-800'}`}>Adresse de livraison</span>
+              <div className="flex-1 overflow-y-auto no-scrollbar px-6 space-y-6">
+                {cartItems.length === 0 ? (
+                  <div className="py-20 text-center">
+                    <div className="w-20 h-20 mx-auto rounded-full bg-stone-50 flex items-center justify-center text-stone-200 mb-4">
+                      <ShoppingBag size={32} />
                     </div>
-                    <p className="text-[11px] font-medium text-stone-400">{address}</p>
+                    <p className="text-stone-400 font-bold">Votre panier est vide</p>
                   </div>
+                ) : (
+                  <div className="divide-y divide-stone-100/50">
+                    {cartItems.map(item => {
+                      const pID = item.id.split('_')[1];
+                      const product = allProducts.find(p => p.id === pID);
 
-                  <div className="grid grid-cols-3 gap-2">
-                    {['momo', 'card', 'cod'].map(m => (
-                      <button key={m} onClick={() => setPaymentMethod(m as any)} className={`py-3 rounded-2xl border-2 flex flex-col items-center gap-1.5 transition-all ${paymentMethod === m ? 'border-[#38b000] bg-[#38b000]/10 text-[#38b000]' : 'border-transparent bg-stone-100/50 text-stone-400'}`}>
-                        {m === 'momo' ? <Wallet size={16} /> : m === 'card' ? <CreditCard size={16} /> : <Truck size={16} />}
-                        <span className="text-[8px] font-black uppercase">{m}</span>
-                      </button>
-                    ))}
+                      return (
+                        <div key={item.id} className="py-6 flex items-center gap-5">
+                          {/* Image Box */}
+                          <div className={`w-24 h-24 rounded-3xl overflow-hidden flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}>
+                            {product?.image_url ? (
+                              <img src={product.image_url} alt={item.item} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-4xl">{product?.emoji || '📦'}</span>
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start mb-1">
+                              <h4 className={`text-[16px] font-black truncate ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>{item.item}</h4>
+                              <button
+                                onClick={() => {
+                                  const newList = (currentUser?.shoppingList || []).map(i =>
+                                    i.id === item.id ? { ...i, isInCart: false } : i
+                                  );
+                                  updateShoppingList(newList);
+                                }}
+                                className="text-stone-300 hover:text-rose-500 transition-colors"
+                              >
+                                <XCircle size={16} />
+                              </button>
+                            </div>
+                            <p className="text-[12px] font-bold text-[#8FAABB] mb-4">
+                              {item.recipeName || 'Produit Store'}
+                            </p>
+
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[15px] font-black ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>
+                                  {parseFloat(item.priceXOF || '0').toLocaleString()} XOF
+                                </span>
+                              </div>
+
+                              {/* Qty controls */}
+                              <div className={`flex items-center gap-4 px-2 py-1.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-white border border-stone-100'}`}>
+                                <button
+                                  onClick={() => updateQty(item.id, -1)}
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 ${isDark ? 'bg-white/10 text-white' : 'bg-white border border-stone-100 text-stone-800 shadow-sm'}`}
+                                >
+                                  <Minus size={14} strokeWidth={3} />
+                                </button>
+                                <span className={`text-sm font-black ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  onClick={() => updateQty(item.id, 1)}
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 ${isDark ? 'bg-white/10 text-white' : 'bg-[#D1EEDD] text-[#2D6A4F] shadow-sm'}`}
+                                >
+                                  <Plus size={14} strokeWidth={3} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </section>
+                )}
+
+                {cartItems.length > 0 && (
+                  <div className="pt-6 space-y-6 pb-12">
+                    {/* Payment methods immediately visible as requested */}
+                    <div className="pt-2 pb-6 border-t border-dashed border-stone-200">
+                      <h3 className={`text-[12px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+                        <Wallet size={14} className="text-[#38b000]" /> Moyen de paiement
+                      </h3>
+                      <div className="flex flex-col gap-3">
+                        <div
+                          onClick={() => setPaymentMethod('momo')}
+                          className={`p-4 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer ${paymentMethod === 'momo' ? 'border-[#38b000] bg-[#38b000]/5 shadow-sm' : (isDark ? 'border-white/5 bg-white/2' : 'border-stone-100 bg-stone-50/50')}`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/20">
+                              <span className="text-[10px] font-black text-white">MoMo</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className={`text-[13px] font-black ${isDark ? 'text-white' : 'text-stone-800'}`}>Mobile Money</span>
+                              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-tight">MTN, Moov, Celtiis</span>
+                            </div>
+                          </div>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'momo' ? 'bg-[#38b000] border-[#38b000]' : 'border-stone-200'}`}>
+                            {paymentMethod === 'momo' && <Check size={10} className="text-white" strokeWidth={4} />}
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => setPaymentMethod('card')}
+                          className={`p-4 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer ${paymentMethod === 'card' ? 'border-[#38b000] bg-[#38b000]/5 shadow-sm' : (isDark ? 'border-white/5 bg-white/2' : 'border-stone-100 bg-stone-50/50')}`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 text-white">
+                              <CreditCard size={20} />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className={`text-[13px] font-black ${isDark ? 'text-white' : 'text-stone-800'}`}>Carte Bancaire</span>
+                              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-tight">Visa, Mastercard</span>
+                            </div>
+                          </div>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'card' ? 'bg-[#38b000] border-[#38b000]' : 'border-stone-200'}`}>
+                            {paymentMethod === 'card' && <Check size={10} className="text-white" strokeWidth={4} />}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex items-center justify-center gap-2">
+                        <ShieldCheck size={12} className="text-emerald-500" />
+                        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Paiement sécurisé par FedaPay</span>
+                      </div>
+                    </div>
+
+                    {/* Summary */}
+                    <div className="pt-6 border-t border-dashed border-stone-200">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-[14px] font-bold text-[#8FAABB]">Sous-total</span>
+                        <span className={`text-[14px] font-bold ${isDark ? 'text-white/60' : 'text-stone-500'}`}>{subtotal.toLocaleString()} XOF</span>
+                      </div>
+                      {/* Tax row removed as requested */}
+                      <div className="flex justify-between items-center">
+                        <span className={`text-[18px] font-black ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>Total</span>
+                        <span className={`text-[18px] font-black ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>{total.toLocaleString()} XOF</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className={`p-6 pb-12 rounded-t-[32px] ${isDark ? 'bg-white/5' : 'bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)]'}`}>
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <p className="text-stone-400 text-[10px] font-black uppercase">Total à payer</p>
-                    <p className="text-2xl font-black text-[#38b000]">{total.toLocaleString()} XOF</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-stone-400">Livraison: {deliveryFee} XOF</p>
-                  </div>
+              {/* Fixed Footer Button */}
+              {cartItems.length > 0 && (
+                <div className={`p-6 pb-10 ${isDark ? 'bg-black' : 'bg-white shadow-[0_-20px_40px_rgba(0,0,0,0.02)]'}`}>
+                  <button
+                    onClick={handlePlaceOrder}
+                    className="w-full h-16 bg-[#006837] text-white rounded-[24px] font-black text-sm uppercase tracking-[0.1em] shadow-xl shadow-green-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    Valider la commande
+                  </button>
                 </div>
-                <button onClick={handlePlaceOrder} disabled={cartItems.length === 0} className="w-full h-14 bg-[#38b000] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-[#38b000]/30 active:scale-95 transition-all disabled:grayscale">
-                  Commander maintenant
-                </button>
-              </div>
+              )}
             </div>
           )}
         </motion.div>
@@ -3844,7 +4051,7 @@ export default function App() {
     const purchased = list.filter(i => i.isPurchased);
     const toBuy = list.filter(i => !i.isPurchased);
     const toBuyRecipe = toBuy.filter(i => !i.id.startsWith('store_'));
-    const toBuyStore = toBuy.filter(i => i.id.startsWith('store_'));
+    const toBuyStore = toBuy.filter(i => i.id.startsWith('store_') && !i.isInCart);
 
     // Integrated Ads from CMS
     const shoppingAds = dynamicSections.filter((s: any) => s.type === 'advertising' && s.config?.page === 'shopping');
@@ -3857,7 +4064,7 @@ export default function App() {
             id: s.id,
             title: s.title,
             sub: s.subtitle,
-            emoji: s.config?.emoji || '📢',
+            image_url: s.config?.image_url || '/logo_admin.png',
             bg: s.config?.background || 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)',
             tag: s.config?.tag || 'PROMO',
             isDynamic: true,
@@ -3865,20 +4072,20 @@ export default function App() {
             buttonText: 'Boutique'
           }];
         }
-        return merchantIds.map((mid: string) => {
-          const slideConfig = s.config?.slides?.[mid] || {};
-          const merchant = allMerchants.find(m => m.id === mid);
+        return merchantIds.map((pid: string) => {
+          const slideConfig = s.config?.slides?.[pid] || {};
+          const product = allProducts.find(p => p.id === pid);
           return {
-            id: `${s.id}-${mid}`,
-            title: slideConfig.title || s.title || merchant?.name || 'Offre Spéciale',
-            sub: slideConfig.subtitle || s.subtitle || merchant?.category || 'Découvrez nos produits',
-            emoji: slideConfig.emoji || s.config?.emoji || '🎁',
+            id: `${s.id}-${pid}`,
+            title: slideConfig.title || s.title || product?.name || 'Offre Spéciale',
+            sub: slideConfig.subtitle || s.subtitle || product?.category || 'Découvrez nos produits',
+            image_url: product?.image_url || '/logo_admin.png',
             bg: slideConfig.background || s.config?.background || 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)',
             tag: slideConfig.tag || s.config?.tag || 'OFFRE',
-            buttonText: slideConfig.button_text || 'Boutique',
+            buttonText: slideConfig.button_text || 'Acheter',
             isDynamic: true,
             section: s,
-            merchant: merchant
+            product: product
           };
         });
       })
@@ -3900,8 +4107,12 @@ export default function App() {
         {/* ── Promo Banner ── */}
         <div className="mx-4 mt-4 mb-2 rounded-[24px] overflow-hidden relative" style={{ background: banner.bg, minHeight: 150 }}>
           <div className="p-7 flex items-center gap-4 relative z-10">
-            <div className="w-14 h-14 rounded-[18px] bg-white/20 flex items-center justify-center text-3xl flex-shrink-0 backdrop-blur-sm">
-              {banner.emoji}
+            <div className="w-14 h-14 rounded-[18px] bg-white text-3xl flex-shrink-0 backdrop-blur-sm overflow-hidden border-2 border-white/20">
+              {banner.image_url ? (
+                <img src={banner.image_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-stone-300">📦</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <span className="text-[9px] font-black uppercase tracking-widest text-white/60">{banner.tag}</span>
@@ -4005,7 +4216,16 @@ export default function App() {
                           <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> {t.toBuy}
                         </h3>
                         <div className="space-y-3">
-                          {toBuyRecipe.map(item => <ShoppingItemRow key={item.id} item={item} list={list} updateShoppingList={updateShoppingList} UNITS={SHOPPING_UNITS} />)}
+                          {toBuyRecipe.map(item => (
+                            <ShoppingItemRow
+                              key={item.id}
+                              item={item}
+                              list={list}
+                              updateShoppingList={updateShoppingList}
+                              UNITS={SHOPPING_UNITS}
+                              isDark={isDark}
+                            />
+                          ))}
                         </div>
                       </div>
                     )}
@@ -4013,24 +4233,90 @@ export default function App() {
                     {toBuyStore.length > 0 && (
                       <div className="space-y-3 pl-2 pr-2">
                         <h3 className="text-[10px] font-black uppercase text-[#38b000] tracking-widest flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> Articles Store
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> Articles du Store
                         </h3>
                         <div className="space-y-3">
-                          {toBuyStore.map(item => <ShoppingItemRow key={item.id} item={item} list={list} updateShoppingList={updateShoppingList} UNITS={SHOPPING_UNITS} />)}
+                          {toBuyStore.map(item => (
+                            <ShoppingItemRow
+                              key={item.id}
+                              item={item}
+                              list={list}
+                              updateShoppingList={updateShoppingList}
+                              UNITS={SHOPPING_UNITS}
+                              isSelected={selectedStoreItemIds.includes(item.id)}
+                              onToggleSelection={(id) => {
+                                setSelectedStoreItemIds(prev =>
+                                  prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                                );
+                              }}
+                              isDark={isDark}
+                            />
+                          ))}
                         </div>
                       </div>
                     )}
 
-                    {purchased.length > 0 && (
+                    {purchased.filter(i => !i.id.startsWith('store_')).length > 0 && (
                       <div className="space-y-3">
                         <h3 className="text-[10px] font-black uppercase text-[#38b000] tracking-widest flex items-center gap-2">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> {t.purchased}
                         </h3>
                         <div className="space-y-3">
-                          {purchased.map(item => <ShoppingItemRow key={item.id} item={item} dimmed list={list} updateShoppingList={updateShoppingList} UNITS={SHOPPING_UNITS} />)}
+                          {purchased.filter(i => !i.id.startsWith('store_')).map(item => (
+                            <ShoppingItemRow
+                              key={item.id}
+                              item={item}
+                              dimmed
+                              list={list}
+                              updateShoppingList={updateShoppingList}
+                              UNITS={SHOPPING_UNITS}
+                              isDark={isDark}
+                            />
+                          ))}
                         </div>
                       </div>
                     )}
+
+                    {/* Add to Cart Floating Dock for Store Items */}
+                    <AnimatePresence>
+                      {selectedStoreItemIds.length > 0 && (
+                        <motion.div
+                          initial={{ y: 100, opacity: 0, scale: 0.9 }}
+                          animate={{ y: 0, opacity: 1, scale: 1 }}
+                          exit={{ y: 100, opacity: 0, scale: 0.9 }}
+                          className="fixed bottom-[116px] left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[400px] z-[600]"
+                        >
+                          <div className={`p-2.5 rounded-[30px] border flex items-center justify-between shadow-2xl ${isDark ? 'bg-black/80 border-white/10' : 'bg-white/90 border-stone-100'
+                            } backdrop-blur-xl`}>
+                            <div className="flex items-center gap-3.5 pl-3">
+                              <div className="w-12 h-12 rounded-[20px] bg-[#38b000]/10 flex items-center justify-center text-[#38b000] relative">
+                                <ShoppingBag size={22} />
+                                <span className="absolute -top-1 -right-1 bg-[#38b000] text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white">
+                                  {selectedStoreItemIds.length}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <p className={`text-[13px] font-black leading-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>Articles sélectionnés</p>
+                                <p className="text-[10px] font-bold text-stone-400 tracking-wide uppercase">Prêt pour le panier</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const newList = list.map(i =>
+                                  selectedStoreItemIds.includes(i.id) ? { ...i, isInCart: true } : i
+                                );
+                                updateShoppingList(newList);
+                                setSelectedStoreItemIds([]);
+                                showAlert(`${selectedStoreItemIds.length} article(s) ajouté(s) au panier !`, 'success');
+                              }}
+                              className="bg-[#38b000] text-white h-12 px-7 rounded-[20px] font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#38b000]/30 active:scale-95 transition-all flex items-center justify-center"
+                            >
+                              Confirmer
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     <button
                       onClick={() => { if (window.confirm(t.clearList + "?")) { updateShoppingList([]); } }}
                       className="w-full py-4 rounded-full border-2 border-stone-100 text-stone-400 font-black text-[10px] uppercase tracking-widest hover:bg-stone-50 hover:text-stone-600 transition-all active:scale-95 mt-4"
@@ -4098,7 +4384,10 @@ export default function App() {
               <div className="px-5 grid grid-cols-2 gap-4">
                 {filteredProducts.length > 0 ? (
                   filteredProducts.map(product => {
-                    const isInList = list.some(i => i.id.startsWith(`store_${product.id}`));
+                    const shopItem = list.find(i => i.id.startsWith(`store_${product.id}`));
+                    const isInList = !!shopItem;
+                    const isInCart = shopItem?.isInCart;
+
                     const mName = product.merchant_id ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand) : product.brand;
 
                     return (
@@ -4111,12 +4400,20 @@ export default function App() {
                           className={`relative aspect-square rounded-[26px] flex items-center justify-center text-[54px] mb-4 cursor-pointer active:scale-95 transition-all ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}
                         >
                           {isInList && (
-                            <div className="absolute top-2 left-2 right-2 py-1.5 rounded-full bg-[#38b000]/10 border border-[#38b000]/20 flex items-center justify-center gap-1.5 z-10 backdrop-blur-sm">
-                              <Check size={10} className="text-[#38b000]" strokeWidth={4} />
-                              <span className="text-[9px] font-black text-[#38b000] uppercase tracking-wide">Au panier</span>
+                            <div className={`absolute top-2 left-2 right-2 py-1.5 rounded-full border flex items-center justify-center gap-1.5 z-10 backdrop-blur-sm ${isInCart ? 'bg-[#38b000]/10 border-[#38b000]/20 text-[#38b000]' : 'bg-orange-500/10 border-orange-500/20 text-orange-500'}`}>
+                              <Check size={10} strokeWidth={4} />
+                              <span className="text-[9px] font-black uppercase tracking-wide">
+                                {isInCart ? 'Au panier' : 'Dans la liste'}
+                              </span>
                             </div>
                           )}
-                          <div className="hover:scale-110 transition-transform duration-500">{product.emoji}</div>
+                          <div className="hover:scale-110 transition-transform duration-500 w-full h-full flex items-center justify-center overflow-hidden rounded-[22px]">
+                            {product.image_url ? (
+                              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[54px]">{product.emoji || '📦'}</span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Details */}
@@ -4953,6 +5250,8 @@ export default function App() {
             currentUser={currentUser}
             updateShoppingList={updateShoppingList}
             showAlert={showAlert}
+            allProducts={allProducts}
+            allMerchants={allMerchants}
           />
         )}
       </AnimatePresence>

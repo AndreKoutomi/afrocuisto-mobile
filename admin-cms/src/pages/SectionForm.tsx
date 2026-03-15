@@ -14,7 +14,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Search, Utensils, Info, Sparkles, LayoutGrid, CheckCircle2, Store } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Search, Utensils, Info, Sparkles, LayoutGrid, CheckCircle2, Store, ShoppingBag } from 'lucide-react';
 
 interface Recipe {
     id: string;
@@ -53,6 +53,7 @@ export function SectionForm() {
     const [formData, setFormData] = useState(INITIAL_STATE);
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [merchants, setMerchants] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -74,6 +75,13 @@ export function SectionForm() {
                     .order('name');
 
                 if (merchantData) setMerchants(merchantData);
+
+                const { data: productData } = await supabase
+                    .from('products')
+                    .select('id, name, image_url, category, brand, merchant_id')
+                    .order('name');
+
+                if (productData) setProducts(productData);
 
                 if (id) {
                     const { data: sectionData, error } = await supabase
@@ -236,6 +244,12 @@ export function SectionForm() {
     const filteredMerchants = merchants.filter(m =>
         m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (m.category && m.category.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    const filteredProducts = products.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.brand && p.brand.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     if (initialLoading) {
@@ -823,20 +837,20 @@ export function SectionForm() {
                         </div>
                     </div>
 
-                    {/* Panel 3: Éléments sélectionnés (Plats ou Marchands) */}
+                    {/* Panel 3: Éléments sélectionnés (Plats ou Produits) */}
                     <div style={cardStyle}>
                         <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{ width: '32px', height: '32px', background: formData.type === 'advertising' ? 'linear-gradient(135deg, #fb560710, #fb560720)' : 'linear-gradient(135deg, #fef2f2, #fecaca)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {formData.type === 'advertising' ? <Store size={16} color="var(--primary)" /> : <Utensils size={16} color="#ef4444" />}
+                                    {formData.type === 'advertising' ? <ShoppingBag size={16} color="var(--primary)" /> : <Utensils size={16} color="#ef4444" />}
                                 </div>
                                 <div>
                                     <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>
-                                        {formData.type === 'advertising' ? 'Marchands liés' : 'Plats sélectionnés'}
+                                        {formData.type === 'advertising' ? 'Produits en vedette' : 'Plats sélectionnés'}
                                     </h3>
                                     <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>
                                         {formData.type === 'advertising'
-                                            ? ((formData.merchant_ids?.length || 0) === 0 ? 'Aucun marchand lié' : `${formData.merchant_ids?.length || 0} marchand${(formData.merchant_ids?.length || 0) > 1 ? 's' : ''} lié${(formData.merchant_ids?.length || 0) > 1 ? 's' : ''}`)
+                                            ? ((formData.merchant_ids?.length || 0) === 0 ? 'Aucun produit sélectionné' : `${formData.merchant_ids?.length || 0} produit${(formData.merchant_ids?.length || 0) > 1 ? 's' : ''} sélectionné${(formData.merchant_ids?.length || 0) > 1 ? 's' : ''}`)
                                             : (formData.recipe_ids.length === 0 ? 'Aucun plat — sélectionnez dans le catalogue' : `${formData.recipe_ids.length} plat${formData.recipe_ids.length > 1 ? 's' : ''} épinglé${formData.recipe_ids.length > 1 ? 's' : ''}`)
                                         }
                                     </p>
@@ -846,14 +860,14 @@ export function SectionForm() {
                         <div style={{ padding: '24px' }}>
                             {formData.type === 'advertising' ? (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
-                                    {formData.merchant_ids?.map(mid => {
-                                        const m = merchants.find(mer => mer.id === mid);
-                                        return m ? (
-                                            <div key={mid} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {formData.merchant_ids?.map(pid => {
+                                        const p = products.find(prod => prod.id === pid);
+                                        return p ? (
+                                            <div key={pid} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 <div style={{ height: '80px', borderRadius: '14px', overflow: 'hidden', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
-                                                    {m.logo_url ? <img src={m.logo_url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Store size={32} color="#d1d5db" />}
+                                                    {p.image_url ? <img src={p.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <ShoppingBag size={32} color="#d1d5db" />}
                                                 </div>
-                                                <p style={{ margin: 0, fontSize: '12px', fontWeight: 800, color: '#111827' }}>{m.name}</p>
+                                                <p style={{ margin: 0, fontSize: '12px', fontWeight: 800, color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</p>
                                             </div>
                                         ) : null;
                                     })}
@@ -884,26 +898,28 @@ export function SectionForm() {
                                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>Configuration des Slides</h3>
                             </div>
                             <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                {formData.merchant_ids?.map((mid, idx) => {
-                                    const m = merchants.find(mer => mer.id === mid);
-                                    if (!m) return null;
-                                    const slideConfig = formData.config?.slides?.[mid] || {};
+                                {formData.merchant_ids?.map((itemId, idx) => {
+                                    const item = formData.type === 'advertising'
+                                        ? products.find(p => p.id === itemId)
+                                        : merchants.find(mer => mer.id === itemId);
+                                    if (!item) return null;
+                                    const slideConfig = formData.config?.slides?.[itemId] || {};
                                     return (
-                                        <div key={mid} style={{ border: '1.5px solid #f3f4f6', borderRadius: '16px', overflow: 'hidden' }}>
+                                        <div key={itemId} style={{ border: '1.5px solid #f3f4f6', borderRadius: '16px', overflow: 'hidden' }}>
                                             <div style={{ background: '#f9fafb', padding: '12px 16px', borderBottom: '1.5px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                 <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#fff', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 900 }}>
                                                     {idx + 1}
                                                 </div>
-                                                <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#111827' }}>{m.name}</p>
+                                                <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#111827' }}>{item.name}</p>
                                             </div>
                                             <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                                                 <div>
                                                     <label style={labelStyle}>Titre sur la slide</label>
                                                     <input
                                                         type="text"
-                                                        placeholder="Ex: -20% sur tout le rayon"
+                                                        placeholder={formData.type === 'advertising' ? "Ex: Achetez maintenant" : "Ex: -20% sur tout le rayon"}
                                                         value={slideConfig.title || ''}
-                                                        onChange={(e) => handleSlideChange(mid, 'title', e.target.value)}
+                                                        onChange={(e) => handleSlideChange(itemId, 'title', e.target.value)}
                                                         style={inputStyle}
                                                     />
                                                 </div>
@@ -913,7 +929,7 @@ export function SectionForm() {
                                                         type="text"
                                                         placeholder="Ex: Uniquement ce weekend..."
                                                         value={slideConfig.subtitle || ''}
-                                                        onChange={(e) => handleSlideChange(mid, 'subtitle', e.target.value)}
+                                                        onChange={(e) => handleSlideChange(itemId, 'subtitle', e.target.value)}
                                                         style={inputStyle}
                                                     />
                                                 </div>
@@ -922,8 +938,8 @@ export function SectionForm() {
                                                     <input
                                                         type="text"
                                                         placeholder="Ex: Voir plus"
-                                                        value={slideConfig.button_text || 'Boutique'}
-                                                        onChange={(e) => handleSlideChange(mid, 'button_text', e.target.value)}
+                                                        value={slideConfig.button_text || (formData.type === 'advertising' ? 'Acheter' : 'Boutique')}
+                                                        onChange={(e) => handleSlideChange(itemId, 'button_text', e.target.value)}
                                                         style={inputStyle}
                                                     />
                                                 </div>
@@ -933,17 +949,7 @@ export function SectionForm() {
                                                         type="text"
                                                         placeholder="Ex: OFFRE"
                                                         value={slideConfig.tag || ''}
-                                                        onChange={(e) => handleSlideChange(mid, 'tag', e.target.value)}
-                                                        style={inputStyle}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label style={labelStyle}>Emoji icône</label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Ex: 🎁"
-                                                        value={slideConfig.emoji || ''}
-                                                        onChange={(e) => handleSlideChange(mid, 'emoji', e.target.value)}
+                                                        onChange={(e) => handleSlideChange(itemId, 'tag', e.target.value)}
                                                         style={inputStyle}
                                                     />
                                                 </div>
@@ -953,7 +959,7 @@ export function SectionForm() {
                                                         type="text"
                                                         placeholder="Ex: linear-gradient(...)"
                                                         value={slideConfig.background || ''}
-                                                        onChange={(e) => handleSlideChange(mid, 'background', e.target.value)}
+                                                        onChange={(e) => handleSlideChange(itemId, 'background', e.target.value)}
                                                         style={inputStyle}
                                                     />
                                                 </div>
@@ -972,7 +978,7 @@ export function SectionForm() {
                         <div style={{ padding: '20px 20px 0' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>
-                                    {formData.type === 'advertising' ? 'Catalogue des Marchands' : 'Catalogue des Plats'}
+                                    {formData.type === 'advertising' ? 'Catalogue des Produits' : 'Catalogue des Plats'}
                                 </h3>
                                 {formData.type !== 'featured' && (
                                     <div style={{ display: 'flex', gap: '6px' }}>
@@ -980,7 +986,7 @@ export function SectionForm() {
                                             type="button"
                                             title="Tout sélectionner"
                                             onClick={() => {
-                                                const listToCheck = formData.type === 'advertising' ? filteredMerchants : filteredRecipes;
+                                                const listToCheck = formData.type === 'advertising' ? filteredProducts : filteredRecipes;
                                                 const fieldToId = formData.type === 'advertising' ? 'merchant_ids' : 'recipe_ids';
                                                 const filteredIds = listToCheck.map(item => item.id);
                                                 const newIds = Array.from(new Set([...(formData[fieldToId] || []), ...filteredIds]));
@@ -1000,7 +1006,7 @@ export function SectionForm() {
                                             type="button"
                                             title="Tout désélectionner"
                                             onClick={() => {
-                                                const listToCheck = formData.type === 'advertising' ? filteredMerchants : filteredRecipes;
+                                                const listToCheck = formData.type === 'advertising' ? filteredProducts : filteredRecipes;
                                                 const fieldToId = formData.type === 'advertising' ? 'merchant_ids' : 'recipe_ids';
                                                 const filteredIds = new Set(listToCheck.map(item => item.id));
                                                 setFormData(prev => ({
@@ -1023,7 +1029,7 @@ export function SectionForm() {
                             </div>
                             <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#9ca3af', fontWeight: 500 }}>
                                 {formData.type === 'advertising'
-                                    ? <>{filteredMerchants.length} marchand{filteredMerchants.length !== 1 ? 's' : ''} affiché{filteredMerchants.length !== 1 ? 's' : ''}</>
+                                    ? <>{filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} affiché{filteredProducts.length !== 1 ? 's' : ''}</>
                                     : <>{filteredRecipes.length} plat{filteredRecipes.length !== 1 ? 's' : ''} affiché{filteredRecipes.length !== 1 ? 's' : ''}</>
                                 }
                                 {(formData.type === 'advertising' ? (formData.merchant_ids?.length || 0) : formData.recipe_ids.length) > 0 && (
@@ -1054,17 +1060,17 @@ export function SectionForm() {
 
                         <div style={{ maxHeight: 'calc(100vh - 340px)', overflowY: 'auto', padding: '8px 12px 12px' }}>
                             {formData.type === 'advertising' ? (
-                                filteredMerchants.length === 0 ? (
+                                filteredProducts.length === 0 ? (
                                     <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-                                        <Store size={28} color="#d1d5db" style={{ marginBottom: '8px' }} />
-                                        <p style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 600, margin: 0 }}>Aucun marchand</p>
+                                        <ShoppingBag size={28} color="#d1d5db" style={{ marginBottom: '8px' }} />
+                                        <p style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 600, margin: 0 }}>Aucun produit</p>
                                     </div>
-                                ) : filteredMerchants.map(merchant => {
-                                    const selected = formData.merchant_ids?.includes(merchant.id);
+                                ) : filteredProducts.map(product => {
+                                    const selected = formData.merchant_ids?.includes(product.id);
                                     return (
                                         <div
-                                            key={merchant.id}
-                                            onClick={() => handleToggleMerchant(merchant.id)}
+                                            key={product.id}
+                                            onClick={() => handleToggleMerchant(product.id)}
                                             style={{
                                                 display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 8px',
                                                 borderRadius: '12px', cursor: 'pointer',
@@ -1074,13 +1080,13 @@ export function SectionForm() {
                                             }}
                                         >
                                             <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f0f0f0', flexShrink: 0 }}>
-                                                {merchant.logo_url ? <img src={merchant.logo_url} style={{ width: '80%', height: '80%', objectFit: 'contain' }} /> : <Store size={20} color="#d1d5db" />}
+                                                {product.image_url ? <img src={product.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <ShoppingBag size={20} color="#d1d5db" />}
                                             </div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: selected ? 'var(--primary)' : '#111827', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {merchant.name}
+                                                    {product.name}
                                                 </p>
-                                                <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>{merchant.category || 'Commerce'}</p>
+                                                <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>{product.brand || product.category || 'Article'}</p>
                                             </div>
                                             <div style={{
                                                 width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
