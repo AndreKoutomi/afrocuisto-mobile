@@ -77,24 +77,29 @@ export function UsersPage() {
             const authUsers = authData?.users || [];
             const profilesMap = new Map((profiles || []).map(p => [p.id, p]));
 
-            // 3. Fusionner les données
-            const mergedUsers: UserProfile[] = authUsers.map((au: any) => {
-                const profile = profilesMap.get(au.id);
-                return {
-                    id: au.id,
-                    email: au.email,
-                    name: profile?.name || au.user_metadata?.full_name || 'Utilisateur',
-                    language: profile?.language || 'fr',
-                    dark_mode: profile?.dark_mode || false,
-                    joined_date: profile?.joined_date || au.created_at,
-                    updated_at: profile?.updated_at || au.updated_at,
-                    favorites: profile?.favorites || [],
-                    shopping_list: profile?.shopping_list || [],
-                    avatar: profile?.avatar || au.user_metadata?.avatar_url,
-                    is_banned: !!au.banned_until || au.user_metadata?.banned === true,
-                    last_sign_in: au.last_sign_in_at
-                };
-            });
+            // 3. Fusionner et Filtrer (On ne garde que les clients réels de l'app)
+            const mergedUsers: UserProfile[] = authUsers
+                .filter((au: any) => {
+                    const role = au.user_metadata?.role;
+                    return role !== 'admin' && role !== 'merchant';
+                })
+                .map((au: any) => {
+                    const profile = profilesMap.get(au.id);
+                    return {
+                        id: au.id,
+                        email: au.email,
+                        name: profile?.name || au.user_metadata?.full_name || 'Utilisateur',
+                        language: profile?.language || 'fr',
+                        dark_mode: profile?.dark_mode || false,
+                        joined_date: profile?.joined_date || au.created_at,
+                        updated_at: profile?.updated_at || au.updated_at,
+                        favorites: profile?.favorites || [],
+                        shopping_list: profile?.shopping_list || [],
+                        avatar: profile?.avatar || au.user_metadata?.avatar_url,
+                        is_banned: !!au.banned_until || au.user_metadata?.banned === true,
+                        last_sign_in: au.last_sign_in_at
+                    };
+                });
 
             setUsers(mergedUsers);
         } catch (err: any) {
@@ -251,9 +256,9 @@ export function UsersPage() {
     };
 
     return (
-        <div style={{ width: '100%', boxSizing: 'border-box', padding: '0 0 40px' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
             {/* ── Header ── */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <div className="flex-responsive" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}>
                 <div>
                     <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#9ca3af' }}>Gérez les accès et surveillez l'activité des utilisateurs</p>
                 </div>
@@ -275,7 +280,7 @@ export function UsersPage() {
             </div>
 
             {/* ── Stats ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '32px' }}>
+            <div className="grid-responsive-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '32px' }}>
                 {[
                     { label: 'Utilisateurs inscrits', value: stats.total, suffix: 'comptes', icon: <Users size={20} />, color: '#fb5607', bg: '#fff5f0' },
                     { label: 'Mode Sombre activé', value: stats.darkMode, suffix: 'utilisateurs', icon: <Activity size={20} />, color: '#7c3aed', bg: '#F5F3FF' },
@@ -297,7 +302,7 @@ export function UsersPage() {
             </div>
 
             {/* ── Toolbar ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div className="flex-responsive" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                 <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <Search size={16} color="#9ca3af" style={{ position: 'absolute', left: '14px' }} />
                     <input
@@ -364,8 +369,8 @@ export function UsersPage() {
                     <p style={{ color: '#9ca3af', fontSize: '14px' }}>Aucun utilisateur ne correspond à "{search}".</p>
                 </div>
             ) : (
-                <div style={{ background: '#fff', borderRadius: '28px', border: '1px solid #f0f0f0', boxShadow: '0 1px 8px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 80px 50px', gap: '12px', padding: '14px 24px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+                <div className="table-mobile-card" style={{ background: '#fff', borderRadius: '28px', border: '1px solid #f0f0f0', boxShadow: '0 1px 8px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                    <div className="table-header-hidden" style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 80px 50px', gap: '12px', padding: '14px 24px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
                         {["Utilisateur", "Email", "Langue", "Favoris", "Inscription", "Mode", ""].map(h => (
                             <span key={h} style={{ fontSize: '10px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px' }}>{h}</span>
                         ))}
@@ -377,6 +382,7 @@ export function UsersPage() {
                         return (
                             <div
                                 key={user.id}
+                                className="table-mobile-row"
                                 style={{
                                     display: 'grid',
                                     gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 80px 50px',
@@ -389,7 +395,7 @@ export function UsersPage() {
                                 onMouseEnter={e => (e.currentTarget.style.background = '#fafeff')}
                                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div className="table-cell-label" data-label="Utilisateur" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     {user.avatar ? (
                                         <img src={user.avatar} alt={user.name} style={{ width: 40, height: 40, borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} />
                                     ) : (
@@ -411,7 +417,7 @@ export function UsersPage() {
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                <div className="table-cell-label" data-label="Email" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                                     <Mail size={13} color="#9ca3af" />
                                     <span style={{ fontSize: '13px', fontWeight: 500, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {user.email || '—'}
@@ -426,22 +432,26 @@ export function UsersPage() {
                                     )}
                                 </div>
 
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>
-                                    {langLabel(user.language)}
-                                </span>
+                                <div className="table-cell-label" data-label="Langue">
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>
+                                        {langLabel(user.language)}
+                                    </span>
+                                </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <div className="table-cell-label" data-label="Favoris" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <Heart size={11} color="#fb5607" fill="#fb5607" />
                                     <span style={{ fontSize: '12px', fontWeight: 800, color: '#ea580c', background: '#fff7ed', padding: '2px 8px', borderRadius: '10px' }}>
                                         {user.favorites?.length || 0}
                                     </span>
                                 </div>
 
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af' }}>
-                                    {user.joined_date ? new Date(user.joined_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '—'}
-                                </span>
+                                <div className="table-cell-label" data-label="Inscription">
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af' }}>
+                                        {user.joined_date ? new Date(user.joined_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '—'}
+                                    </span>
+                                </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                <div className="table-cell-label" data-label="Mode" style={{ display: 'flex', justifyContent: 'center' }}>
                                     <span style={{
                                         fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '20px',
                                         background: user.dark_mode ? '#1e1b4b' : '#f3f4f6',
@@ -451,15 +461,17 @@ export function UsersPage() {
                                     </span>
                                 </div>
 
-                                <button
-                                    onClick={() => {
-                                        setSelectedUser(user);
-                                        setActiveTab('info');
-                                    }}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '6px', display: 'flex', justifyContent: 'center' }}
-                                >
-                                    <MoreHorizontal size={18} />
-                                </button>
+                                <div className="table-cell-label" data-label="Actions" style={{ display: 'flex', justifyContent: 'center' }}>
+                                    <button
+                                        onClick={() => {
+                                            setSelectedUser(user);
+                                            setActiveTab('info');
+                                        }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '6px' }}
+                                    >
+                                        <MoreHorizontal size={18} />
+                                    </button>
+                                </div>
                             </div>
                         );
                     })}
@@ -505,7 +517,7 @@ export function UsersPage() {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
                     <div style={{ background: '#fff', borderRadius: '32px', width: '100%', maxWidth: '700px', height: '85vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
 
-                        <div style={{ padding: '32px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ padding: '32px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }} className="flex-responsive">
                             <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                                 <div style={{ width: 64, height: 64, borderRadius: '20px', background: `linear-gradient(135deg, ${getAvatarColor(selectedUser.id)[0]}, ${getAvatarColor(selectedUser.id)[1]})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 900, color: '#fff' }}>
                                     {getInitials(selectedUser.name, selectedUser.email)}
@@ -547,7 +559,7 @@ export function UsersPage() {
                         <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
                             {activeTab === 'info' && (
                                 <div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '40px' }}>
+                                    <div className="flex-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '40px' }}>
                                         <div>
                                             <h4 style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>Informations de compte</h4>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -575,7 +587,7 @@ export function UsersPage() {
                                     </div>
 
                                     <h4 style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>Actions de Management</h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                    <div className="grid-2-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                         <button
                                             onClick={() => {
                                                 setFormData({ ...formData, name: selectedUser.name || '' });
@@ -600,7 +612,7 @@ export function UsersPage() {
                                         </button>
                                         <button
                                             onClick={() => deleteUser(selectedUser.id)}
-                                            style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', borderRadius: '16px', background: '#f9fafb', color: '#ef4444', border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginTop: '10px' }}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', borderRadius: '16px', background: '#f9fafb', color: '#ef4444', border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginTop: '10px', width: '100%', gridColumn: '1 / -1' }}
                                         >
                                             <Trash2 size={16} /> Supprimer définitivement
                                         </button>

@@ -107,9 +107,9 @@ export function Dashboard() {
         <div style={{ width: '100%', boxSizing: 'border-box' }}>
 
             {/* Grille de 3 colonnes pour afficher les KPI (chiffres clés) */}
-            <div className="grid grid-cols-3 grid-gap-6 mb-8">
+            <div className="grid-responsive-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '24px' }}>
                 {/* Carte 1 : Nombre de recettes */}
-                <div className="card kpi-card">
+                <div className="card kpi-card" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '24px' }}>
                     <div className="kpi-icon-wrapper">
                         <Book size={28} />
                     </div>
@@ -144,7 +144,7 @@ export function Dashboard() {
 
             {/* Section basse pour l'activité récente */}
             <div className="mt-8 card">
-                <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="card-header flex-responsive" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 className="card-title">Activité Récente</h3>
                     {!loading && activities.length > 0 && <span style={{ fontSize: '12px', color: '#9ca3af' }}>{activities.length} derniers événements</span>}
                 </div>
@@ -163,7 +163,7 @@ export function Dashboard() {
                             {activities.map((activity, idx) => (
                                 <div
                                     key={`${activity.type}-${activity.id}-${idx}`}
-                                    className="activity-item"
+                                    className="activity-item list-item-responsive"
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',

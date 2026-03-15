@@ -27,6 +27,7 @@ const TYPE_META: Record<string, { label: string; icon: any; color: string; bg: s
     horizontal_list_v2: { label: 'Horizontal v2', icon: GalleryHorizontal, color: '#8b5cf6', bg: '#f5f3ff', description: 'Scroll horizontal premium avec cards élégantes' },
     vertical_list_1: { label: 'Liste simple', icon: List, color: '#059669', bg: '#d1fae5', description: 'Cartes verticales avec image et détails' },
     vertical_list_2: { label: 'Grille 2col', icon: LayoutGrid, color: '#d97706', bg: '#fef3c7', description: 'Grille en deux colonnes, style magazine' },
+    advertising: { label: 'Publicité', icon: Sparkles, color: '#f59e0b', bg: '#fffbeb', description: 'Bannière publicitaire pour la boutique' },
 };
 
 function getTypeMeta(type: string) {
@@ -42,7 +43,7 @@ const SectionCard = ({ section, idx, group, handleMoveGroup, handleDelete, delet
     const isAIGenerated = section.config?.ai_generated;
 
     return (
-        <div style={{
+        <div className="list-item-responsive" style={{
             background: '#fff', borderRadius: '18px',
             border: isAIGenerated ? '1.5px solid #ffd8c2' : '1px solid #f0f0f0',
             boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
@@ -55,18 +56,18 @@ const SectionCard = ({ section, idx, group, handleMoveGroup, handleDelete, delet
             <div style={{ width: '44px', height: '44px', flexShrink: 0, background: meta.bg, borderRadius: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon size={20} color={meta.color} />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, paddingRight: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: '15px', fontWeight: 800, color: '#111827' }}>{section.title}</span>
                     {isAIGenerated && <Sparkles size={12} color="#fb5607" />}
                 </div>
                 <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af', fontWeight: 500 }}>{section.subtitle}</p>
             </div>
-            <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <button onClick={() => handleMoveGroup(section.id, 'up', group)} disabled={isFirst} style={{ padding: '6px', borderRadius: '8px', border: '1px solid #eee', background: '#fff', cursor: isFirst ? 'not-allowed' : 'pointer' }}><ArrowUp size={14} /></button>
                 <button onClick={() => handleMoveGroup(section.id, 'down', group)} disabled={isLast} style={{ padding: '6px', borderRadius: '8px', border: '1px solid #eee', background: '#fff', cursor: isLast ? 'not-allowed' : 'pointer' }}><ArrowDown size={14} /></button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <Link to={`/sections/edit/${section.id}`} style={{ padding: '8px 12px', borderRadius: '10px', background: 'var(--primary)', color: '#fff', fontSize: '12px', fontWeight: 700, textDecoration: 'none' }}>Modifier</Link>
                 <button onClick={() => handleDelete(section.id)} style={{ padding: '8px', borderRadius: '10px', background: '#fff5f5', border: '1px solid #fee2e2', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
             </div>
@@ -76,7 +77,7 @@ const SectionCard = ({ section, idx, group, handleMoveGroup, handleDelete, delet
 
 const GroupPanel = ({ title, description, icon: GIcon, iconColor, iconBg, groupSections, handleMoveGroup, handleDelete, deletingId }: any) => (
     <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+        <div className="flex-responsive" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <GIcon size={18} color={iconColor} />
             </div>
@@ -199,17 +200,17 @@ export function SectionsManager() {
 
     const homeSections = sections.filter(s => !s.config?.page || s.config.page === 'home');
     const explorerSections = sections.filter(s => s.config?.page === 'explorer');
+    const shoppingSections = sections.filter(s => s.config?.page === 'shopping');
 
     return (
         <div style={{ width: '100%', boxSizing: 'border-box' }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+            <div className="flex-responsive" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', gap: '20px' }}>
                 <div>
-
+                    <h2 style={{ fontSize: '24px', fontWeight: 900, margin: 0 }}>Gestion des Sections</h2>
                     <p style={{ color: '#9ca3af', margin: '4px 0 0' }}>Organisez le contenu de votre application mobile</p>
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     <button onClick={() => {
                         setWizardStep(1);
                         setTheme('');
@@ -258,6 +259,17 @@ export function SectionsManager() {
                         iconColor="#d97706"
                         iconBg="#fef3c7"
                         groupSections={explorerSections}
+                        handleMoveGroup={handleMoveGroup}
+                        handleDelete={handleDelete}
+                        deletingId={deletingId}
+                    />
+                    <GroupPanel
+                        title="Page Shopping"
+                        description="Boutique et publicités application"
+                        icon={LayoutGrid}
+                        iconColor="#7c3aed"
+                        iconBg="#ede9fe"
+                        groupSections={shoppingSections}
                         handleMoveGroup={handleMoveGroup}
                         handleDelete={handleDelete}
                         deletingId={deletingId}

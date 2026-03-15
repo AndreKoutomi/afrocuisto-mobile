@@ -23,6 +23,7 @@ interface FeaturedCarouselProps {
     currentUser: User | null;
     toggleFavorite: (id: string) => void;
     isDark?: boolean;
+    merchants?: any[];
 }
 
 export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
@@ -31,7 +32,8 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
     setSelectedRecipe,
     currentUser,
     toggleFavorite,
-    isDark
+    isDark,
+    merchants = []
 }) => {
     const scrollRef = React.useRef<HTMLDivElement>(null);
     const [isInteracting, setIsInteracting] = React.useState(false);
@@ -49,7 +51,11 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
         }
     };
 
-    const n = recipes.length;
+    const displayItems = section?.type === 'advertising'
+        ? merchants.filter(m => (section.config?.merchant_ids || section.merchant_ids || []).includes(m.id))
+        : recipes;
+
+    const n = displayItems.length;
 
     const config = section?.config || {};
     const rawAutoScroll = config.auto_scroll ?? config.autoScroll ?? config.autoscroll;
@@ -130,8 +136,11 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                     WebkitOverflowScrolling: 'touch',
                 }}
             >
-                {recipes.map((recipe, index) => {
-                    const isFavorite = isFav(recipe.id);
+                {displayItems.map((item, index) => {
+                    const isRecipe = section?.type !== 'advertising';
+                    const recipe = isRecipe ? item as Recipe : null;
+                    const merchant = !isRecipe ? item : null;
+                    const isFavorite = isRecipe ? isFav(recipe!.id) : false;
 
                     if (section?.type === 'banner') {
                         return (
@@ -213,18 +222,129 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* Right Image */}
+                                    {/* Right Image Content */}
                                     <div style={{
                                         position: 'absolute',
-                                        right: '-20px',
+                                        right: '-15px',
                                         top: '50%',
                                         transform: 'translateY(-50%)',
-                                        width: '170px',
-                                        height: '170px',
+                                        width: '180px',
+                                        height: '180px',
                                         borderRadius: '50%',
                                         zIndex: 5,
+                                        backgroundColor: '#ddd',
+                                        overflow: 'hidden',
+                                        border: '6px solid rgba(255, 255, 255, 0.2)',
+                                        boxShadow: '0 12px 25px rgba(0,0,0,0.2)'
                                     }}>
-                                        <img src={recipe.image} alt={recipe.name} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', boxShadow: '-4px 4px 15px rgba(0,0,0,0.15)', backgroundColor: '#fff' }} />
+                                        <img
+                                            src={recipe.image}
+                                            alt={recipe.name}
+                                            draggable={false}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
+                                    </div>
+
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    if (section?.type === 'advertising' && merchant) {
+                        const slideConfig = section.config?.slides?.[merchant.id] || {};
+                        const title = slideConfig.title || merchant.name || section.title;
+                        const subtitle = slideConfig.subtitle || section.subtitle || merchant.category || 'Découvrez nos offres';
+                        const background = slideConfig.background || 'linear-gradient(135deg, #fb5607, #ff8c42)';
+                        const buttonText = slideConfig.button_text || 'Visiter la boutique';
+                        const tagText = slideConfig.tag || 'Publicité';
+                        const emoji = slideConfig.emoji || '';
+
+                        return (
+                            <div
+                                key={merchant.id}
+                                style={{
+                                    flexShrink: 0,
+                                    width: '340px',
+                                    scrollSnapAlign: 'start',
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                }}
+                            >
+                                <div style={{
+                                    width: '100%',
+                                    height: '200px',
+                                    borderRadius: '28px',
+                                    background: background,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '20px 24px',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 8px 25px rgba(251, 86, 7, 0.3)',
+                                }}>
+                                    <div style={{ flex: 1, zIndex: 10, maxWidth: '60%' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                                            <span style={{
+                                                display: 'inline-block',
+                                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                                padding: '4px 12px',
+                                                borderRadius: '20px',
+                                                fontSize: '10px',
+                                                fontWeight: 800,
+                                                color: '#fff',
+                                                textTransform: 'uppercase',
+                                            }}>
+                                                {tagText}
+                                            </span>
+                                            {emoji && <span style={{ fontSize: '16px' }}>{emoji}</span>}
+                                        </div>
+                                        <h3 style={{
+                                            margin: 0, fontSize: '22px', fontWeight: 900, color: '#fff',
+                                            lineHeight: 1.1, letterSpacing: '-0.02em',
+                                            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                                        }}>
+                                            {title}
+                                        </h3>
+                                        <p style={{ margin: '8px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+                                            {subtitle}
+                                        </p>
+                                        <div style={{
+                                            marginTop: '16px',
+                                            backgroundColor: '#fff',
+                                            color: '#fb5607',
+                                            padding: '8px 16px',
+                                            borderRadius: '12px',
+                                            fontSize: '12px',
+                                            fontWeight: 800,
+                                            display: 'inline-block'
+                                        }}>
+                                            {buttonText}
+                                        </div>
+                                    </div>
+
+                                    {/* Merchant Logo/Image */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        right: '-10px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        width: '150px',
+                                        height: '150px',
+                                        borderRadius: '50%',
+                                        zIndex: 5,
+                                        backgroundColor: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '10px',
+                                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                                    }}>
+                                        <img
+                                            src={merchant.logo_url || '/logo_admin.png'}
+                                            alt={merchant.name}
+                                            draggable={false}
+                                            style={{ width: '85%', height: '85%', objectFit: 'contain' }}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -237,8 +357,8 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
 
                     return (
                         <div
-                            key={recipe.id}
-                            onClick={() => setSelectedRecipe(recipe)}
+                            key={isRecipe ? recipe!.id : merchant!.id}
+                            onClick={() => isRecipe && setSelectedRecipe(recipe!)}
                             style={{
                                 flexShrink: 0,
                                 width: cardWidth,
@@ -260,8 +380,8 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                                 backgroundColor: '#f3f4f6',
                             }}>
                                 <img
-                                    src={recipe.image}
-                                    alt={recipe.name}
+                                    src={isRecipe ? recipe!.image : '/logo_admin.png'}
+                                    alt={isRecipe ? recipe!.name : merchant!.name}
                                     draggable={false}
                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 />
@@ -279,7 +399,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
 
                                 {/* Heart Button Inside Image */}
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
+                                    onClick={(e) => { e.stopPropagation(); isRecipe && toggleFavorite(recipe!.id); }}
                                     style={{
                                         position: 'absolute', top: 12, right: 12,
                                         width: 32, height: 32, borderRadius: '50%',
@@ -345,7 +465,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                                         backdropFilter: 'blur(4px)',
                                         boxShadow: '0 4px 10px rgba(251, 86, 7, 0.3)',
                                     }}>
-                                        {recipe.region}
+                                        {isRecipe ? recipe!.region : (merchant!.category || 'Commerce')}
                                     </p>
                                     <h3 style={{
                                         margin: 0,
@@ -356,7 +476,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                                         wordBreak: 'break-word',
                                         fontFamily: 'Montserrat, sans-serif'
                                     }}>
-                                        {recipe.name}
+                                        {isRecipe ? recipe!.name : merchant!.name}
                                     </h3>
                                     <div style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -370,7 +490,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                                     }}>
                                         <Clock size={12} color="#ffffff" strokeWidth={3} />
                                         <span style={{ fontSize: '11px', fontWeight: 800, color: '#ffffff' }}>
-                                            {recipe.prepTime}
+                                            {isRecipe ? recipe!.prepTime : '30 min'}
                                         </span>
                                     </div>
                                 </div>
@@ -379,6 +499,6 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                     );
                 })}
             </div>
-        </section >
+        </section>
     );
 };

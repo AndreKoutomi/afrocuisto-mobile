@@ -643,3 +643,422 @@ textarea.form-control {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: 20px 0 50px rgba(0, 0, 0, 0.1);
+    z-index: 1000 !important;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar.collapsed {
+    width: 290px;
+    /* Reset on mobile if needed, or keep it consistent */
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+  }
+
+  .topbar {
+    padding: 0 1rem;
+    height: auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+
+  .topbar-card {
+    width: 100%;
+    margin-bottom: 1rem;
+    justify-content: space-between;
+  }
+
+  .topbar-card div:first-child {
+    flex: 1;
+  }
+
+  .topbar-card input {
+    width: 100% !important;
+  }
+
+  .content-area {
+    padding: 1rem;
+  }
+
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar-card {
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .topbar-card .avatar span {
+    display: none;
+  }
+
+  .kpi-card {
+    flex-direction: column !important;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .kpi-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.5rem;
+  }
+
+  .sidebar-header {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .table-wrapper {
+    padding: 0 1rem 1rem 1rem;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+
+/* Overlay for mobile sidebar */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  display: none;
+}
+
+.sidebar-overlay.active {
+  display: block;
+}
+
+/* Hide collapse button on mobile */
+@media (max-width: 1024px) {
+  .sidebar .sidebar-toggle {
+    display: none !important;
+  }
+}
+
+/* Global Responsive Utilities */
+.flex-responsive {
+  display: flex !important;
+}
+
+@media (max-width: 640px) {
+  .flex-responsive {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+}
+
+.grid-responsive-stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+@media (max-width: 1200px) {
+  .grid-responsive-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Stats Grid Responsiveness */
+.grid-responsive-stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 12px !important;
+}
+
+@media (max-width: 1024px) {
+  .grid-responsive-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .grid-responsive-stats {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Custom Table Responsiveness */
+.table-mobile-card {
+  display: block;
+}
+
+@media (max-width: 800px) {
+  .table-header-hidden {
+    display: none !important;
+  }
+
+
+  .table-mobile-row {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 1.25rem !important;
+    gap: 0.75rem !important;
+    border-bottom: 8px solid var(--bg-color) !important;
+    align-items: flex-start !important;
+    border-radius: 12px;
+  }
+
+  .table-cell-label::before {
+    content: attr(data-label) ": ";
+    font-weight: 800;
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  /* Some specific tweaks to make cells flow better */
+  .table-cell-label {
+    width: 100%;
+    text-align: left !important;
+    display: block !important;
+  }
+
+  /* Recipe specifics - High Level Polish */
+  .recipe-mobile-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    padding: 20px !important;
+    gap: 14px !important;
+    border-bottom: 8px solid #f8f9fa !important;
+    align-items: center !important;
+    position: relative;
+    background: #fff !important;
+  }
+
+  /* Image */
+  .recipe-mobile-row>div:nth-child(1) {
+    width: 72px !important;
+    height: 72px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  /* Name & Time */
+  .recipe-mobile-row>div:nth-child(2) {
+    flex: 1 !important;
+    min-width: 140px !important;
+  }
+
+  .recipe-mobile-row>div:nth-child(2) p {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* Region */
+  .recipe-mobile-row>p:nth-child(3) {
+    width: 100% !important;
+    color: #6b7280 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    background: #f3f4f6 !important;
+    padding: 6px 12px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  /* Category & Difficulty - Row layout */
+  .recipe-mobile-row>div:nth-child(4),
+  .recipe-mobile-row>div:nth-child(5) {
+    width: auto !important;
+    flex: 1 1 0 !important;
+  }
+
+  /* Actions */
+  .recipe-mobile-row>div:nth-child(6) {
+    width: 100% !important;
+    justify-content: flex-end !important;
+    margin-top: 8px !important;
+    padding-top: 16px !important;
+    border-top: 1.5px solid #f9fafb !important;
+    gap: 12px !important;
+  }
+
+  .recipe-mobile-row>div:nth-child(6)>* {
+    height: 40px !important;
+    flex: 1 !important;
+  }
+}
+
+/* Form Layout Responsiveness */
+.grid-form-layout {
+  display: grid !important;
+  grid-template-columns: 1fr 360px !important;
+  gap: 24px !important;
+}
+
+@media (max-width: 1024px) {
+  .grid-form-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .grid-form-layout>* {
+    order: 2;
+  }
+
+  .grid-form-layout>div.sidebar-panel {
+    order: 1;
+    margin-bottom: 20px;
+  }
+}
+
+.grid-2-cols {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+}
+
+@media (max-width: 600px) {
+  .grid-2-cols {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.grid-responsive-3 {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+@media (max-width: 1024px) {
+  .grid-responsive-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid-responsive-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.recipe-form-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+@media (max-width: 640px) {
+  .recipe-form-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+
+  .recipe-form-header button {
+    width: 100% !important;
+  }
+}
+
+.flex-responsive {
+  display: flex !important;
+}
+
+@media (max-width: 640px) {
+  .flex-responsive {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+
+  .flex-responsive>* {
+    width: 100% !important;
+  }
+}
+
+
+/* List Item Responsiveness */
+.list-item-responsive {
+  display: flex !important;
+}
+
+@media (max-width: 640px) {
+  .list-item-responsive {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+
+  .list-item-responsive>div {
+    width: 100% !important;
+    text-align: left !important;
+  }
+}
+
+/* Modal Form Responsiveness */
+.grid-modal-form {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 20px !important;
+}
+
+.grid-full-width {
+  grid-column: span 2;
+}
+
+@media (max-width: 650px) {
+  .grid-modal-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .grid-modal-form>div,
+  .mobile-full-width,
+  .grid-full-width {
+    grid-column: span 1 !important;
+    width: 100% !important;
+  }
+}
+
+/* Base modal fix to ensure no overflow */
+.modal-overlay {
+  padding: 16px !important;
+}
+
+.modal-content {
+  width: 100% !important;
+  max-height: 95vh !important;
+}

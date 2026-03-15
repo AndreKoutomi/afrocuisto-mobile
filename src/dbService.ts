@@ -11,7 +11,7 @@
  * ============================================================================
  */
 
-import { User, Recipe } from './types';
+import { User, Recipe, Product } from './types';
 import type { DishSuggestionPayload } from './components/DishSuggestionForm';
 import { createClient } from '@supabase/supabase-js';
 
@@ -133,6 +133,27 @@ export const dbService = {
         throw new Error('Internet connection required for initial data load.');
     },
 
+    async getRemoteMerchants(): Promise<any[]> {
+        const REMOTE_MERCHANTS_KEY = 'afrocuisto_remote_merchants';
+        try {
+            if (!supabase) return [];
+            const { data, error } = await supabase
+                .from('merchants')
+                .select('*')
+                .order('name');
+
+            if (error) throw error;
+            if (data) {
+                localStorage.setItem(REMOTE_MERCHANTS_KEY, JSON.stringify(data));
+                return data;
+            }
+        } catch (err) {
+            console.error('Merchants sync error:', err);
+        }
+        const cached = localStorage.getItem(REMOTE_MERCHANTS_KEY);
+        return cached ? JSON.parse(cached) : [];
+    },
+
     async getRemoteSections(): Promise<any[]> {
         const REMOTE_SECTIONS_KEY = 'afrocuisto_remote_sections';
         try {
@@ -160,6 +181,30 @@ export const dbService = {
         return cached ? JSON.parse(cached) : [];
     },
 
+    async getRemoteProducts(): Promise<Product[]> {
+        const REMOTE_PRODUCTS_KEY = 'afrocuisto_remote_products';
+        try {
+            if (!supabase) return [];
+            const { data, error } = await supabase
+                .from('products')
+                .select('*')
+                .order('name');
+
+            if (error) {
+                if (error.code === '42P01') return [];
+                throw error;
+            }
+            if (data) {
+                localStorage.setItem(REMOTE_PRODUCTS_KEY, JSON.stringify(data));
+                return data;
+            }
+        } catch (err) {
+            console.error('Products sync error:', err);
+        }
+        const cached = localStorage.getItem(REMOTE_PRODUCTS_KEY);
+        return cached ? JSON.parse(cached) : [];
+    },
+
     // ── Email/Password Auth ─────────────────────────────────────────────────
     async signUp(email: string, password: string, name: string, phone?: string) {
         if (!supabase) throw new Error("Serveur indisponible");
@@ -175,7 +220,11 @@ export const dbService = {
             email: email.trim().toLowerCase(),
             password: password.trim(),
             email_confirm: true, // Bypass verification!
-            user_metadata: { full_name: name.trim(), phone: phone ? phone.trim() : null }
+            user_metadata: {
+                full_name: name.trim(),
+                phone: phone ? phone.trim() : null,
+                role: 'user' // Explicitly separate clients/app users
+            }
         });
 
         if (createError) throw createError;
@@ -451,7 +500,7 @@ export const dbService = {
     async sendDishSuggestionEmail(dish: any): Promise<{ success: boolean; error?: string }> {
         try {
             const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_k3w11sm';
-            const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_huya44j'; 
+            const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_huya44j';
             const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '5bxF5hiV8eLRjESo4';
 
             const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
@@ -502,7 +551,7 @@ export const dbService = {
                     console.warn('Table missing, using email fallback...');
                     return await this.sendDishSuggestionEmail(dish);
                 }
-                
+
                 if (insertError.code === 'PGRST204' || insertError.message?.includes('column')) {
                     const minimalPayload = {
                         name: dish.name.trim(),

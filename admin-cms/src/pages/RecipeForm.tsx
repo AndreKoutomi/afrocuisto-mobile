@@ -206,7 +206,7 @@ export function RecipeForm() {
         <div style={{ width: '100%', boxSizing: 'border-box' }}>
 
             {/* ── Header ── */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
+            <div className="recipe-form-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <Link to="/recipes" style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -242,8 +242,7 @@ export function RecipeForm() {
                 </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '20px', alignItems: 'start' }}>
-
+            <form onSubmit={handleSubmit} className="grid-form-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '20px', alignItems: 'start' }}>
                 {/* ══ LEFT COLUMN ══ */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
@@ -297,7 +296,7 @@ export function RecipeForm() {
                                     </button>
                                 </div>
                             </Field>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                            <div className="grid-2-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                 <Field label="Alias / Nom local">
                                     <input name="alias" value={formData.alias || ''} onChange={handleChange} placeholder="Nom en langue locale" style={inputStyle} />
                                 </Field>
@@ -308,7 +307,7 @@ export function RecipeForm() {
                                     </select>
                                 </Field>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                            <div className="grid-2-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                 <Field label="Type de Plat">
                                     <input name="type" value={formData.type || ''} onChange={handleChange} placeholder="Plat principal, Dessert..." style={inputStyle} />
                                 </Field>
@@ -316,7 +315,7 @@ export function RecipeForm() {
                                     <input name="style" value={formData.style || ''} onChange={handleChange} placeholder="Braisé, Vapeur, Frit..." style={inputStyle} />
                                 </Field>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                            <div className="grid-2-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                 <Field label="Ingrédient de Base">
                                     <input name="base" value={formData.base || ''} onChange={handleChange} placeholder="Maïs, Manioc, Poulet..." style={inputStyle} />
                                 </Field>
@@ -341,7 +340,7 @@ export function RecipeForm() {
                                     style={textareaStyle}
                                 />
                             </Field>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                            <div className="grid-2-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                 <Field label="Technique — Titre">
                                     <input name="technique_title" value={formData.technique_title || ''} onChange={handleChange} placeholder="Ex: La cuisson à l'étouffée" style={inputStyle} />
                                 </Field>
@@ -404,7 +403,7 @@ export function RecipeForm() {
                 </div>
 
                 {/* ══ RIGHT COLUMN ══ */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'sticky', top: '24px' }}>
+                <div className="sidebar-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
                     {/* Panel: Image */}
                     <div style={cardStyle}>
@@ -490,7 +489,7 @@ export function RecipeForm() {
                                 </select>
                             </Field>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div className="grid-2-cols">
                                 <Field label="Temps de Prépa.">
                                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                         <Clock size={14} color="#9ca3af" style={{ position: 'absolute', left: '12px' }} />

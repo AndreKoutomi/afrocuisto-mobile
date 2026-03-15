@@ -130,15 +130,12 @@ export function RecipesList() {
         <div style={{ width: '100%', boxSizing: 'border-box' }}>
 
             {/* En-tête de la page */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' }}>
+            <div className="flex-responsive" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div>
-
-                    <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>
-                        Ajoutez, modifiez et organisez le catalogue de plats de l'application.
-                    </p>
+                    <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '14px' }}>Gérez les plats et spécialités culinaires</p>
                 </div>
                 {/* Boutons d'action (Refresh, IA, Ajout) */}
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button
                         onClick={fetchRecipes}
                         style={{
@@ -180,7 +177,7 @@ export function RecipesList() {
             </div>
 
             {/* Barre de statistiques (Chiffres clés) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
+            <div className="grid-responsive-stats">
                 {[
                     { label: 'Total recettes', value: recipes.length, icon: ChefHat, color: 'var(--primary)', bg: '#fff5f0' },
                     { label: 'Résultats', value: filteredRecipes.length, icon: Search, color: '#059669', bg: '#d1fae5' },
@@ -203,8 +200,8 @@ export function RecipesList() {
             </div>
 
             {/* Barre de filtres (Recherche et Sélecteurs) */}
-            <div style={{ ...cardStyle, padding: '16px 20px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ flex: '1 1 220px', position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <div className="flex-responsive" style={{ ...cardStyle, padding: '16px 20px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 100%', minWidth: '220px', position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <Search size={16} color="#9ca3af" style={{ position: 'absolute', left: '13px' }} />
                     <input
                         type="text"
@@ -218,7 +215,7 @@ export function RecipesList() {
                 <select
                     value={filterCategory}
                     onChange={e => setFilterCategory(e.target.value)}
-                    style={{ ...inputStyle, flex: '0 0 200px', cursor: 'pointer', color: filterCategory ? '#111827' : '#9ca3af' }}
+                    style={{ ...inputStyle, flex: '1 1 auto', minWidth: '160px', cursor: 'pointer', color: filterCategory ? '#111827' : '#9ca3af' }}
                 >
                     <option value="">Toutes les catégories</option>
                     {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
@@ -227,7 +224,7 @@ export function RecipesList() {
                 <select
                     value={filterDifficulty}
                     onChange={e => setFilterDifficulty(e.target.value)}
-                    style={{ ...inputStyle, flex: '0 0 160px', cursor: 'pointer', color: filterDifficulty ? '#111827' : '#9ca3af' }}
+                    style={{ ...inputStyle, flex: '1 1 auto', minWidth: '140px', cursor: 'pointer', color: filterDifficulty ? '#111827' : '#9ca3af' }}
                 >
                     <option value="">Toute difficulté</option>
                     <option value="Facile">Facile</option>
@@ -251,7 +248,7 @@ export function RecipesList() {
             </div>
 
             {/* Tableau des recettes */}
-            <div style={{ ...cardStyle, overflowX: 'auto' }}>
+            <div className="table-mobile-card" style={{ ...cardStyle, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }}>
                 {loading ? (
                     // On affiche des barres de chargement (shimmer) si c'est en cours
                     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -273,9 +270,9 @@ export function RecipesList() {
                         <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#9ca3af' }}>Modifiez vos filtres ou ajoutez une nouvelle recette.</p>
                     </div>
                 ) : (
-                    <div>
+                    <>
                         {/* En-tête du tableau (noms des colonnes) */}
-                        <div style={{
+                        <div className="table-header-hidden" style={{
                             display: 'grid',
                             gridTemplateColumns: '56px 1fr 130px 160px 100px 110px',
                             gap: '0 12px',
@@ -290,7 +287,7 @@ export function RecipesList() {
                         </div>
 
                         {/* Liste des lignes (Une ligne par recette) */}
-                        <div style={{ padding: '8px 12px 12px' }}>
+                        <>
                             {filteredRecipes.map((recipe, idx) => {
                                 const catMeta = getCategoryMeta(recipe.category);
                                 const diffMeta = DIFFICULTY_META[recipe.difficulty] || { color: '#6b7280', bg: '#f3f4f6' };
@@ -299,6 +296,7 @@ export function RecipesList() {
                                 return (
                                     <div
                                         key={recipe.id}
+                                        className="recipe-mobile-row"
                                         style={{
                                             display: 'grid',
                                             gridTemplateColumns: '56px 1fr 130px 160px 100px 110px',
@@ -352,28 +350,32 @@ export function RecipesList() {
                                         </p>
 
                                         {/* Colonne 4 : Badge de Catégorie */}
-                                        <span style={{
-                                            display: 'inline-block', fontSize: '10px', fontWeight: 700,
-                                            color: catMeta.color, background: catMeta.bg,
-                                            borderRadius: '8px', padding: '3px 10px',
-                                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                            maxWidth: '155px',
-                                        }}>
-                                            {catMeta.label || recipe.category || '—'}
-                                        </span>
-
-                                        {/* Colonne 5 : Badge de Difficulté */}
-                                        {recipe.difficulty ? (
+                                        <div style={{ minWidth: 0 }}>
                                             <span style={{
                                                 display: 'inline-block', fontSize: '10px', fontWeight: 700,
-                                                color: diffMeta.color, background: diffMeta.bg,
+                                                color: catMeta.color, background: catMeta.bg,
                                                 borderRadius: '8px', padding: '3px 10px',
+                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                maxWidth: '155px',
                                             }}>
-                                                {recipe.difficulty}
+                                                {catMeta.label || recipe.category || '—'}
                                             </span>
-                                        ) : (
-                                            <span style={{ color: '#d1d5db', fontSize: '13px' }}>—</span>
-                                        )}
+                                        </div>
+
+                                        {/* Colonne 5 : Badge de Difficulté */}
+                                        <div>
+                                            {recipe.difficulty ? (
+                                                <span style={{
+                                                    display: 'inline-block', fontSize: '10px', fontWeight: 700,
+                                                    color: diffMeta.color, background: diffMeta.bg,
+                                                    borderRadius: '8px', padding: '3px 10px',
+                                                }}>
+                                                    {recipe.difficulty}
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: '#d1d5db', fontSize: '13px' }}>—</span>
+                                            )}
+                                        </div>
 
                                         {/* Colonne 6 : Boutons Modifier / Supprimer */}
                                         <div style={{ display: 'flex', gap: '6px' }}>
@@ -409,7 +411,7 @@ export function RecipesList() {
                                     </div>
                                 );
                             })}
-                        </div>
+                        </>
 
                         {/* Bas du tableau : Compteur de résultats */}
                         <div style={{ padding: '12px 20px', borderTop: '1px solid #f3f4f6', background: '#fafafa', borderRadius: '0 0 20px 20px' }}>
@@ -418,7 +420,7 @@ export function RecipesList() {
                                 {recipes.length !== filteredRecipes.length && ` sur ${recipes.length}`}
                             </p>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
 

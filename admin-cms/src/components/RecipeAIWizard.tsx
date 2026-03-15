@@ -197,11 +197,11 @@ export function RecipeAIWizard({ onClose, onSaved }: Props) {
 
     /* ─────────── Render ─────────── */
     return (
-        <div style={overlay} onClick={onClose}>
-            <div style={modal} onClick={e => e.stopPropagation()}>
+        <div style={overlay} onClick={onClose} className="modal-overlay">
+            <div style={modal} onClick={e => e.stopPropagation()} className="modal-content">
 
                 {/* Header */}
-                <div style={headerBar}>
+                <div style={headerBar} className="flex-responsive">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                         <div style={{
                             width: '44px', height: '44px', borderRadius: '14px',
@@ -224,7 +224,7 @@ export function RecipeAIWizard({ onClose, onSaved }: Props) {
                             </p>
                         </div>
                     </div>
-                    <button style={btn('ghost')} onClick={onClose}><X size={20} /></button>
+                    <button style={{ ...btn('ghost'), position: 'absolute', top: '16px', right: '16px' }} onClick={onClose}><X size={20} /></button>
                 </div>
 
                 {/* Body */}
@@ -532,7 +532,7 @@ export function RecipeAIWizard({ onClose, onSaved }: Props) {
                     padding: '16px 28px', borderTop: '1px solid #f0f0f0',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     background: '#fafafa', flexShrink: 0,
-                }}>
+                }} className="wizard-footer-responsive">
                     {step === 'input' && (
                         <>
                             <button style={btn('secondary')} onClick={onClose}>Annuler</button>
@@ -557,14 +557,15 @@ export function RecipeAIWizard({ onClose, onSaved }: Props) {
                             </button>
                             <div style={{ display: 'flex', gap: '10px' }}>
                                 <button
+                                    className="mobile-full-width"
                                     style={{ ...btn('secondary'), color: '#374151' }}
                                     onClick={handlePrefillForm}
                                     title="Ouvrir dans le formulaire d'édition"
                                 >
-                                    <ExternalLink size={15} /> Éditer dans le formulaire
+                                    <ExternalLink size={15} /> Éditer
                                 </button>
-                                <button style={btn('primary')} onClick={handleSaveDirect}>
-                                    <Save size={15} /> Enregistrer directement
+                                <button className="mobile-full-width" style={btn('primary')} onClick={handleSaveDirect}>
+                                    <Save size={15} /> Enregistrer
                                 </button>
                             </div>
                         </>

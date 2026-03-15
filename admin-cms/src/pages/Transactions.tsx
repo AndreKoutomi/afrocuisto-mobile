@@ -78,9 +78,9 @@ export function Transactions() {
     };
 
     return (
-        <div style={{ width: '100%', boxSizing: 'border-box', padding: '0 0 40px' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <div className="flex-responsive" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}>
                 <div>
 
                     <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#9ca3af' }}>Gérez les paiements, abonnements et dons</p>
@@ -114,7 +114,7 @@ export function Transactions() {
             </div>
 
             {/* Stats Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+            <div className="grid-responsive-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
                 <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', boxShadow: '0 1px 8px rgba(0,0,0,0.04)', border: '1px solid #f0f0f0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                         <div style={{ width: 44, height: 44, borderRadius: '14px', background: '#fff5f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fb5607' }}>
@@ -158,7 +158,7 @@ export function Transactions() {
             </div>
 
             {/* Toolbar */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div className="flex-responsive" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                 <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <Search size={18} color="#9ca3af" style={{ position: 'absolute', left: '16px' }} />
                     <input
@@ -197,8 +197,8 @@ export function Transactions() {
             </div>
 
             {/* Data Table */}
-            <div style={{ background: '#fff', borderRadius: '24px', border: '1px solid #f0f0f0', boxShadow: '0 2px 12px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 2fr) minmax(150px, 2fr) 1.5fr 1fr 1fr 1fr 80px', gap: '16px', padding: '16px 24px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+            <div className="table-mobile-card" style={{ background: '#fff', borderRadius: '24px', border: '1px solid #f0f0f0', boxShadow: '0 2px 12px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
+                <div className="table-header-hidden" style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 2fr) minmax(150px, 2fr) 1.5fr 1fr 1fr 1fr 80px', gap: '16px', padding: '16px 24px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
                     {["Client", "Référence", "Type", "Date", "Montant", "Statut", "Action"].map(h => (
                         <span key={h} style={{ fontSize: '11px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{h}</span>
                     ))}
@@ -225,6 +225,7 @@ export function Transactions() {
                         return (
                             <div
                                 key={tx.id}
+                                className="table-mobile-row"
                                 style={{
                                     display: 'grid', gridTemplateColumns: 'minmax(200px, 2fr) minmax(150px, 2fr) 1.5fr 1fr 1fr 1fr 80px', gap: '16px',
                                     padding: '20px 24px', alignItems: 'center', borderBottom: isLast ? 'none' : '1px solid #f9fafb',
@@ -235,27 +236,27 @@ export function Transactions() {
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
                                 {/* Client */}
-                                <div style={{ minWidth: 0 }}>
+                                <div className="table-cell-label" data-label="Client" style={{ minWidth: 0 }}>
                                     <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx.userName}</p>
                                     <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx.userEmail}</p>
                                 </div>
 
                                 {/* Reference */}
-                                <div>
+                                <div className="table-cell-label" data-label="Référence">
                                     <p style={{ margin: 0, fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, color: '#374151', background: '#f3f4f6', padding: '4px 8px', borderRadius: '6px', display: 'inline-block' }}>
                                         {tx.reference}
                                     </p>
                                 </div>
 
                                 {/* Type */}
-                                <div>
+                                <div className="table-cell-label" data-label="Type">
                                     <span style={{ fontSize: '13px', fontWeight: 600, color: '#4b5563' }}>
                                         {getTypeLabel(tx.type)}
                                     </span>
                                 </div>
 
                                 {/* Date */}
-                                <div>
+                                <div className="table-cell-label" data-label="Date">
                                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#374151' }}>
                                         {new Date(tx.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
                                     </p>
@@ -265,14 +266,14 @@ export function Transactions() {
                                 </div>
 
                                 {/* Amount */}
-                                <div>
+                                <div className="table-cell-label" data-label="Montant">
                                     <span style={{ fontSize: '15px', fontWeight: 800, color: '#111827' }}>
                                         {tx.amount.toLocaleString('fr-FR')} <span style={{ fontSize: '12px', color: '#6b7280' }}>FCFA</span>
                                     </span>
                                 </div>
 
                                 {/* Status */}
-                                <div>
+                                <div className="table-cell-label" data-label="Statut">
                                     <span style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '6px',
                                         padding: '6px 10px', borderRadius: '20px',
@@ -285,7 +286,7 @@ export function Transactions() {
                                 </div>
 
                                 {/* Action */}
-                                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <div className="table-cell-label" data-label="Action" style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                     <button
                                         style={{
                                             background: '#f3f4f6', border: 'none', borderRadius: '10px',

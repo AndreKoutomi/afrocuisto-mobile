@@ -66,10 +66,14 @@ import {
   AlertCircle,
   Loader,
   Phone,
-  RefreshCw
+  RefreshCw,
+  CreditCard,
+  Truck,
+  Wallet,
+  SlidersHorizontal
 } from 'lucide-react';
 import { recipes } from './data';
-import { Recipe, Difficulty, User, UserSettings, ShoppingItem } from './types';
+import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product } from './types';
 import { getAIRecipeRecommendation } from './aiService';
 import { dbService } from './dbService';
 import { translations, LanguageCode } from './translations';
@@ -1119,13 +1123,92 @@ const ModernAlertComponent = ({
 
 // --- Constants & Components for Shopping List ---
 const SHOPPING_UNITS = ['g', 'kg', 'L', 'mL', 'cl', 'pcs', 'tbsp', 'tsp', 'pinch'];
+const STORE_CATEGORIES = ['Tout', 'Épices', 'Boissons', 'Huiles', 'Féculents', 'Légumes', 'Viandes', 'Poissons'];
 const STORE_PRODUCTS = [
-  { id: 'p1', name: 'Huile de Palme Bio', brand: 'NaturAfrik', price: 2800, unit: '1L', emoji: '🫙', badge: 'Populaire', color: '#fb5607' },
-  { id: 'p2', name: 'Riz Parfumé Long Grain', brand: 'Goldenrice', price: 4500, unit: '5kg', emoji: '🌾', badge: 'Promo -15%', color: '#10b981' },
-  { id: 'p3', name: 'Ndolé Séché Premium', brand: 'TasteOfCMR', price: 1800, unit: '200g', emoji: '🍃', badge: 'Nouveau', color: '#6366f1' },
-  { id: 'p4', name: 'Gingembre Frais Moulu', brand: 'SpiceLab', price: 750, unit: '100g', emoji: '🫚', badge: null, color: '#f59e0b' },
-  { id: 'p5', name: 'Piment Scotch Bonnet', brand: 'AfroSpice', price: 950, unit: '250g', emoji: '🌶️', badge: 'Best-seller', color: '#ef4444' },
-  { id: 'p6', name: 'Plantains Mûrs', brand: 'FruitDirect', price: 1200, unit: '1kg', emoji: '🍌', badge: null, color: '#f59e0b' },
+  {
+    id: 'p1',
+    name: 'Huile de Palme Bio',
+    brand: 'NaturAfrik',
+    price: 2800,
+    unit: '1L',
+    emoji: '🫙',
+    category: 'Huiles',
+    badge: 'Populaire',
+    color: '#38b000',
+    description: "Une huile de palme pure, extraite de manière traditionnelle et issue de l'agriculture biologique. Parfaite pour vos plats locaux comme le ragoût d'igname ou la sauce graine.",
+    rating: 4.8,
+    reviews_count: 124
+  },
+  {
+    id: 'p2',
+    name: 'Riz Parfumé Long Grain',
+    brand: 'Goldenrice',
+    price: 4500,
+    unit: '5kg',
+    emoji: '🌾',
+    category: 'Féculents',
+    badge: 'Promo -15%',
+    color: '#10b981',
+    description: "Riz parfumé de haute qualité, cultivé dans les plaines fertiles. Ses grains longs et sa texture légère en font l'accompagnement idéal pour tous vos mets.",
+    rating: 4.5,
+    reviews_count: 85
+  },
+  {
+    id: 'p3',
+    name: 'Ndolé Séché Premium',
+    brand: 'TasteOfCMR',
+    price: 1800,
+    unit: '200g',
+    emoji: '🍃',
+    category: 'Légumes',
+    badge: 'Nouveau',
+    color: '#6366f1',
+    description: "Feuilles de Ndolé soigneusement sélectionnées, lavées et séchées pour conserver toute leur saveur et leurs bienfaits nutritionnels. Prêt pour la cuisson.",
+    rating: 4.9,
+    reviews_count: 56
+  },
+  {
+    id: 'p4',
+    name: 'Gingembre Frais Moulu',
+    brand: 'SpiceLab',
+    price: 750,
+    unit: '100g',
+    emoji: '🫚',
+    category: 'Épices',
+    badge: null,
+    color: '#f59e0b',
+    description: "Poudre de gingembre 100% naturelle, moulue à partir de racines fraîches. Un arôme puissant et piquant pour sublimer vos boissons et vos marinades.",
+    rating: 4.7,
+    reviews_count: 210
+  },
+  {
+    id: 'p5',
+    name: 'Piment Scotch Bonnet',
+    brand: 'AfroSpice',
+    price: 950,
+    unit: '250g',
+    emoji: '🌶️',
+    category: 'Épices',
+    badge: 'Best-seller',
+    color: '#ef4444',
+    description: "Le fameux piment antillais, réputé pour son parfum fruité et sa force de caractère. Cultivé sans pesticides pour une saveur authentique.",
+    rating: 4.6,
+    reviews_count: 142
+  },
+  {
+    id: 'p6',
+    name: 'Bangla Tomato',
+    brand: 'Deshi Product',
+    price: 3650,
+    unit: '1kg',
+    emoji: '🍅',
+    category: 'Légumes',
+    badge: 'Frais',
+    color: '#ef4444',
+    description: "Tomates fraîches et juteuses, cultivées localement. Elles sont riches en lycopène et parfaites pour vos sauces, salades et soupes préférées.",
+    rating: 4.5,
+    reviews_count: 89
+  },
 ];
 
 const SHOPPING_BANNERS = [
@@ -1164,24 +1247,26 @@ const ShoppingItemRow: React.FC<{
             const newList = list.map(i => i.id === item.id ? { ...i, isPurchased: !i.isPurchased } : i);
             updateShoppingList(newList);
           }}
-          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${item.isPurchased ? 'bg-emerald-500 border-emerald-500 shadow-sm' : 'border-stone-200 hover:border-[#fb5607]'}`}
+          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${item.isPurchased ? 'bg-[#38b000] border-[#38b000] shadow-sm' : 'border-stone-200 hover:border-[#38b000]'}`}
         >
           {item.isPurchased && <Check size={13} className="text-white" />}
         </button>
         <div className="flex-1 min-w-0">
           <p className={`text-[13px] font-bold leading-tight ${item.isPurchased ? 'line-through text-stone-400' : 'text-stone-800'}`}>{item.item}</p>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-            {item.quantity && <span className="text-[11px] font-black text-[#fb5607]">{item.quantity} {item.unit}</span>}
+            {item.quantity && <span className="text-[11px] font-black text-[#38b000]">{item.quantity} {item.unit}</span>}
             {item.priceXOF && <span className="text-[10px] font-bold text-stone-400">{parseInt(item.priceXOF).toLocaleString()} XOF</span>}
             {!item.quantity && !item.priceXOF && <span className="text-[11px] text-stone-300 italic">Appuyez ✎ pour ajouter qté &amp; prix</span>}
             {item.recipeName && <><span className="w-1 h-1 rounded-full bg-stone-200 inline-block" /><span className="text-[10px] text-stone-400 truncate max-w-[90px]">↳ {item.recipeName}</span></>}
           </div>
         </div>
-        <button onClick={() => setIsEditing(!isEditing)}
-          className="w-8 h-8 rounded-full bg-stone-50 text-stone-400 flex items-center justify-center hover:bg-[#fb5607]/10 hover:text-[#fb5607] transition-all"
-        >
-          <Edit2 size={13} />
-        </button>
+        {!item.id.startsWith('store_') && (
+          <button onClick={() => setIsEditing(!isEditing)}
+            className="w-8 h-8 rounded-full bg-stone-50 text-stone-400 flex items-center justify-center hover:bg-[#38b000]/10 hover:text-[#38b000] transition-all"
+          >
+            <Edit2 size={13} />
+          </button>
+        )}
         <button onClick={() => { const nl = list.filter(i => i.id !== item.id); updateShoppingList(nl); }}
           className="w-8 h-8 rounded-full bg-stone-50 text-stone-300 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all"
         >
@@ -1198,12 +1283,12 @@ const ShoppingItemRow: React.FC<{
                 <div className="flex-1">
                   <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Quantité</label>
                   <input type="number" value={editQty} onChange={e => setEditQty(e.target.value)} placeholder="Ex: 500"
-                    className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20" />
+                    className={`w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#38b000]/20`} />
                 </div>
                 <div className="w-28">
                   <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Unité</label>
                   <select value={editUnit} onChange={e => setEditUnit(e.target.value)}
-                    className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20"
+                    className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#38b000]/20"
                   >
                     {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
@@ -1212,9 +1297,9 @@ const ShoppingItemRow: React.FC<{
               <div>
                 <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1 block">Prix estimé (XOF)</label>
                 <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="Ex: 1500"
-                  className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#fb5607]/20" />
+                  className="w-full bg-white border border-stone-200 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#38b000]/20" />
               </div>
-              <button onClick={save} className="w-full py-3 bg-[#fb5607] text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-sm">
+              <button onClick={save} className="w-full py-3 bg-[#38b000] text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-sm">
                 Enregistrer
               </button>
             </div>
@@ -1380,11 +1465,24 @@ export default function App() {
 
   // Cloud Sync & Internet Dependency
   const [allRecipes, setAllRecipes] = useState<Recipe[]>(recipes); // Use static data as first fallback
+  const [allProducts, setAllProducts] = useState<Product[]>(STORE_PRODUCTS); // Dynamic store products
+  const [selectedStoreCategory, setSelectedStoreCategory] = useState('Tout');
+  const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [allMerchants, setAllMerchants] = useState<any[]>([]); // Dynamic merchants
   const [isSyncing, setIsSyncing] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  // Theme context for shopping/store
+  const shopTheme = {
+    primary: '#38b000',
+    secondary: '#70e000',
+    dark: '#004b23',
+    light: '#ccff33',
+    accent: '#9ef01a'
+  };
   // ── Shopping page tabs & modals ──
   const [storeTab, setStoreTab] = useState<'store' | 'mylist'>('mylist');
   const [showAddShoppingModal, setShowAddShoppingModal] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [bannerIdx, setBannerIdx] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setBannerIdx(i => (i + 1) % SHOPPING_BANNERS.length), 4000);
@@ -1475,9 +1573,31 @@ export default function App() {
       }
     };
 
+    const syncProducts = async () => {
+      try {
+        const products = await dbService.getRemoteProducts();
+        if (products && products.length > 0) {
+          setAllProducts(products);
+        }
+      } catch (err) {
+        console.error('Products sync failed:', err);
+      }
+    };
+
+    const syncMerchants = async () => {
+      try {
+        const merchants = await dbService.getRemoteMerchants();
+        setAllMerchants(merchants || []);
+      } catch (err) {
+        console.error('Merchants sync failed:', err);
+      }
+    };
+
     // Lancement des synchronisations
     syncRecipes();
     syncSections();
+    syncProducts();
+    syncMerchants();
 
     // Configuration des mises à jour en temps réel (Realtime)
     let channel: any;
@@ -1508,6 +1628,32 @@ export default function App() {
           }
         )
         .subscribe();
+
+      // Écoute des changements sur la table 'products'
+      const productsChannel = dbService.supabase
+        .channel('products-db-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'products' },
+          () => {
+            console.log('Products changed, re-syncing products...');
+            syncProducts();
+          }
+        )
+        .subscribe();
+
+      // Écoute des changements sur la table 'merchants'
+      const merchantsChannel = dbService.supabase
+        .channel('merchants-db-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'merchants' },
+          () => {
+            console.log('Merchants changed, re-syncing merchants...');
+            syncMerchants();
+          }
+        )
+        .subscribe();
     }
 
     // Gérer le retour de l'application au premier plan (sur mobile)
@@ -1516,6 +1662,7 @@ export default function App() {
         console.log('App resumed, syncing recipes and sections...');
         syncRecipes();
         syncSections();
+        syncMerchants();
       }
     };
     const appListener = CapacitorApp.addListener('appStateChange', handleAppStateChange);
@@ -1529,6 +1676,7 @@ export default function App() {
   }, []);
 
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState('home');
   const [history, setHistory] = useState<string[]>(['home']);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1583,6 +1731,7 @@ export default function App() {
     setHistory(prev => [...prev, tab]); // Mémorise l'historique pour le bouton "Retour"
     setActiveTab(tab); // Change l'onglet actif
     setSelectedRecipe(null); // Ferme une éventuelle recette ouverte
+    setSelectedProduct(null); // Ferme une éventuelle vue produit
     setProfileSubView(null); // Réinitialise les sous-vues de profil
     setSecuritySubView('main');
     setIsScrolled(false);
@@ -1599,6 +1748,8 @@ export default function App() {
   const goBackRef = useRef<() => void>(() => { });
 
   const goBack = () => {
+    // -3. Si le panier est ouvert
+    if (isCartOpen) { setIsCartOpen(false); return; }
     // -2.5 Si le modal d'ajout de course est ouvert
     if (showAddShoppingModal) { setShowAddShoppingModal(false); return; }
     // -2. Si le détail d'une notification est ouvert
@@ -1609,6 +1760,8 @@ export default function App() {
     if (isSearchExpanded) { setIsSearchExpanded(false); return; }
     // 1. Si une recette est ouverte, on la ferme
     if (selectedRecipe) { setSelectedRecipe(null); return; }
+    // 1.5 Si un produit est ouvert, on le ferme
+    if (selectedProduct) { setSelectedProduct(null); return; }
     // 2. Si on est dans une sous-vue de sécurité, on revient au menu sécurité principal
     if (profileSubView === 'security' && securitySubView !== 'main') {
       setSecuritySubView('main');
@@ -2087,12 +2240,13 @@ export default function App() {
 
           if (sectionRecipes.length === 0) return null;
 
-          if (section.type === 'dynamic_carousel' || section.type === 'featured' || section.type === 'banner') {
+          if (section.type === 'dynamic_carousel' || section.type === 'featured' || section.type === 'banner' || section.type === 'advertising') {
             return (
               <FeaturedCarousel
                 key={section.id}
                 section={section}
                 recipes={sectionRecipes}
+                merchants={allMerchants}
                 setSelectedRecipe={setSelectedRecipe}
                 currentUser={currentUser}
                 toggleFavorite={toggleFavorite}
@@ -2556,7 +2710,7 @@ export default function App() {
 
               if (sectionRecipes.length === 0) return null;
 
-              if (section.type === 'dynamic_carousel') {
+              if (section.type === 'dynamic_carousel' || section.type === 'advertising' || section.type === 'banner' || section.type === 'featured') {
                 return (
                   <FeaturedCarousel
                     key={section.id}
@@ -3398,16 +3552,347 @@ export default function App() {
   }
   const RecipeDetail = RecipeDetailRef.current!;
 
+  // Store ProductDetail in a ref so its identity is stable
+  const ProductDetailRef = useRef<React.FC<any>>(null);
+  if (!ProductDetailRef.current) {
+    ProductDetailRef.current = ({
+      product,
+      goBack,
+      isDark,
+      updateShoppingList,
+      showAlert: showAlertProp,
+      allMerchants,
+      currentUser
+    }: {
+      product: Product;
+      goBack: () => void;
+      isDark: boolean;
+      updateShoppingList: (nl: any[]) => void;
+      showAlert: (msg: string, type?: any) => void;
+      allMerchants: any[];
+      currentUser: User | null;
+    }) => {
+      const [qty, setQty] = useState(1);
+      const merchantName = product.merchant_id
+        ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand)
+        : product.brand;
+
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 30 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 380, mass: 0.8 }}
+          className={`absolute inset-0 z-[700] overflow-hidden w-full flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.15)] ${isDark ? 'bg-[#000000]' : 'bg-[#F9F9F9]'}`}
+        >
+          {/* Header */}
+          <div className="px-6 pt-12 pb-4 flex items-center justify-between relative z-50">
+            <button
+              onClick={goBack}
+              className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center text-[#38b000] shadow-sm transition-transform active:scale-95 shrink-0"
+            >
+              <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+            {/* Product Image section */}
+            <div className="flex justify-center py-8 relative">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className={`w-64 h-64 rounded-full flex items-center justify-center text-[120px] shadow-2xl ${isDark ? 'bg-white/5' : 'bg-white'}`}
+              >
+                {product.emoji}
+                {/* Visual shadow effect */}
+                <div className="absolute bottom-4 w-48 h-8 bg-black/5 blur-xl rounded-full translate-y-8" />
+              </motion.div>
+            </div>
+
+            {/* Info Section */}
+            <div className="px-8 pt-6">
+              <h1 className={`text-[28px] font-black leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                {product.name}
+              </h1>
+              <p className={`text-sm font-semibold mt-1 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+                {merchantName}
+              </p>
+
+              {/* Rating */}
+              <div className="flex items-center gap-1.5 mt-3">
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star
+                      key={s}
+                      size={14}
+                      className={s <= (product.rating || 4) ? 'fill-[#70e000] text-[#70e000]' : 'text-stone-200'}
+                    />
+                  ))}
+                </div>
+                <span className={`text-[11px] font-bold ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+                  ({product.reviews_count || 12} reviews)
+                </span>
+              </div>
+
+              {/* Controls & Price */}
+              <div className="flex items-center justify-between mt-8">
+                <div className={`flex items-center gap-6 p-2 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-stone-200 shadow-sm'}`}>
+                  <button
+                    onClick={() => setQty(Math.max(1, qty - 1))}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xl active:scale-90 transition-all ${isDark ? 'text-white' : 'text-stone-800'}`}
+                  >
+                    -
+                  </button>
+                  <span className={`text-base font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{qty}</span>
+                  <button
+                    onClick={() => setQty(qty + 1)}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xl active:scale-90 transition-all ${isDark ? 'text-white' : 'text-stone-800'}`}
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="flex items-baseline gap-1">
+                  <span className={`text-[26px] font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                    {(product.price * qty).toLocaleString()}
+                  </span>
+                  <span className={`text-xs font-bold ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+                    XOF
+                  </span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="mt-10">
+                <h3 className={`text-base font-black mb-3 ${isDark ? 'text-white' : 'text-stone-800'}`}>
+                  About the product
+                </h3>
+                <p className={`text-[13px] leading-relaxed font-medium ${isDark ? 'text-white/50' : 'text-stone-500'}`}>
+                  {product.description || "Un produit de qualité supérieure sélectionné avec soin par nos partenaires pour garantir fraîcheur et saveur authentique à chaque bouchée."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="absolute bottom-8 inset-x-0 px-6 flex items-center gap-4">
+            <button className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all active:scale-90 ${isDark ? 'bg-white/5 border-white/10 text-white/40' : 'bg-white border-stone-200 text-stone-300'}`}>
+              <Heart size={22} />
+            </button>
+            <button
+              onClick={() => {
+                const newItem = {
+                  id: `store_${product.id}_${Date.now()}`,
+                  item: product.name,
+                  quantity: String(qty),
+                  unit: product.unit,
+                  priceXOF: String(product.price * qty),
+                  isPurchased: false,
+                  recipeName: merchantName
+                };
+                updateShoppingList([...(currentUser?.shoppingList || []), newItem]);
+                showAlertProp(`${qty} ${product.name} ajouté(s) à votre liste !`, 'success');
+                goBack();
+              }}
+              className="flex-1 h-14 bg-[#38b000] rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-[#38b000]/20 active:scale-95 transition-all"
+            >
+              <Plus size={20} className="text-white" />
+              <span className="text-white font-black text-sm uppercase tracking-widest">Ma liste de course</span>
+            </button>
+          </div>
+        </motion.div>
+      );
+    };
+  }
+  const ProductDetail = ProductDetailRef.current!;
+
+  // --- Cart Overlay Logic ---
+  const CartOverlayRef = useRef<React.FC<any>>(null);
+  if (!CartOverlayRef.current) {
+    CartOverlayRef.current = ({
+      isDark,
+      goBack,
+      currentUser,
+      updateShoppingList,
+      showAlert
+    }: {
+      isDark: boolean;
+      goBack: () => void;
+      currentUser: User | null;
+      updateShoppingList: (nl: any[]) => void;
+      showAlert: (msg: string, type?: any) => void;
+    }) => {
+      const [step, setStep] = useState<'cart' | 'checkout' | 'success'>('cart');
+      const [paymentMethod, setPaymentMethod] = useState<'cod' | 'momo' | 'card'>('momo');
+      const [address] = useState("Rue des Jardins, Cocody, Abidjan");
+
+      const cartItems = (currentUser?.shoppingList || []).filter(i => i.id.startsWith('store_') && !i.isPurchased);
+      const subtotal = cartItems.reduce((acc, i) => acc + (parseFloat(i.priceXOF || '0')), 0);
+      const deliveryFee = subtotal > 0 ? 1500 : 0;
+      const total = subtotal + deliveryFee;
+
+      const handlePlaceOrder = () => {
+        setStep('success');
+        const newList = (currentUser?.shoppingList || []).map(i => {
+          if (i.id.startsWith('store_') && !i.isPurchased) {
+            return { ...i, isPurchased: true };
+          }
+          return i;
+        });
+        updateShoppingList(newList);
+
+        setTimeout(() => {
+          goBack();
+          showAlert("Votre commande a été enregistrée avec succès !", "success");
+        }, 2500);
+      };
+
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 30 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 380, mass: 0.8 }}
+          className={`absolute inset-0 z-[850] overflow-hidden w-full flex flex-col ${isDark ? 'bg-[#000000]' : 'bg-[#F9F9F9]'}`}
+        >
+          {/* Header */}
+          <div className="px-6 pt-12 pb-4 flex items-center justify-between border-b border-stone-100/10">
+            <button onClick={goBack} className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center text-[#38b000] shadow-sm transition-transform active:scale-95 shrink-0">
+              <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
+            </button>
+            <h2 className={`text-lg font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>
+              {step === 'cart' ? 'Mon Panier' : step === 'checkout' ? 'Paiement' : 'Terminé'}
+            </h2>
+            <div className="w-10" />
+          </div>
+
+          {step === 'success' ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center text-white mb-8 shadow-xl">
+                <Check size={48} strokeWidth={4} />
+              </motion.div>
+              <h3 className={`text-2xl font-black mb-3 ${isDark ? 'text-white' : 'text-stone-900'}`}>Génial !</h3>
+              <p className="text-stone-400 font-medium">Votre commande est enregistrée.</p>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
+                <section>
+                  <h3 className={`text-[10px] font-black uppercase tracking-widest mb-4 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>Articles ({cartItems.length})</h3>
+                  <div className="space-y-3">
+                    {cartItems.map(item => (
+                      <div key={item.id} className={`flex items-center gap-4 p-4 rounded-2xl ${isDark ? 'bg-white/5' : 'bg-white shadow-sm border border-stone-55'}`}>
+                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-xl">📦</div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-[13px] font-black truncate ${isDark ? 'text-white/90' : 'text-stone-800'}`}>{item.item}</p>
+                          <p className="text-[10px] font-bold text-stone-400">{item.quantity} {item.unit} • {item.recipeName}</p>
+                        </div>
+                        <p className={`text-[13px] font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{parseFloat(item.priceXOF || '0').toLocaleString()} XOF</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <MapPin size={16} className="text-[#38b000]" />
+                      <span className={`text-xs font-black ${isDark ? 'text-white' : 'text-stone-800'}`}>Adresse de livraison</span>
+                    </div>
+                    <p className="text-[11px] font-medium text-stone-400">{address}</p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {['momo', 'card', 'cod'].map(m => (
+                      <button key={m} onClick={() => setPaymentMethod(m as any)} className={`py-3 rounded-2xl border-2 flex flex-col items-center gap-1.5 transition-all ${paymentMethod === m ? 'border-[#38b000] bg-[#38b000]/10 text-[#38b000]' : 'border-transparent bg-stone-100/50 text-stone-400'}`}>
+                        {m === 'momo' ? <Wallet size={16} /> : m === 'card' ? <CreditCard size={16} /> : <Truck size={16} />}
+                        <span className="text-[8px] font-black uppercase">{m}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <div className={`p-6 pb-12 rounded-t-[32px] ${isDark ? 'bg-white/5' : 'bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)]'}`}>
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <p className="text-stone-400 text-[10px] font-black uppercase">Total à payer</p>
+                    <p className="text-2xl font-black text-[#38b000]">{total.toLocaleString()} XOF</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-stone-400">Livraison: {deliveryFee} XOF</p>
+                  </div>
+                </div>
+                <button onClick={handlePlaceOrder} disabled={cartItems.length === 0} className="w-full h-14 bg-[#38b000] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-[#38b000]/30 active:scale-95 transition-all disabled:grayscale">
+                  Commander maintenant
+                </button>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      );
+    };
+  }
+  const CartOverlay = CartOverlayRef.current!;
+
+
   // --- Shopping List Logic ---
 
   const renderShoppingList = () => {
     const list = currentUser?.shoppingList || [];
     const purchased = list.filter(i => i.isPurchased);
     const toBuy = list.filter(i => !i.isPurchased);
+    const toBuyRecipe = toBuy.filter(i => !i.id.startsWith('store_'));
+    const toBuyStore = toBuy.filter(i => i.id.startsWith('store_'));
 
-    const banner = SHOPPING_BANNERS[bannerIdx];
+    // Integrated Ads from CMS
+    const shoppingAds = dynamicSections.filter((s: any) => s.type === 'advertising' && s.config?.page === 'shopping');
+
+    const activeBanners = shoppingAds.length > 0
+      ? shoppingAds.flatMap((s: any) => {
+        const merchantIds = s.merchant_ids || s.config?.merchant_ids || [];
+        if (merchantIds.length === 0) {
+          return [{
+            id: s.id,
+            title: s.title,
+            sub: s.subtitle,
+            emoji: s.config?.emoji || '📢',
+            bg: s.config?.background || 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)',
+            tag: s.config?.tag || 'PROMO',
+            isDynamic: true,
+            section: s,
+            buttonText: 'Boutique'
+          }];
+        }
+        return merchantIds.map((mid: string) => {
+          const slideConfig = s.config?.slides?.[mid] || {};
+          const merchant = allMerchants.find(m => m.id === mid);
+          return {
+            id: `${s.id}-${mid}`,
+            title: slideConfig.title || s.title || merchant?.name || 'Offre Spéciale',
+            sub: slideConfig.subtitle || s.subtitle || merchant?.category || 'Découvrez nos produits',
+            emoji: slideConfig.emoji || s.config?.emoji || '🎁',
+            bg: slideConfig.background || s.config?.background || 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)',
+            tag: slideConfig.tag || s.config?.tag || 'OFFRE',
+            buttonText: slideConfig.button_text || 'Boutique',
+            isDynamic: true,
+            section: s,
+            merchant: merchant
+          };
+        });
+      })
+      : SHOPPING_BANNERS;
+
+    const banner = activeBanners[bannerIdx % activeBanners.length];
 
     const totalXOF = list.reduce((acc, i) => acc + (parseFloat(i.priceXOF ?? '0') || 0), 0);
+
+    const filteredProducts = allProducts.filter(p => {
+      const matchCat = selectedStoreCategory === 'Tout' || p.category === selectedStoreCategory;
+      const matchSearch = !productSearchQuery || normalizeString(p.name).includes(normalizeString(productSearchQuery)) || normalizeString(p.brand || '').includes(normalizeString(productSearchQuery));
+      return matchCat && matchSearch;
+    });
 
     return (
       <div className={`flex-1 flex flex-col pb-44 ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>
@@ -3424,7 +3909,7 @@ export default function App() {
               <p className="text-[11px] font-semibold text-white/75 mt-0.5 truncate">{banner.sub}</p>
             </div>
             <button className="flex-shrink-0 bg-white/20 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-full transition-all active:scale-95">
-              Boutique
+              {banner.buttonText || 'Boutique'}
             </button>
           </div>
           {/* Decorative circles */}
@@ -3432,8 +3917,8 @@ export default function App() {
           <div className="absolute -right-2 bottom-0 w-14 h-14 rounded-full bg-white/05 pointer-events-none" />
           {/* Dots indicator */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-            {SHOPPING_BANNERS.map((_, i) => (
-              <div key={i} className={`rounded-full transition-all ${i === bannerIdx ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40'}`} />
+            {activeBanners.map((_, i) => (
+              <div key={i} className={`rounded-full transition-all ${i === (bannerIdx % activeBanners.length) ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40'}`} />
             ))}
           </div>
         </div>
@@ -3441,20 +3926,20 @@ export default function App() {
         {/* ── Tab Switcher ── */}
         <div className={`mx-4 mt-3 mb-0 flex gap-1 p-1 rounded-[40px] ${isDark ? 'bg-white/5' : 'bg-white/80'} backdrop-blur-sm`}>
           {[
-            { key: 'mylist', label: 'Ma Liste', count: list.length },
-            { key: 'store', label: 'Store', count: null },
+            { key: 'mylist', label: 'Liste de Course', count: list.length },
+            { key: 'store', label: 'Boutiques', count: null },
           ].map(tab => (
             <button
               key={tab.key}
               onClick={() => setStoreTab(tab.key as any)}
               className={`flex-1 py-2.5 rounded-[40px] text-[12px] font-black transition-all flex items-center justify-center gap-1.5 ${storeTab === tab.key
-                ? 'bg-[#fb5607] text-white shadow-sm shadow-[#fb5607]/30'
+                ? 'bg-[#38b000] text-white shadow-sm shadow-[#38b000]/30'
                 : isDark ? 'text-white/50' : 'text-stone-500'
                 }`}
             >
               {tab.label}
               {tab.count !== null && tab.count > 0 && (
-                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${storeTab === tab.key ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-500'}`}>
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${storeTab === tab.key ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-500'}`}>
                   {tab.count}
                 </span>
               )}
@@ -3473,12 +3958,18 @@ export default function App() {
               <div className="px-8 pt-7 pb-5 flex items-center justify-between">
                 <div>
                   <p className="text-[13px] font-black text-stone-400 tracking-widest">{list.length} {t.ingredients}</p>
-                  {totalXOF > 0 && <p className="text-[13px] font-black text-[#fb5607]">≈ {totalXOF.toLocaleString()} XOF</p>}
+                  {totalXOF > 0 && <p className="text-[13px] font-black text-[#38b000]">≈ {totalXOF.toLocaleString()} XOF</p>}
                 </div>
                 <div className="flex items-center gap-3">
                   <button
+                    onClick={() => setIsCartOpen(true)}
+                    className={`flex items-center justify-center w-[42px] h-[42px] rounded-full transition-all active:scale-95 shadow-md shadow-[#38b000]/10 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-stone-200 text-[#38b000]'}`}
+                  >
+                    <ShoppingBag size={20} />
+                  </button>
+                  <button
                     onClick={() => setShowAddShoppingModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fb5607]/10 text-[#fb5607] rounded-full active:scale-90 transition-all shadow-md shadow-[#111111]/10 border-[#fd5e1bs]/10 border-1"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#38b000]/10 text-[#38b000] rounded-full active:scale-90 transition-all shadow-md shadow-[#111111]/10 border-[#38b000]/10 border-1"
                   >
                     <Plus size={16} strokeWidth={3} />
                     <span className="text-[11px] font-black uppercase tracking-wider">Créer</span>
@@ -3487,6 +3978,7 @@ export default function App() {
                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
                       <WifiOff size={20} />
                     </motion.div>
+
                   )}
                 </div>
               </div>
@@ -3500,27 +3992,39 @@ export default function App() {
                     <h3 className={`text-lg font-black mb-2 ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.noShoppingItems}</h3>
                     <p className="text-sm font-medium text-stone-400 leading-relaxed mb-8">{t.noShoppingItemsDesc}</p>
                     <button onClick={() => navigateTo('home')}
-                      className="bg-[#fb5607] text-white px-8 py-3.5 rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-[#fb5607]/25 active:scale-95 transition-all"
+                      className="bg-[#38b000] text-white px-8 py-3.5 rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-[#38b000]/25 active:scale-95 transition-all"
                     >
                       {t.discover}
                     </button>
                   </div>
                 ) : (
                   <>
-                    {toBuy.length > 0 && (
-                      <div className="space-y-3">
-                        <h3 className="text-[10px] font-black uppercase text-[#fb5607] tracking-widest flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#fb5607]" /> {t.toBuy}
+                    {toBuyRecipe.length > 0 && (
+                      <div className="space-y-3 pl-2 pr-2">
+                        <h3 className="text-[10px] font-black uppercase text-[#38b000] tracking-widest flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> {t.toBuy}
                         </h3>
                         <div className="space-y-3">
-                          {toBuy.map(item => <ShoppingItemRow key={item.id} item={item} list={list} updateShoppingList={updateShoppingList} UNITS={SHOPPING_UNITS} />)}
+                          {toBuyRecipe.map(item => <ShoppingItemRow key={item.id} item={item} list={list} updateShoppingList={updateShoppingList} UNITS={SHOPPING_UNITS} />)}
                         </div>
                       </div>
                     )}
+
+                    {toBuyStore.length > 0 && (
+                      <div className="space-y-3 pl-2 pr-2">
+                        <h3 className="text-[10px] font-black uppercase text-[#38b000] tracking-widest flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> Articles Store
+                        </h3>
+                        <div className="space-y-3">
+                          {toBuyStore.map(item => <ShoppingItemRow key={item.id} item={item} list={list} updateShoppingList={updateShoppingList} UNITS={SHOPPING_UNITS} />)}
+                        </div>
+                      </div>
+                    )}
+
                     {purchased.length > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-[10px] font-black uppercase text-emerald-500 tracking-widest flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {t.purchased}
+                        <h3 className="text-[10px] font-black uppercase text-[#38b000] tracking-widest flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> {t.purchased}
                         </h3>
                         <div className="space-y-3">
                           {purchased.map(item => <ShoppingItemRow key={item.id} item={item} dimmed list={list} updateShoppingList={updateShoppingList} UNITS={SHOPPING_UNITS} />)}
@@ -3542,60 +4046,130 @@ export default function App() {
           {/* ════════════ STORE ════════════ */}
           {storeTab === 'store' && (
             <motion.div key="store" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.22 }}
-              className="flex-1 px-4 pt-4 pb-4"
+              className="flex-1 pb-4"
             >
-              {/* Partners label */}
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-[13px] font-black text-stone-400 tracking-widest pl-2">Produits Partenaires</p>
-                <span className={`text-[13px] font-black px-2 py-1 rounded-full ${isDark ? 'bg-white/10 text-white/60' : 'bg-stone-100 text-stone-400'}`}>Livraison 24h</span>
+              {/* Search Bar */}
+              <div className="px-5 pt-6 pb-4">
+                <div className={`flex items-center gap-3 px-5 h-14 rounded-[22px] border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-stone-100 shadow-sm'}`}>
+                  <Search size={22} className="text-stone-300" />
+                  <input
+                    type="text"
+                    value={productSearchQuery}
+                    onChange={(e) => setProductSearchQuery(e.target.value)}
+                    placeholder="Rechercher des produits"
+                    className="flex-1 bg-transparent border-none outline-none text-[15px] font-medium placeholder:text-stone-300"
+                  />
+                  <button className="text-stone-400">
+                    <SlidersHorizontal size={20} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Enhanced Category Filter */}
+              <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-6 px-5">
+                {STORE_CATEGORIES.map(cat => {
+                  const icons: Record<string, string> = {
+                    'Tout': '🛍️',
+                    'Épices': '🌶️',
+                    'Boissons': '🥤',
+                    'Huiles': '🫙',
+                    'Féculents': '🌾',
+                    'Légumes': '🥦',
+                    'Viandes': '🥩',
+                    'Poissons': '🐟'
+                  };
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedStoreCategory(cat)}
+                      className={`flex items-center gap-2.5 px-5 py-3 rounded-full whitespace-nowrap transition-all active:scale-95 ${selectedStoreCategory === cat
+                        ? 'bg-[#38b000] text-white shadow-lg shadow-[#38b000]/20'
+                        : isDark ? 'bg-white/5 text-white/60 border border-white/10' : 'bg-white text-stone-500 border border-stone-100 shadow-sm'
+                        }`}
+                    >
+                      <span className="text-[18px]">{icons[cat] || '📦'}</span>
+                      <span className="text-[14px] font-black">{cat}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Product Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {STORE_PRODUCTS.map(product => (
-                  <motion.div key={product.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    className={`rounded-[22px] overflow-hidden border shadow-sm px-4 py-3 flex flex-col ${isDark ? 'bg-white/5 border-white/8' : 'bg-white border-stone-100'}`}
-                  >
-                    {/* Product top */}
-                    <div className="relative p-4 pb-2 flex flex-col items-center">
-                      {product.badge && (
-                        <span className="absolute top-2.5 right-2.5 text-[8px] font-black px-2 py-0.5 rounded-full text-white"
-                          style={{ background: product.color }}>
-                          {product.badge}
-                        </span>
-                      )}
-                      <div className="w-14 h-14 rounded-[18px] flex items-center justify-center text-[28px] mb-2"
-                        style={{ background: product.color + '15' }}>
-                        {product.emoji}
-                      </div>
-                      <p className={`text-[12px] font-black text-center leading-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{product.name}</p>
-                      <p className="text-[10px] font-semibold text-stone-400 mt-0.5">{product.brand}</p>
-                    </div>
-                    {/* Price + CTA */}
-                    <div className="px-3 pb-3 mt-auto">
-                      <div className="flex items-baseline justify-between mb-2">
-                        <span className="text-[15px] font-black" style={{ color: product.color }}>{product.price.toLocaleString()}</span>
-                        <span className="text-[9px] font-bold text-stone-400">XOF / {product.unit}</span>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const newItem = { id: `store_${product.id}_${Date.now()}`, item: product.name, quantity: '1', unit: product.unit, priceXOF: String(product.price), isPurchased: false, recipeName: product.brand };
-                          updateShoppingList([...list, newItem]);
-                          setStoreTab('mylist');
-                        }}
-                        className="w-full py-2 rounded-full text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
-                        style={{ background: product.color }}
+              <div className="px-5 grid grid-cols-2 gap-4">
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.map(product => {
+                    const isInList = list.some(i => i.id.startsWith(`store_${product.id}`));
+                    const mName = product.merchant_id ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand) : product.brand;
+
+                    return (
+                      <motion.div key={product.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+                        className={`rounded-[32px] overflow-hidden p-3 flex flex-col ${isDark ? 'bg-white/5' : 'bg-white shadow-sm border border-stone-50'}`}
                       >
-                        + Ma liste
-                      </button>
+                        {/* Image/Emoji Container */}
+                        <div
+                          onClick={() => setSelectedProduct(product)}
+                          className={`relative aspect-square rounded-[26px] flex items-center justify-center text-[54px] mb-4 cursor-pointer active:scale-95 transition-all ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}
+                        >
+                          {isInList && (
+                            <div className="absolute top-2 left-2 right-2 py-1.5 rounded-full bg-[#38b000]/10 border border-[#38b000]/20 flex items-center justify-center gap-1.5 z-10 backdrop-blur-sm">
+                              <Check size={10} className="text-[#38b000]" strokeWidth={4} />
+                              <span className="text-[9px] font-black text-[#38b000] uppercase tracking-wide">Au panier</span>
+                            </div>
+                          )}
+                          <div className="hover:scale-110 transition-transform duration-500">{product.emoji}</div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="px-2 pb-1.5">
+                          <h4
+                            onClick={() => setSelectedProduct(product)}
+                            className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}
+                          >
+                            {product.name}
+                          </h4>
+                          <p className="text-[11px] font-bold text-stone-400 mt-1 truncate">
+                            {mName}
+                          </p>
+
+                          <div className="flex items-center justify-between mt-4">
+                            <div className="flex items-baseline gap-0.5">
+                              <span className="text-[13px] font-bold text-stone-400">XOF</span>
+                              <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{product.price.toLocaleString()}</span>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                const newItem = { id: `store_${product.id}_${Date.now()}`, item: product.name, quantity: '1', unit: product.unit, priceXOF: String(product.price), isPurchased: false, recipeName: mName };
+                                updateShoppingList([...list, newItem]);
+                                showAlert(`${product.name} ajouté à votre liste !`, 'success');
+                              }}
+                              className="w-[42px] h-[42px] rounded-2xl bg-[#38b000] text-white flex items-center justify-center shadow-lg shadow-[#38b000]/25 active:scale-90 transition-all"
+                            >
+                              <Plus size={20} strokeWidth={3} />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-2 py-20 text-center">
+                    <div className={`w-20 h-20 mx-auto rounded-[32px] flex items-center justify-center mb-6 ${isDark ? 'bg-white/5' : 'bg-stone-50'}`}>
+                      <ShoppingBag size={32} className="text-stone-300" />
                     </div>
-                  </motion.div>
-                ))}
+                    <h3 className={`text-lg font-black mb-2 ${isDark ? 'text-white' : 'text-stone-800'}`}>Aucun produit</h3>
+                    <p className="text-stone-400 text-sm font-medium px-12 leading-relaxed">
+                      Nous n'avons trouvé aucun article correspondant à "{productSearchQuery}" dans cette catégorie.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* CTA more partners */}
-              <div className={`mt-4 p-4 rounded-[20px] text-center border border-dashed ${isDark ? 'border-white/10' : 'border-stone-200'}`}>
-                <p className="text-[11px] font-black text-stone-400">Plus de partenaires arrivent bientôt 🚀</p>
+              <div className="px-5 mt-8 mb-4">
+                <div className={`p-6 rounded-[32px] text-center border-2 border-dashed ${isDark ? 'border-white/10' : 'border-stone-100'}`}>
+                  <p className="text-[12px] font-black text-stone-300 uppercase tracking-widest">Plus de partenaires africains bientôt 🚀</p>
+                </div>
               </div>
             </motion.div>
           )}
@@ -3609,7 +4183,7 @@ export default function App() {
           isDark={isDark}
           t={t}
         />
-      </div>
+      </div >
     );
   };
 
@@ -4280,7 +4854,22 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {!selectedRecipe && !profileSubView && (
+        {selectedProduct && (
+          <ProductDetail
+            key="product-detail"
+            product={selectedProduct}
+            goBack={goBack}
+            isDark={isDark}
+            updateShoppingList={updateShoppingList}
+            showAlert={showAlert}
+            allMerchants={allMerchants}
+            currentUser={currentUser}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {!selectedRecipe && !profileSubView && !selectedProduct && (
           <motion.nav
             initial={{ y: 100, opacity: 0, scale: 0.92 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -4352,6 +4941,19 @@ export default function App() {
               <NotifCenter notifications={notifications} onMarkAllRead={markAllRead} onClose={() => setIsNotifCenterOpen(false)} onViewMore={notif => setSelectedNotifDetail(notif)} isDark={isDark} />
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isCartOpen && (
+          <CartOverlay
+            key="cart-overlay"
+            isDark={isDark}
+            goBack={goBack}
+            currentUser={currentUser}
+            updateShoppingList={updateShoppingList}
+            showAlert={showAlert}
+          />
         )}
       </AnimatePresence>
 

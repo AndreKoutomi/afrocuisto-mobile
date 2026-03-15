@@ -14,7 +14,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Search, Utensils, Info, Sparkles, Star, LayoutGrid, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Search, Utensils, Info, Sparkles, LayoutGrid, CheckCircle2, Store } from 'lucide-react';
 
 interface Recipe {
     id: string;
@@ -29,6 +29,7 @@ const INITIAL_STATE = {
     title: '',
     subtitle: '',
     recipe_ids: [] as string[],
+    merchant_ids: [] as string[],
     order_index: 0,
     type: 'dynamic_carousel',
     config: {
@@ -43,6 +44,7 @@ const INITIAL_STATE = {
 const PAGES = [
     { value: 'home', label: 'Page d\'accueil' },
     { value: 'explorer', label: 'Page Explorer' },
+    { value: 'shopping', label: 'Page Shopping' },
 ];
 
 export function SectionForm() {
@@ -50,6 +52,7 @@ export function SectionForm() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState(INITIAL_STATE);
     const [recipes, setRecipes] = useState<Recipe[]>([]);
+    const [merchants, setMerchants] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -65,6 +68,13 @@ export function SectionForm() {
 
                 if (recipeData) setRecipes(recipeData);
 
+                const { data: merchantData } = await supabase
+                    .from('merchants')
+                    .select('id, name, logo_url, category, city')
+                    .order('name');
+
+                if (merchantData) setMerchants(merchantData);
+
                 if (id) {
                     const { data: sectionData, error } = await supabase
                         .from('home_sections')
@@ -73,10 +83,12 @@ export function SectionForm() {
                         .single();
 
                     if (sectionData && !error) {
+                        const config = { ...INITIAL_STATE.config, ...sectionData.config };
                         setFormData({
                             ...INITIAL_STATE,
                             ...sectionData,
-                            config: { ...INITIAL_STATE.config, ...sectionData.config }
+                            merchant_ids: sectionData.merchant_ids || config.merchant_ids || [],
+                            config
                         });
                     }
                 } else {
@@ -142,11 +154,38 @@ export function SectionForm() {
     const handleToggleRecipe = (recipeId: string) => {
         setFormData(prev => {
             if (prev.recipe_ids.includes(recipeId)) {
-                // Désélection 
                 return { ...prev, recipe_ids: prev.recipe_ids.filter(rid => rid !== recipeId) };
             }
-            // Sélection normale sans limite max
             return { ...prev, recipe_ids: [...prev.recipe_ids, recipeId] };
+        });
+    };
+
+    const handleToggleMerchant = (merchantId: string) => {
+        setFormData(prev => {
+            if (prev.merchant_ids?.includes(merchantId)) {
+                return { ...prev, merchant_ids: prev.merchant_ids.filter(mid => mid !== merchantId) };
+            }
+            return { ...prev, merchant_ids: [...(prev.merchant_ids || []), merchantId] };
+        });
+    };
+
+    const handleSlideChange = (merchantId: string, field: string, value: any) => {
+        setFormData(prev => {
+            const currentSlides = prev.config.slides || {};
+            const merchantSlide = currentSlides[merchantId] || {};
+            return {
+                ...prev,
+                config: {
+                    ...prev.config,
+                    slides: {
+                        ...currentSlides,
+                        [merchantId]: {
+                            ...merchantSlide,
+                            [field]: value
+                        }
+                    }
+                }
+            };
         });
     };
 
@@ -159,7 +198,10 @@ export function SectionForm() {
                 title: formData.title,
                 subtitle: formData.subtitle,
                 type: formData.type,
-                config: formData.config,
+                config: {
+                    ...formData.config,
+                    merchant_ids: formData.merchant_ids || []
+                },
                 recipe_ids: formData.recipe_ids,
                 order_index: formData.order_index
             };
@@ -189,6 +231,11 @@ export function SectionForm() {
     const filteredRecipes = recipes.filter(r =>
         r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredMerchants = merchants.filter(m =>
+        m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.category && m.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     if (initialLoading) {
@@ -249,7 +296,7 @@ export function SectionForm() {
                 </div>
             )}
             {/* Page Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+            <div className="flex-responsive" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <Link to="/sections" style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -289,7 +336,7 @@ export function SectionForm() {
                 </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', alignItems: 'start' }}>
+            <form onSubmit={handleSubmit} className="grid-form-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', alignItems: 'start' }}>
                 {/* LEFT COLUMN */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
@@ -305,15 +352,15 @@ export function SectionForm() {
                             </div>
                         </div>
                         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            <div className="flex-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div>
-                                    <label style={labelStyle}>Titre de la section</label>
+                                    <label style={labelStyle}>{formData.type === 'advertising' ? 'Titre de la publicité' : 'Titre de la section'}</label>
                                     <input
                                         required
                                         name="title"
                                         value={formData.title}
                                         onChange={handleChange}
-                                        placeholder="Ex: Spécialités du Sud"
+                                        placeholder={formData.type === 'advertising' ? "Ex: Offre Spéciale Boutique" : "Ex: Spécialités du Sud"}
                                         style={inputStyle}
                                     />
                                 </div>
@@ -330,17 +377,17 @@ export function SectionForm() {
                                 </div>
                             </div>
                             <div>
-                                <label style={labelStyle}>Description / Sous-titre</label>
+                                <label style={labelStyle}>{formData.type === 'advertising' ? 'Texte d\'accroche (Appel à l\'action)' : 'Description / Sous-titre'}</label>
                                 <input
                                     name="subtitle"
                                     value={formData.subtitle}
                                     onChange={handleChange}
-                                    placeholder="Une courte description de la section..."
+                                    placeholder={formData.type === 'advertising' ? "Ex: Découvrez nos produits frais" : "Une courte description de la section..."}
                                     style={inputStyle}
                                 />
                             </div>
                             <div>
-                                <label style={labelStyle}>Icône de la section</label>
+                                <label style={labelStyle}>{formData.type === 'advertising' ? 'Image de la publicité' : 'Icône de la section'}</label>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <label style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -349,7 +396,7 @@ export function SectionForm() {
                                         fontSize: '13px', fontWeight: 600, color: '#6b7280',
                                         cursor: 'pointer',
                                     }}>
-                                        📎 Choisir un fichier
+                                        📎 {formData.type === 'advertising' ? 'Choisir l\'image' : 'Choisir un fichier'}
                                         <input type="file" accept="image/*" onChange={handleIconChange} style={{ display: 'none' }} />
                                     </label>
                                     {formData.config?.icon && (
@@ -616,6 +663,33 @@ export function SectionForm() {
                                     );
                                 })()}
 
+                                {/* ── ADVERTISING ── */}
+                                {(() => {
+                                    const isActive = formData.type === 'advertising';
+                                    return (
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, type: 'advertising' }))}
+                                            style={{ border: isActive ? '2.5px solid #f59e0b' : '2px solid #f0f0f0', background: isActive ? '#fffbeb' : '#fafafa', borderRadius: '18px', padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', transition: 'all 0.2s', position: 'relative' }}>
+                                            {isActive && <div style={{ position: 'absolute', top: '8px', right: '8px', color: '#f59e0b' }}><CheckCircle2 size={14} /></div>}
+                                            {/* Advertising mockup */}
+                                            <div style={{ width: '100%', aspectRatio: '9/7', position: 'relative', overflow: 'hidden', borderRadius: '10px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <div style={{ padding: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px', width: '80%' }}>
+                                                    <div style={{ width: '100%', height: '4px', background: '#fff', borderRadius: '2px' }} />
+                                                    <div style={{ width: '60%', height: '3px', background: 'rgba(255,255,255,0.7)', borderRadius: '2px' }} />
+                                                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                        <div style={{ width: '40%', height: '12px', background: '#fff', borderRadius: '4px', marginTop: '4px' }} />
+                                                    </div>
+                                                </div>
+                                                <div style={{ position: 'absolute', top: '4px', left: '4px', fontSize: '8px', fontWeight: 900, color: '#fff' }}>AD</div>
+                                            </div>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <p style={{ margin: 0, fontSize: '11px', fontWeight: 800, color: isActive ? '#f59e0b' : '#374151' }}>Publicité</p>
+                                                <p style={{ margin: 0, fontSize: '9px', color: '#9ca3af', marginTop: '2px' }}>Boutique Shop</p>
+                                            </div>
+                                        </button>
+                                    );
+                                })()}
+
+
                             </div>
 
                             {/* Description contextuelle du type sélectionné */}
@@ -628,6 +702,7 @@ export function SectionForm() {
                                     {formData.type === 'horizontal_list_v2' && "Scroll horizontal premium avec cards élégantes et image circulaire débordante. Idéal pour mettre en avant une sélection ciblée comme des suggestions."}
                                     {formData.type === 'vertical_list_1' && "Liste verticale avec une seule colonne. Format épuré avec image, nom et infos complémentaires sur chaque ligne."}
                                     {formData.type === 'vertical_list_2' && "Grille à 2 colonnes pour une vue compacte et visuelle. Parfait pour les pages de découverte avec de nombreuses recettes."}
+                                    {formData.type === 'advertising' && "Bannière publicitaire immersive pour promouvoir des produits de la boutique ou des partenaires marchands."}
                                 </p>
                             </div>
 
@@ -660,7 +735,7 @@ export function SectionForm() {
                                         </div>
 
                                         {/* Row 1: toggles */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+                                        <div className="flex-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                                             {/* Autoplay toggle */}
                                             <label htmlFor="autoplay" style={{
                                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -748,67 +823,49 @@ export function SectionForm() {
                         </div>
                     </div>
 
-                    {/* Panel 3: Plats sélectionnés */}
+                    {/* Panel 3: Éléments sélectionnés (Plats ou Marchands) */}
                     <div style={cardStyle}>
                         <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #fef2f2, #fecaca)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Utensils size={16} color="#ef4444" />
+                                <div style={{ width: '32px', height: '32px', background: formData.type === 'advertising' ? 'linear-gradient(135deg, #fb560710, #fb560720)' : 'linear-gradient(135deg, #fef2f2, #fecaca)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {formData.type === 'advertising' ? <Store size={16} color="var(--primary)" /> : <Utensils size={16} color="#ef4444" />}
                                 </div>
                                 <div>
-                                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>Plats sélectionnés</h3>
+                                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>
+                                        {formData.type === 'advertising' ? 'Marchands liés' : 'Plats sélectionnés'}
+                                    </h3>
                                     <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>
-                                        {formData.recipe_ids.length === 0 ? 'Aucun plat — sélectionnez dans le catalogue' : `${formData.recipe_ids.length} plat${formData.recipe_ids.length > 1 ? 's' : ''} épinglé${formData.recipe_ids.length > 1 ? 's' : ''}`}
+                                        {formData.type === 'advertising'
+                                            ? ((formData.merchant_ids?.length || 0) === 0 ? 'Aucun marchand lié' : `${formData.merchant_ids?.length || 0} marchand${(formData.merchant_ids?.length || 0) > 1 ? 's' : ''} lié${(formData.merchant_ids?.length || 0) > 1 ? 's' : ''}`)
+                                            : (formData.recipe_ids.length === 0 ? 'Aucun plat — sélectionnez dans le catalogue' : `${formData.recipe_ids.length} plat${formData.recipe_ids.length > 1 ? 's' : ''} épinglé${formData.recipe_ids.length > 1 ? 's' : ''}`)
+                                        }
                                     </p>
                                 </div>
                             </div>
                         </div>
                         <div style={{ padding: '24px' }}>
-                            {formData.recipe_ids.length === 0 ? (
-                                <div style={{
-                                    background: '#fafafa', border: '2px dashed #e5e7eb',
-                                    borderRadius: '16px', padding: '40px 24px', textAlign: 'center',
-                                }}>
-                                    <div style={{ width: '52px', height: '52px', background: '#f3f4f6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                                        <Utensils size={24} color="#9ca3af" />
-                                    </div>
-                                    <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#374151' }}>Aucun plat sélectionné</p>
-                                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#9ca3af' }}>Cliquez sur les plats dans le catalogue →</p>
+                            {formData.type === 'advertising' ? (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
+                                    {formData.merchant_ids?.map(mid => {
+                                        const m = merchants.find(mer => mer.id === mid);
+                                        return m ? (
+                                            <div key={mid} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <div style={{ height: '80px', borderRadius: '14px', overflow: 'hidden', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
+                                                    {m.logo_url ? <img src={m.logo_url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Store size={32} color="#d1d5db" />}
+                                                </div>
+                                                <p style={{ margin: 0, fontSize: '12px', fontWeight: 800, color: '#111827' }}>{m.name}</p>
+                                            </div>
+                                        ) : null;
+                                    })}
                                 </div>
                             ) : (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
                                     {formData.recipe_ids.map(rid => {
                                         const r = recipes.find(rec => rec.id === rid);
                                         return r ? (
-                                            <div key={rid} className="group" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleToggleRecipe(rid)}
-                                                    style={{
-                                                        position: 'absolute', top: '8px', right: '8px',
-                                                        width: '26px', height: '26px', borderRadius: '50%',
-                                                        background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
-                                                        border: 'none', cursor: 'pointer', color: '#fff',
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        opacity: 0, transition: 'opacity 0.15s',
-                                                        zIndex: 2,
-                                                    }}
-                                                    className="group-hover:opacity-100"
-                                                    onMouseEnter={e => (e.currentTarget.style.background = '#ef4444')}
-                                                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.45)')}
-                                                >
-                                                    <Trash2 size={12} strokeWidth={2.5} />
-                                                </button>
-                                                <div style={{ height: '100px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-                                                    <img src={r.image} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s' }} />
-                                                </div>
-                                                <div>
-                                                    <p style={{ margin: 0, fontSize: '12px', fontWeight: 800, color: '#111827', lineHeight: 1.3 }} className="line-clamp-1">{r.name}</p>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '4px' }}>
-                                                        {[1, 2, 3, 4].map(s => <Star key={s} size={10} color="#f59e0b" fill="#f59e0b" />)}
-                                                        <span style={{ fontSize: '9px', color: '#9ca3af', fontWeight: 700, marginLeft: '3px' }}>4.5</span>
-                                                    </div>
-                                                </div>
+                                            <div key={rid} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <img src={r.image} style={{ height: '100px', borderRadius: '14px', objectFit: 'cover' }} />
+                                                <p style={{ margin: 0, fontSize: '12px', fontWeight: 800, color: '#111827' }}>{r.name}</p>
                                             </div>
                                         ) : null;
                                     })}
@@ -816,23 +873,118 @@ export function SectionForm() {
                             )}
                         </div>
                     </div>
+
+                    {/* Panel 4: Configuration spécifique par Slide (uniquement pour Publicité) */}
+                    {formData.type === 'advertising' && (formData.merchant_ids?.length || 0) > 0 && (
+                        <div style={cardStyle}>
+                            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #fb560710, #fb560720)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <LayoutGrid size={16} color="var(--primary)" />
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>Configuration des Slides</h3>
+                            </div>
+                            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                {formData.merchant_ids?.map((mid, idx) => {
+                                    const m = merchants.find(mer => mer.id === mid);
+                                    if (!m) return null;
+                                    const slideConfig = formData.config?.slides?.[mid] || {};
+                                    return (
+                                        <div key={mid} style={{ border: '1.5px solid #f3f4f6', borderRadius: '16px', overflow: 'hidden' }}>
+                                            <div style={{ background: '#f9fafb', padding: '12px 16px', borderBottom: '1.5px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#fff', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 900 }}>
+                                                    {idx + 1}
+                                                </div>
+                                                <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#111827' }}>{m.name}</p>
+                                            </div>
+                                            <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                                                <div>
+                                                    <label style={labelStyle}>Titre sur la slide</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ex: -20% sur tout le rayon"
+                                                        value={slideConfig.title || ''}
+                                                        onChange={(e) => handleSlideChange(mid, 'title', e.target.value)}
+                                                        style={inputStyle}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={labelStyle}>Sous-titre / Description</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ex: Uniquement ce weekend..."
+                                                        value={slideConfig.subtitle || ''}
+                                                        onChange={(e) => handleSlideChange(mid, 'subtitle', e.target.value)}
+                                                        style={inputStyle}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={labelStyle}>Texte du bouton (CTA)</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ex: Voir plus"
+                                                        value={slideConfig.button_text || 'Boutique'}
+                                                        onChange={(e) => handleSlideChange(mid, 'button_text', e.target.value)}
+                                                        style={inputStyle}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={labelStyle}>Badge (ex: PROMO)</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ex: OFFRE"
+                                                        value={slideConfig.tag || ''}
+                                                        onChange={(e) => handleSlideChange(mid, 'tag', e.target.value)}
+                                                        style={inputStyle}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={labelStyle}>Emoji icône</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ex: 🎁"
+                                                        value={slideConfig.emoji || ''}
+                                                        onChange={(e) => handleSlideChange(mid, 'emoji', e.target.value)}
+                                                        style={inputStyle}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={labelStyle}>Couleur / Dégradé (CSS)</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ex: linear-gradient(...)"
+                                                        value={slideConfig.background || ''}
+                                                        onChange={(e) => handleSlideChange(mid, 'background', e.target.value)}
+                                                        style={inputStyle}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* RIGHT COLUMN — Catalogue */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '24px' }}>
+                <div className="sidebar-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={cardStyle}>
                         <div style={{ padding: '20px 20px 0' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>Catalogue des Plats</h3>
+                                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>
+                                    {formData.type === 'advertising' ? 'Catalogue des Marchands' : 'Catalogue des Plats'}
+                                </h3>
                                 {formData.type !== 'featured' && (
                                     <div style={{ display: 'flex', gap: '6px' }}>
                                         <button
                                             type="button"
                                             title="Tout sélectionner"
                                             onClick={() => {
-                                                const filteredIds = filteredRecipes.map(r => r.id);
-                                                const newIds = Array.from(new Set([...formData.recipe_ids, ...filteredIds]));
-                                                setFormData(prev => ({ ...prev, recipe_ids: newIds }));
+                                                const listToCheck = formData.type === 'advertising' ? filteredMerchants : filteredRecipes;
+                                                const fieldToId = formData.type === 'advertising' ? 'merchant_ids' : 'recipe_ids';
+                                                const filteredIds = listToCheck.map(item => item.id);
+                                                const newIds = Array.from(new Set([...(formData[fieldToId] || []), ...filteredIds]));
+                                                setFormData(prev => ({ ...prev, [fieldToId]: newIds }));
                                             }}
                                             style={{
                                                 display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -841,8 +993,6 @@ export function SectionForm() {
                                                 border: '1.5px solid #bbf7d0', cursor: 'pointer',
                                                 transition: 'all 0.15s',
                                             }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = '#dcfce7')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = '#f0fdf4')}
                                         >
                                             <CheckCircle2 size={12} /> Tout
                                         </button>
@@ -850,10 +1000,12 @@ export function SectionForm() {
                                             type="button"
                                             title="Tout désélectionner"
                                             onClick={() => {
-                                                const filteredIds = new Set(filteredRecipes.map(r => r.id));
+                                                const listToCheck = formData.type === 'advertising' ? filteredMerchants : filteredRecipes;
+                                                const fieldToId = formData.type === 'advertising' ? 'merchant_ids' : 'recipe_ids';
+                                                const filteredIds = new Set(listToCheck.map(item => item.id));
                                                 setFormData(prev => ({
                                                     ...prev,
-                                                    recipe_ids: prev.recipe_ids.filter(id => !filteredIds.has(id))
+                                                    [fieldToId]: (prev[fieldToId] || []).filter(id => !filteredIds.has(id))
                                                 }));
                                             }}
                                             style={{
@@ -863,8 +1015,6 @@ export function SectionForm() {
                                                 border: '1.5px solid #fecaca', cursor: 'pointer',
                                                 transition: 'all 0.15s',
                                             }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = '#fff5f5')}
                                         >
                                             <Trash2 size={12} /> Aucun
                                         </button>
@@ -872,10 +1022,13 @@ export function SectionForm() {
                                 )}
                             </div>
                             <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#9ca3af', fontWeight: 500 }}>
-                                {filteredRecipes.length} plat{filteredRecipes.length !== 1 ? 's' : ''} affiché{filteredRecipes.length !== 1 ? 's' : ''}
-                                {formData.recipe_ids.length > 0 && (
+                                {formData.type === 'advertising'
+                                    ? <>{filteredMerchants.length} marchand{filteredMerchants.length !== 1 ? 's' : ''} affiché{filteredMerchants.length !== 1 ? 's' : ''}</>
+                                    : <>{filteredRecipes.length} plat{filteredRecipes.length !== 1 ? 's' : ''} affiché{filteredRecipes.length !== 1 ? 's' : ''}</>
+                                }
+                                {(formData.type === 'advertising' ? (formData.merchant_ids?.length || 0) : formData.recipe_ids.length) > 0 && (
                                     <span style={{ marginLeft: '6px', fontWeight: 700, color: '#16a34a' }}>
-                                        · {formData.recipe_ids.length} sélectionné{formData.recipe_ids.length > 1 ? 's' : ''}
+                                        · {formData.type === 'advertising' ? (formData.merchant_ids?.length || 0) : formData.recipe_ids.length} sélectionné{(formData.type === 'advertising' ? (formData.merchant_ids?.length || 0) : formData.recipe_ids.length) > 1 ? 's' : ''}
                                     </span>
                                 )}
                             </p>
@@ -900,46 +1053,87 @@ export function SectionForm() {
                         </div>
 
                         <div style={{ maxHeight: 'calc(100vh - 340px)', overflowY: 'auto', padding: '8px 12px 12px' }}>
-                            {filteredRecipes.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-                                    <Utensils size={28} color="#d1d5db" style={{ marginBottom: '8px' }} />
-                                    <p style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 600, margin: 0 }}>Aucun résultat</p>
-                                </div>
-                            ) : filteredRecipes.map(recipe => {
-                                const selected = formData.recipe_ids.includes(recipe.id);
-                                return (
-                                    <div
-                                        key={recipe.id}
-                                        onClick={() => handleToggleRecipe(recipe.id)}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 8px',
-                                            borderRadius: '12px',
-                                            // Griser les plats non sélectionnables en mode featured
-                                            cursor: (formData.type === 'featured' && !selected && formData.recipe_ids.length >= 1) ? 'not-allowed' : 'pointer',
-                                            opacity: (formData.type === 'featured' && !selected && formData.recipe_ids.length >= 1) ? 0.4 : 1,
-                                            background: selected ? 'rgba(22,163,74,0.06)' : 'transparent',
-                                            border: selected ? '1px solid rgba(22,163,74,0.2)' : '1px solid transparent',
-                                            marginBottom: '4px', transition: 'all 0.15s',
-                                        }}
-                                    >
-                                        <img src={recipe.image} style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0, border: selected ? '2px solid #16a34a' : '2px solid transparent', transition: 'border 0.15s' }} />
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: selected ? '#16a34a' : '#111827', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {recipe.name}
-                                            </p>
-                                            <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>{recipe.category}</p>
-                                        </div>
-                                        <div style={{
-                                            width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
-                                            background: selected ? '#16a34a' : '#f3f4f6',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            transition: 'all 0.2s',
-                                        }}>
-                                            <CheckCircle2 size={15} color={selected ? '#fff' : '#d1d5db'} fill="none" />
-                                        </div>
+                            {formData.type === 'advertising' ? (
+                                filteredMerchants.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+                                        <Store size={28} color="#d1d5db" style={{ marginBottom: '8px' }} />
+                                        <p style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 600, margin: 0 }}>Aucun marchand</p>
                                     </div>
-                                );
-                            })}
+                                ) : filteredMerchants.map(merchant => {
+                                    const selected = formData.merchant_ids?.includes(merchant.id);
+                                    return (
+                                        <div
+                                            key={merchant.id}
+                                            onClick={() => handleToggleMerchant(merchant.id)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 8px',
+                                                borderRadius: '12px', cursor: 'pointer',
+                                                background: selected ? 'rgba(251,86,7,0.06)' : 'transparent',
+                                                border: selected ? '1px solid rgba(251,86,7,0.2)' : '1px solid transparent',
+                                                marginBottom: '4px', transition: 'all 0.15s',
+                                            }}
+                                        >
+                                            <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f0f0f0', flexShrink: 0 }}>
+                                                {merchant.logo_url ? <img src={merchant.logo_url} style={{ width: '80%', height: '80%', objectFit: 'contain' }} /> : <Store size={20} color="#d1d5db" />}
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: selected ? 'var(--primary)' : '#111827', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {merchant.name}
+                                                </p>
+                                                <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>{merchant.category || 'Commerce'}</p>
+                                            </div>
+                                            <div style={{
+                                                width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
+                                                background: selected ? 'var(--primary)' : '#f3f4f6',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                transition: 'all 0.2s',
+                                            }}>
+                                                <CheckCircle2 size={15} color={selected ? '#fff' : '#d1d5db'} fill="none" />
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                filteredRecipes.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+                                        <Utensils size={28} color="#d1d5db" style={{ marginBottom: '8px' }} />
+                                        <p style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 600, margin: 0 }}>Aucun résultat</p>
+                                    </div>
+                                ) : filteredRecipes.map(recipe => {
+                                    const selected = formData.recipe_ids.includes(recipe.id);
+                                    return (
+                                        <div
+                                            key={recipe.id}
+                                            onClick={() => handleToggleRecipe(recipe.id)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 8px',
+                                                borderRadius: '12px',
+                                                cursor: (formData.type === 'featured' && !selected && formData.recipe_ids.length >= 1) ? 'not-allowed' : 'pointer',
+                                                opacity: (formData.type === 'featured' && !selected && formData.recipe_ids.length >= 1) ? 0.4 : 1,
+                                                background: selected ? 'rgba(22,163,74,0.06)' : 'transparent',
+                                                border: selected ? '1px solid rgba(22,163,74,0.2)' : '1px solid transparent',
+                                                marginBottom: '4px', transition: 'all 0.15s',
+                                            }}
+                                        >
+                                            <img src={recipe.image} style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0, border: selected ? '2px solid #16a34a' : '2px solid transparent', transition: 'border 0.15s' }} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: selected ? '#16a34a' : '#111827', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {recipe.name}
+                                                </p>
+                                                <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>{recipe.category}</p>
+                                            </div>
+                                            <div style={{
+                                                width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
+                                                background: selected ? '#16a34a' : '#f3f4f6',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                transition: 'all 0.2s',
+                                            }}>
+                                                <CheckCircle2 size={15} color={selected ? '#fff' : '#d1d5db'} fill="none" />
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
                     </div>
 

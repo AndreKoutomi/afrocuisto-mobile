@@ -145,7 +145,7 @@ export function Feedback() {
         <div style={{ width: '100%', boxSizing: 'border-box', paddingBottom: 60 }}>
 
             {/* ══ HERO STATS ══════════════════════════════════════════════════ */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 20, marginBottom: 28 }}>
+            <div className="grid-responsive-stats" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 20, marginBottom: 28 }}>
 
                 {/* Score global */}
                 <div style={{
@@ -230,7 +230,7 @@ export function Feedback() {
             </div>
 
             {/* ══ TOOLBAR ═════════════════════════════════════════════════════ */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+            <div className="flex-responsive" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
                 {/* Search */}
                 <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <Search size={15} color="#9ca3af" style={{ position: 'absolute', left: 14 }} />
@@ -243,7 +243,7 @@ export function Feedback() {
                 </div>
 
                 {/* Rating filter pills */}
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', overflowX: 'auto', paddingBottom: '4px' }}>
                     <Filter size={14} color="#9ca3af" />
                     {(['all', 5, 4, 3, 2, 1] as const).map(r => (
                         <button
@@ -257,6 +257,7 @@ export function Feedback() {
                                 background: filterRating === r ? '#fb5607' : '#fff',
                                 color: filterRating === r ? '#fff' : '#6b7280',
                                 display: 'flex', alignItems: 'center', gap: 4,
+                                whiteSpace: 'nowrap'
                             }}
                         >
                             {r === 'all' ? 'Tous' : <><Star size={10} fill="currentColor" />{r}</>}
@@ -264,28 +265,30 @@ export function Feedback() {
                     ))}
                 </div>
 
-                {/* Sort */}
-                <div style={{ position: 'relative' }}>
-                    <select
-                        value={sortBy}
-                        onChange={e => setSortBy(e.target.value as any)}
-                        style={{ height: 44, borderRadius: 14, border: '1.5px solid #e5e7eb', background: '#fff', padding: '0 36px 0 14px', fontSize: 13, fontWeight: 700, color: '#374151', cursor: 'pointer', outline: 'none', appearance: 'none' }}
-                    >
-                        <option value="date">Plus récents</option>
-                        <option value="rating_desc">Meilleures notes</option>
-                        <option value="rating_asc">Notes basses</option>
-                    </select>
-                    <ChevronDown size={14} color="#9ca3af" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                </div>
+                <div className="flex-responsive" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    {/* Sort */}
+                    <div style={{ position: 'relative' }}>
+                        <select
+                            value={sortBy}
+                            onChange={e => setSortBy(e.target.value as any)}
+                            style={{ height: 44, borderRadius: 14, border: '1.5px solid #e5e7eb', background: '#fff', padding: '0 36px 0 14px', fontSize: 13, fontWeight: 700, color: '#374151', cursor: 'pointer', outline: 'none', appearance: 'none' }}
+                        >
+                            <option value="date">Plus récents</option>
+                            <option value="rating_desc">Meilleures notes</option>
+                            <option value="rating_asc">Notes basses</option>
+                        </select>
+                        <ChevronDown size={14} color="#9ca3af" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    </div>
 
-                {/* Refresh */}
-                <button
-                    onClick={fetchReviews}
-                    title="Actualiser"
-                    style={{ width: 44, height: 44, borderRadius: 14, border: '1.5px solid #e5e7eb', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280', flexShrink: 0 }}
-                >
-                    <RefreshCw size={16} />
-                </button>
+                    {/* Refresh */}
+                    <button
+                        onClick={fetchReviews}
+                        title="Actualiser"
+                        style={{ width: 44, height: 44, borderRadius: 14, border: '1.5px solid #e5e7eb', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280', flexShrink: 0 }}
+                    >
+                        <RefreshCw size={16} />
+                    </button>
+                </div>
             </div>
 
             {/* ══ REVIEWS ═════════════════════════════════════════════════════ */}
@@ -314,7 +317,7 @@ export function Feedback() {
                         {filterRating !== 'all' && ` · Note : ${filterRating}★`}
                         {search && ` · "${search}"`}
                     </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+                    <div className="grid-responsive-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
                         {filtered.map(review => {
                             const rc = RATING_COLORS[review.rating] || RATING_COLORS[3];
                             const isDeleting = deleting === review.id;
@@ -426,7 +429,8 @@ export function Feedback() {
                         })}
                     </div>
                 </>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }

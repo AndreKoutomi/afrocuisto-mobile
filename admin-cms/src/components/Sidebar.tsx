@@ -12,19 +12,23 @@
  */
 
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users, Heart, CreditCard, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users, Sparkles, CreditCard, Bell, ChevronLeft, ChevronRight, Store, ShoppingBag, LogOut } from 'lucide-react';
+import logoAdmin from '../assets/logo_admin.png';
 
 interface SidebarProps {
     isCollapsed: boolean;
     setIsCollapsed: (val: boolean) => void;
+    isMobileOpen?: boolean;
+    onLogout: () => void;
 }
 
 // Composant Sidebar (La barre latérale gauche)
-export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
+export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }: SidebarProps) {
     return (
-        <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`} style={{ position: 'relative' }}>
+        <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`} style={{ position: 'relative' }}>
             {/* Bouton pour réduire/agrandir la barre */}
             <button
+                className="sidebar-toggle"
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 style={{
                     position: 'absolute',
@@ -50,13 +54,12 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
             {/* Haut de la barre latérale : Logo et Nom de l'app */}
             <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <img src="/images/chef_icon_v2.png" alt="Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+                <img src={logoAdmin} alt="Logo" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '8px' }} />
                 {!isCollapsed && (
                     <>
                         <div style={{ fontSize: '1.25rem', fontWeight: 800 }}>
                             <span style={{ color: 'var(--text-main)' }}>Afro</span><span style={{ color: 'var(--primary)' }}>Cuisto</span>
                         </div>
-                        <span className="badge badge-primary text-xs ml-2" style={{ marginLeft: 'auto' }}>PRO</span>
                     </>
                 )}
             </div>
@@ -102,6 +105,24 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                     <span>Utilisateurs</span>
                 </NavLink>
 
+                {/* Lien vers la gestion des Marchands */}
+                <NavLink
+                    to="/merchants"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <Store size={20} style={{ marginRight: '8px' }} />
+                    <span>Marchands</span>
+                </NavLink>
+
+                {/* Lien vers la gestion des Produits du Store */}
+                <NavLink
+                    to="/products"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <ShoppingBag size={20} style={{ marginRight: '8px' }} />
+                    <span>Produits Store</span>
+                </NavLink>
+
                 {/* Lien vers les Transactions financières */}
                 <NavLink
                     to="/transactions"
@@ -125,9 +146,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                     to="/contributions"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >
-                    <Heart size={20} style={{ marginRight: '8px' }} />
-                    <span>Contributions Utilisateur</span>
-                    <span className="badge badge-primary text-[10px] ml-auto">NEW</span>
+                    <Sparkles size={20} style={{ marginRight: '8px' }} />
+                    <span>Contributions</span>
                 </NavLink>
 
                 {/* Lien vers les Notifications Push */}
@@ -137,9 +157,30 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 >
                     <Bell size={20} style={{ marginRight: '8px' }} />
                     <span>Notifications</span>
-                    <span className="badge badge-primary text-[10px] ml-auto">NEW</span>
                 </NavLink>
 
+                <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                    <button
+                        onClick={onLogout}
+                        className="nav-item"
+                        style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            color: 'var(--danger)',
+                            transition: 'all 0.2s',
+                            borderRadius: '12px',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#fff5f5';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >
+                        <LogOut size={20} style={{ marginRight: '8px' }} />
+                        {!isCollapsed && <span>Déconnexion</span>}
+                    </button>
+                </div>
             </nav>
 
         </aside> // Fin du composant Sidebar

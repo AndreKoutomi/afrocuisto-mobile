@@ -144,24 +144,24 @@ export function Notifications() {
 
     return (
         <div style={{ width: '100%', boxSizing: 'border-box' }}>
-
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+            <div className="notifications-header flex-responsive" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
                 <div>
+                    <h2 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>Notifications Push</h2>
                     <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 0' }}>
                         Envoyez des alertes directement dans l'application AfroCuisto
                     </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff5f0', padding: '8px 16px', borderRadius: 12, border: '1px solid #ffe0d0' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F94D00', boxShadow: '0 0 0 3px rgba(249,77,0,0.2)' }} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#F94D00' }}>{notifications.filter(n => n.is_active).length} notifications actives</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#F94D00', whiteSpace: 'nowrap' }}>{notifications.filter(n => n.is_active).length} actives</span>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(340px, 400px)', gap: 24 }} className="notifications-grid">
 
                 {/* Formulaire de création */}
-                <div>
+                <div className="notifications-form-panel">
                     <div style={cardStyle}>
                         {/* Titre section */}
                         <div style={{ padding: '20px 24px 12px', borderBottom: '1px solid #f5f5f5' }}>
@@ -234,7 +234,7 @@ export function Notifications() {
                             </div>
 
                             {/* Emoji Icône + Couleur */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginBottom: 20 }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
                                         Emoji icône
@@ -255,6 +255,7 @@ export function Notifications() {
                                         {ICON_COLORS.map(c => (
                                             <button
                                                 key={c.value}
+                                                type="button"
                                                 title={c.label}
                                                 onClick={() => setForm(p => ({ ...p, color: c.value }))}
                                                 style={{ width: 28, height: 28, borderRadius: '50%', background: c.value, border: form.color === c.value ? `3px solid ${c.value}` : '2px solid #e5e7eb', outline: form.color === c.value ? `2px solid white` : 'none', outlineOffset: form.color === c.value ? '-5px' : '0', cursor: 'pointer', transition: 'transform 0.2s', transform: form.color === c.value ? 'scale(1.2)' : 'scale(1)' }}
@@ -277,10 +278,10 @@ export function Notifications() {
                             )}
 
                             {/* Boutons */}
-                            <div style={{ display: 'flex', gap: 12 }}>
+                            <div className="flex-responsive" style={{ display: 'flex', gap: 12 }}>
                                 <button
                                     onClick={() => setPreview(!preview)}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#fafafa', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: 'var(--text-main)' }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 20px', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#fafafa', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: 'var(--text-main)' }}
                                 >
                                     <Eye size={16} /> Aperçu
                                 </button>
@@ -290,7 +291,7 @@ export function Notifications() {
                                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 20px', borderRadius: 12, border: 'none', background: sending ? '#ccc' : 'linear-gradient(135deg, #F94D00, #ff7c00)', color: '#fff', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: 15, boxShadow: '0 4px 15px rgba(249,77,0,0.3)', transition: 'all 0.2s' }}
                                 >
                                     <Send size={18} />
-                                    {sending ? 'Envoi en cours...' : 'Envoyer à tous'}
+                                    {sending ? 'Envoi...' : 'Envoyer à tous'}
                                 </button>
                             </div>
                         </div>
@@ -298,7 +299,7 @@ export function Notifications() {
 
                     {/* Historique des notifications */}
                     <div style={{ ...cardStyle, marginTop: 24 }}>
-                        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                             <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
                                 Historique ({notifications.length})
                             </h2>
@@ -316,11 +317,11 @@ export function Notifications() {
                                 </div>
                             ) : (
                                 notifications.map(notif => (
-                                    <div key={notif.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 14, margin: '4px 0', background: notif.is_active ? '#fff' : '#fafafa', border: `1px solid ${notif.is_active ? '#e5e7eb' : '#f0f0f0'}`, opacity: notif.is_active ? 1 : 0.65 }}>
+                                    <div key={notif.id} className="list-item-responsive" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 14, margin: '4px 0', background: notif.is_active ? '#fff' : '#fafafa', border: `1px solid ${notif.is_active ? '#e5e7eb' : '#f0f0f0'}`, opacity: notif.is_active ? 1 : 0.65 }}>
                                         <div style={{ width: 42, height: 42, borderRadius: 12, background: notif.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
                                             {notif.icon}
                                         </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ flex: 1, minWidth: '200px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                                                 <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{notif.title}</span>
                                                 <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: notif.is_active ? '#f0fdf4' : '#f5f5f5', color: notif.is_active ? '#16a34a' : '#9ca3af', flexShrink: 0 }}>
@@ -337,7 +338,7 @@ export function Notifications() {
                                                 </span>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', gap: 4, flexShrink: 0, marginLeft: 'auto' }}>
                                             <button
                                                 onClick={() => toggleActive(notif.id, notif.is_active)}
                                                 title={notif.is_active ? 'Désactiver' : 'Activer'}
@@ -361,7 +362,7 @@ export function Notifications() {
                 </div>
 
                 {/* Panneau droit : Aperçu */}
-                <div style={{ position: 'sticky', top: 24 }}>
+                <div className="notifications-preview-panel" style={{ position: 'sticky', top: 24 }}>
                     <div style={cardStyle}>
                         <div style={{ padding: '20px 24px 12px', borderBottom: '1px solid #f5f5f5' }}>
                             <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>Aperçu dans l'app</h2>
@@ -369,7 +370,7 @@ export function Notifications() {
                         </div>
                         <div style={{ padding: 24 }}>
                             {/* Simulation bannière push */}
-                            <div style={{ borderRadius: 18, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #e5e7eb' }}>
+                            <div style={{ borderRadius: 18, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #e5e7eb', maxWidth: '340px', margin: '0 auto' }}>
                                 {/* Faux en-tête de téléphone */}
                                 <div style={{ background: '#1a1a1a', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>9:41</span>
@@ -404,7 +405,7 @@ export function Notifications() {
                                 </div>
 
                                 {/* Faux fond d'écran de l'app */}
-                                <div style={{ background: '#f9f5f0', padding: 20, minHeight: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                <div style={{ background: '#f9f5f0', padding: 20, minHeight: 180, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                                     <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #F94D00, #ff7c00)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <ChefHat size={24} color="#fff" />
                                     </div>
@@ -436,7 +437,7 @@ export function Notifications() {
                     </div>
 
                     {/* Stats rapides */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
+                    <div className="grid-responsive-stats" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
                         {[
                             { label: 'Envoyées', value: notifications.length, icon: <Send size={16} color="#F94D00" />, bg: '#fff5f0' },
                             { label: 'Actives', value: notifications.filter(n => n.is_active).length, icon: <Bell size={16} color="#10b981" />, bg: '#f0fdf4' },
@@ -452,7 +453,8 @@ export function Notifications() {
                     </div>
                 </div>
 
-            </div>
+            </div>            <style>{`.notifications-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 400px); gap: 24px; } @media (max-width: 900px) { .notifications-grid { grid-template-columns: 1fr; } }`}</style>
+
         </div>
     );
 }

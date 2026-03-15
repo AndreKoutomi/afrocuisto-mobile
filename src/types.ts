@@ -92,3 +92,20 @@ export interface AuthState {
   user: User | null;         // L'utilisateur si connecté, null si non connecté
   isAuthenticated: boolean;  // Vrai si utilisateur authentifié
 }
+// Structure d'un Produit du Merchant Store
+export interface Product {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  unit: string;
+  emoji: string;
+  color: string;
+  badge?: string;
+  image_url?: string;
+  category?: string;
+  merchant_id?: string;
+  description?: string;
+  rating?: number;
+  reviews_count?: number;
+}
