@@ -73,7 +73,11 @@ import {
   SlidersHorizontal,
   Minus,
   ArrowLeft,
-  Tag
+  Tag,
+  Loader2,
+  Navigation,
+  Edit3,
+  Maximize2
 } from 'lucide-react';
 import { recipes } from './data';
 import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product } from './types';
@@ -1323,6 +1327,134 @@ const ShoppingItemRow: React.FC<{
           </motion.div>
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+};
+// --- Modal de sélection de position sur carte ---
+const MapPickerModal = ({ isOpen, onClose, onSelect, initialCoords, isDark }: any) => {
+  const mapRef = React.useRef<HTMLDivElement>(null);
+  const [tempCoords, setTempCoords] = React.useState(initialCoords || { lat: 6.3654, lng: 2.4183 });
+  const [isLoading, setIsLoading] = React.useState(false);
+  const mapInstance = React.useRef<any>(null);
+  const markerInstance = React.useRef<any>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const initMap = () => {
+      if (!mapRef.current) return;
+      const L = (window as any).L;
+      if (!L) return;
+
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+      }
+
+      mapInstance.current = L.map(mapRef.current, {
+        zoomControl: false,
+        fadeAnimation: true
+      }).setView([tempCoords.lat, tempCoords.lng], 15);
+
+      // Utilisation d'OSM Standard pour une compatibilité maximale
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap builders',
+        maxZoom: 19
+      }).addTo(mapInstance.current);
+
+      L.control.zoom({ position: 'topright' }).addTo(mapInstance.current);
+
+      markerInstance.current = L.marker([tempCoords.lat, tempCoords.lng], {
+        draggable: true
+      }).addTo(mapInstance.current);
+
+      mapInstance.current.on('click', (e: any) => {
+        const { lat, lng } = e.latlng;
+        markerInstance.current.setLatLng([lat, lng]);
+        setTempCoords({ lat, lng });
+      });
+
+      markerInstance.current.on('dragend', () => {
+        const { lat, lng } = markerInstance.current.getLatLng();
+        setTempCoords({ lat, lng });
+      });
+
+      // Correction critique pour les "tuiles grises" : invalidateSize répétée pendant l'animation
+      let count = 0;
+      const timer = setInterval(() => {
+        if (mapInstance.current) {
+          mapInstance.current.invalidateSize();
+          count++;
+        }
+        if (count > 10) clearInterval(timer);
+      }, 300);
+    };
+
+    if (!(window as any).L) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initMap;
+      document.head.appendChild(script);
+    } else {
+      setTimeout(initMap, 100);
+    }
+
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+    };
+  }, [isOpen]);
+
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempCoords.lat}&lon=${tempCoords.lng}`);
+      const data = await response.json();
+      onSelect(tempCoords, data.display_name || `${tempCoords.lat.toFixed(4)}, ${tempCoords.lng.toFixed(4)}`);
+      onClose();
+    } catch (error) {
+      onSelect(tempCoords, `${tempCoords.lat.toFixed(4)}, ${tempCoords.lng.toFixed(4)}`);
+      onClose();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 100 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 100 }}
+      className="fixed inset-0 z-[2000] flex flex-col bg-white"
+    >
+      <div className={`p-6 flex items-center justify-between ${isDark ? 'bg-black text-white' : 'bg-white text-stone-900'} border-b border-stone-100`}>
+        <button onClick={onClose} className="p-2 -ml-2">
+          <ArrowLeft size={24} />
+        </button>
+        <h3 className="text-lg font-black">Choisir ma position</h3>
+        <div className="w-10" />
+      </div>
+
+      <div ref={mapRef} className="flex-1 w-full bg-stone-100" />
+
+      <div className="absolute bottom-10 left-6 right-6 z-[2001]">
+        <button
+          onClick={handleConfirm}
+          disabled={isLoading}
+          className="w-full py-5 bg-[#F94D00] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3"
+        >
+          {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} strokeWidth={3} />}
+          Confirmer cet emplacement
+        </button>
+      </div>
     </motion.div>
   );
 };
@@ -3764,7 +3896,38 @@ export default function App() {
     }) => {
       const [step, setStep] = useState<'cart' | 'checkout' | 'success'>('cart');
       const [paymentMethod, setPaymentMethod] = useState<'cod' | 'momo' | 'card'>('momo');
-      const [address] = useState("Rue des Jardins, Cocody, Abidjan");
+      const [deliveryMode, setDeliveryMode] = useState<'auto' | 'manual'>('manual');
+      const [locationText, setLocationText] = useState(currentUser?.address || 'Cotonou, Bénin');
+      const [coords, setCoords] = useState<{ lat: number, lng: number } | null>(null);
+      const [isLocating, setIsLocating] = useState(false);
+      const [showMapPicker, setShowMapPicker] = useState(false);
+
+      const handleAutoLocation = () => {
+        setIsLocating(true);
+        if ("geolocation" in navigator) {
+          navigator.geolocation.getCurrentPosition(async (position) => {
+            try {
+              const { latitude, longitude } = position.coords;
+              setCoords({ lat: latitude, lng: longitude });
+              const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+              const data = await response.json();
+              setLocationText(data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+              setDeliveryMode('auto');
+              showAlert("Position détectée !", "success");
+            } catch (error) {
+              showAlert("Impossible de récupérer l'adresse.", "error");
+            } finally {
+              setIsLocating(false);
+            }
+          }, (error) => {
+            setIsLocating(false);
+            showAlert("Accès à la position refusé.", "error");
+          });
+        } else {
+          setIsLocating(false);
+          showAlert("Géolocalisation non supportée.", "error");
+        }
+      };
 
       const cartItems = (currentUser?.shoppingList || []).filter(i => i.id.startsWith('store_') && i.isInCart);
       const subtotal = cartItems.reduce((acc, i) => acc + (parseFloat(i.priceXOF || '0') * (parseInt(i.quantity || '1'))), 0);
@@ -3836,17 +3999,33 @@ export default function App() {
             }
           };
 
-          // --- LOGIQUE DE LANCEMENT FLEXIBLE ---
-          if (fp.Checkout && typeof fp.Checkout.init === 'function') {
-            fp.Checkout.init(config);
-            fp.Checkout.open();
-          } else if (typeof fp.init === 'function') {
-            fp.init(config);
-            if (typeof fp.open === 'function') fp.open();
-            else if (fp.Checkout && typeof fp.Checkout.open === 'function') fp.Checkout.open();
-            else alert("Erreur d'ouverture FedaPay.");
-          } else {
-            alert("Erreur: Le service FedaPay n'est pas prêt. Essayez de recharger.");
+          // --- LOGIQUE DE LANCEMENT ROBUSTE (v1.1.7+) ---
+          try {
+            let checkoutInstance: any = null;
+
+            if (fp.Checkout && typeof fp.Checkout.init === 'function') {
+              checkoutInstance = fp.Checkout.init(config);
+            } else if (typeof fp.init === 'function') {
+              checkoutInstance = fp.init(config);
+            }
+
+            // Tentative d'ouverture via l'instance (Recommandé pour v1.1.7+)
+            if (checkoutInstance && typeof checkoutInstance.open === 'function') {
+              checkoutInstance.open();
+            }
+            // Fallback 1: FedaPay.Checkout.open()
+            else if (fp.Checkout && typeof fp.Checkout.open === 'function') {
+              fp.Checkout.open();
+            }
+            // Fallback 2: FedaPay.open()
+            else if (typeof fp.open === 'function') {
+              fp.open();
+            } else {
+              throw new Error("Aucune méthode d'ouverture (open) trouvée dans le SDK FedaPay.");
+            }
+          } catch (e: any) {
+            console.error("FedaPay Launch Error:", e);
+            alert("Erreur d'ouverture FedaPay : " + e.message);
           }
         } catch (error: any) {
           alert("Erreur lors du lancement du paiement : " + error.message);
@@ -3899,7 +4078,6 @@ export default function App() {
 
                       return (
                         <div key={item.id} className="py-6 flex items-center gap-5">
-                          {/* Image Box */}
                           <div className={`w-24 h-24 rounded-3xl overflow-hidden flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}>
                             {product?.image_url ? (
                               <img src={product.image_url} alt={item.item} className="w-full h-full object-cover" />
@@ -3908,7 +4086,6 @@ export default function App() {
                             )}
                           </div>
 
-                          {/* Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start mb-1">
                               <h4 className={`text-[16px] font-black truncate ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>{item.item}</h4>
@@ -3929,13 +4106,10 @@ export default function App() {
                             </p>
 
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className={`text-[15px] font-black ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>
-                                  {parseFloat(item.priceXOF || '0').toLocaleString()} XOF
-                                </span>
-                              </div>
+                              <span className={`text-[15px] font-black ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>
+                                {parseFloat(item.priceXOF || '0').toLocaleString()} XOF
+                              </span>
 
-                              {/* Qty controls */}
                               <div className={`flex items-center gap-4 px-2 py-1.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-white border border-stone-100'}`}>
                                 <button
                                   onClick={() => updateQty(item.id, -1)}
@@ -3962,8 +4136,82 @@ export default function App() {
                 )}
 
                 {cartItems.length > 0 && (
-                  <div className="pt-6 space-y-6 pb-12">
-                    {/* Payment methods immediately visible as requested */}
+                  <>
+                    <div className="py-6 border-t border-stone-100/50">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className={`text-[12px] font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+                          <MapPin size={14} className="text-[#F94D00]" /> Adresse de livraison
+                        </h3>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleAutoLocation}
+                            className={`p-2 rounded-xl transition-all ${deliveryMode === 'auto' ? 'bg-[#F94D00] text-white' : (isDark ? 'bg-white/5 text-stone-400' : 'bg-stone-100 text-stone-500')}`}
+                          >
+                            {isLocating ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
+                          </button>
+                          <button
+                            onClick={() => setDeliveryMode('manual')}
+                            className={`p-2 rounded-xl transition-all ${deliveryMode === 'manual' ? 'bg-[#F94D00] text-white' : (isDark ? 'bg-white/5 text-stone-400' : 'bg-stone-100 text-stone-500')}`}
+                          >
+                            <Edit3 size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={`p-4 rounded-2xl border-2 transition-all ${isDark ? 'bg-white/5 border-white/5' : 'bg-stone-50 border-stone-100'}`}>
+                        {deliveryMode === 'manual' ? (
+                          <textarea
+                            value={locationText}
+                            onChange={(e) => setLocationText(e.target.value)}
+                            placeholder="Entrez votre adresse ici..."
+                            className="w-full bg-transparent border-none focus:ring-0 text-sm font-bold resize-none h-16 text-stone-600 no-scrollbar"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-3 py-2">
+                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                              <Check size={16} />
+                            </div>
+                            <span className="text-sm font-bold text-stone-500 line-clamp-2">{locationText}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {(coords || locationText) && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="mt-4 w-full h-44 rounded-3xl overflow-hidden border-2 border-stone-100/50 shadow-inner group relative"
+                        >
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            scrolling="no"
+                            marginHeight={0}
+                            marginWidth={0}
+                            src={`https://maps.google.com/maps?q=${coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(locationText)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                            className="transition-opacity duration-700 opacity-90 group-hover:opacity-100 pointer-events-none"
+                          ></iframe>
+
+                          {/* Overlay transparent pour bloquer la redirection Maps par défaut */}
+                          <div
+                            className="absolute inset-0 z-10 cursor-pointer bg-transparent"
+                            onClick={() => setShowMapPicker(true)}
+                          />
+
+                          {/* Bouton d'agrandissement */}
+                          <button
+                            onClick={() => setShowMapPicker(true)}
+                            className="absolute top-3 right-3 z-20 w-10 h-10 rounded-xl bg-white/90 backdrop-blur shadow-lg flex items-center justify-center text-[#F94D00] active:scale-90 transition-all border border-stone-100"
+                          >
+                            <Maximize2 size={20} />
+                          </button>
+
+                          <div className="absolute inset-0 pointer-events-none border-[6px] border-white/10 rounded-3xl" />
+                        </motion.div>
+                      )}
+                    </div>
+
                     <div className="pt-2 pb-6 border-t border-dashed border-stone-200">
                       <h3 className={`text-[12px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
                         <Wallet size={14} className="text-[#38b000]" /> Moyen de paiement
@@ -4011,23 +4259,20 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Summary */}
-                    <div className="pt-6 border-t border-dashed border-stone-200">
+                    <div className="pt-6 border-t border-dashed border-stone-200 pb-12">
                       <div className="flex justify-between items-center mb-3">
                         <span className="text-[14px] font-bold text-[#8FAABB]">Sous-total</span>
                         <span className={`text-[14px] font-bold ${isDark ? 'text-white/60' : 'text-stone-500'}`}>{subtotal.toLocaleString()} XOF</span>
                       </div>
-                      {/* Tax row removed as requested */}
                       <div className="flex justify-between items-center">
                         <span className={`text-[18px] font-black ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>Total</span>
                         <span className={`text-[18px] font-black ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>{total.toLocaleString()} XOF</span>
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
 
-              {/* Fixed Footer Button */}
               {cartItems.length > 0 && (
                 <div className={`p-6 pb-10 ${isDark ? 'bg-black' : 'bg-white shadow-[0_-20px_40px_rgba(0,0,0,0.02)]'}`}>
                   <button
@@ -4040,6 +4285,22 @@ export default function App() {
               )}
             </div>
           )}
+
+          <AnimatePresence>
+            {showMapPicker && (
+              <MapPickerModal
+                isOpen={showMapPicker}
+                onClose={() => setShowMapPicker(false)}
+                initialCoords={coords}
+                isDark={isDark}
+                onSelect={(nc: any, nt: string) => {
+                  setCoords(nc);
+                  setLocationText(nt);
+                  setDeliveryMode('auto');
+                }}
+              />
+            )}
+          </AnimatePresence>
         </motion.div>
       );
     };

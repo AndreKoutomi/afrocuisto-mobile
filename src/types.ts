@@ -82,6 +82,7 @@ export interface User {
   phone?: string;         // Numéro de téléphone optionnel
   password?: string;      // Mot de passe (jamais affiché en clair idéalement)
   avatar?: string;        // Photo de profil
+  address?: string;       // Adresse de livraison
   favorites: string[];    // Tableau contenant les IDs des recettes favorites
   shoppingList: ShoppingItem[]; // Sa liste de courses
   joinedDate: string;     // Date d'inscription
