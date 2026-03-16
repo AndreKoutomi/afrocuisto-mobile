@@ -1701,6 +1701,34 @@ export default function App() {
   const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]; // Références pour les cases OTP
   const [phoneCountry, setPhoneCountry] = useState('+229'); // Indicatif pays pour l'inscription
 
+  // --- Adaptive Android System Navigation Bar ---
+  // Automatically detects the height of the Android system navigation bar
+  // (gesture / 2-button / 3-button) and injects it as a CSS variable.
+  useEffect(() => {
+    const applyNavInset = () => {
+      if (!Capacitor.isNativePlatform()) {
+        // On web: rely on CSS env(safe-area-inset-bottom)
+        document.documentElement.style.setProperty('--nav-inset-bottom', 'env(safe-area-inset-bottom, 0px)');
+        return;
+      }
+
+      // On native Android: calculate actual nav bar height
+      // screen.height is the physical screen height in CSS pixels
+      // window.innerHeight is the visible content area (excludes nav bar)
+      const screenH = window.screen.height;
+      const windowH = window.innerHeight;
+      const navBarH = Math.max(0, screenH - windowH);
+
+      // Also check for status bar by reading the existing pt applied
+      // We give a minimum of 16px for gesture navigation overlap
+      const minInset = navBarH > 0 ? navBarH : 0;
+      document.documentElement.style.setProperty('--nav-inset-bottom', `${minInset}px`);
+    };
+
+    applyNavInset();
+    window.addEventListener('resize', applyNavInset);
+    return () => window.removeEventListener('resize', applyNavInset);
+  }, []);
 
   useEffect(() => {
     // Initial Auth Check
@@ -2512,15 +2540,13 @@ export default function App() {
     if (Capacitor.isNativePlatform()) {
       const applyStatusBar = async () => {
         try {
-          // Désactiver 'overlay' oblige la vue native à décaler tout le document web DANS l'écran utilisable.
-          // Les iframes système (comme FedaPay) respecteront ainsi ces limites système et la barre d'état restera au-dessus.
-          await StatusBar.setOverlaysWebView({ overlay: false });
+          // L'overlay est réactivé (true) car FedaPay ne respecte pas les limites système.
+          // Nous reprenons le contrôle total avec padding interne (pt-[44px]) + le hack CSS sur index.css.
+          await StatusBar.setOverlaysWebView({ overlay: true });
 
           if (isDark) {
-            await StatusBar.setBackgroundColor({ color: '#000000' });
             await StatusBar.setStyle({ style: Style.Dark });
           } else {
-            await StatusBar.setBackgroundColor({ color: '#ffffff' });
             await StatusBar.setStyle({ style: Style.Light });
           }
         } catch (error) {
@@ -5476,7 +5502,7 @@ export default function App() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-      className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl pt-[env(safe-area-inset-top,0px)] transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-white'}`}
+      className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl ${Capacitor.isNativePlatform() ? 'pt-[44px]' : 'pt-[env(safe-area-inset-top,4px)]'} transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-white'}`}
     >
       {renderAuth()}
       <ModernAlertComponent
@@ -5494,7 +5520,7 @@ export default function App() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top,0px)] ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
+      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${Capacitor.isNativePlatform() ? 'pt-[44px]' : 'pt-[env(safe-area-inset-top,4px)]'} ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
     >
       <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
@@ -5685,7 +5711,7 @@ export default function App() {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 100, opacity: 0, scale: 0.92 }}
             transition={{ type: 'spring', damping: 24, stiffness: 360, mass: 0.85 }}
-            className="absolute bottom-6 left-4 right-4 z-[800]"
+            className="absolute left-4 right-4 z-[800] nav-bottom-adaptive"
           >
 
             {/* Main pill */}

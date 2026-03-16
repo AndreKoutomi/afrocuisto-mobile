@@ -650,6 +650,15 @@
   color: #ffffff !important;
 }
 
+/* ==========================================================================
+   FEDAPAY & IFRAMES GLOBAL FIX (Status Bar)
+   ========================================================================== */
+/* Décale les overlays externes (ex: FedaPay) sous la barre d'état physique */
+body>iframe {
+  top: 44px !important;
+  height: calc(100% - 44px) !important;
+}
+
 .featured-cta {
   color: #e55820;
 }
@@ -960,4 +969,26 @@
 /* Ensure the sub-view slide container keeps a black bg */
 .dark motion div.absolute.inset-0 {
   background-color: #000000 !important;
+}
+
+/* ==========================================================================
+   ANDROID SYSTEM NAVIGATION BAR — Adaptive Bottom Inset
+   Strategy: Use a CSS variable --nav-inset-bottom set dynamically by JS
+   for accurate Android nav bar height detection (gesture / 2-button / 3-button).
+   Falls back to env(safe-area-inset-bottom) for iOS.
+   ========================================================================== */
+
+:root {
+  /* Default: 0px. Will be overridden by JS on Android native */
+  --nav-inset-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Utility class applied to the floating nav bar bottom offset */
+.nav-bottom-adaptive {
+  bottom: calc(var(--nav-inset-bottom) + 16px) !important;
+}
+
+/* Utility for content padding that accounts for the nav bar + its safe area */
+.pb-nav-adaptive {
+  padding-bottom: calc(var(--nav-inset-bottom) + 92px) !important;
 }
