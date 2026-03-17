@@ -2542,7 +2542,7 @@ export default function App() {
         try {
           // L'overlay est réactivé (true) car FedaPay ne respecte pas les limites système.
           // Nous reprenons le contrôle total avec padding interne (pt-[44px]) + le hack CSS sur index.css.
-          await StatusBar.setOverlaysWebView({ overlay: true });
+          await StatusBar.setOverlaysWebView({ overlay: false });
 
           if (isDark) {
             await StatusBar.setStyle({ style: Style.Dark });
