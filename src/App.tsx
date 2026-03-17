@@ -91,6 +91,9 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { PushNotifBanner, NotifCenter, usePushNotifications, PushNotif } from './components/PushNotifications';
 import { NotifDetail } from './components/NotifDetail';
+import { Geolocation } from '@capacitor/geolocation';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 // --- Constants & Config ---
 const springTransition = { type: 'spring', stiffness: 700, damping: 36, mass: 0.35 };
@@ -1728,6 +1731,38 @@ export default function App() {
     applyNavInset();
     window.addEventListener('resize', applyNavInset);
     return () => window.removeEventListener('resize', applyNavInset);
+  }, []);
+
+  // --- Request Permissions (Location & Notifications) ---
+  useEffect(() => {
+    const requestAppPermissions = async () => {
+      // Only run on native platforms (Android/iOS)
+      if (!Capacitor.isNativePlatform()) return;
+
+      try {
+        // 1. Geolocation
+        const geoStatus = await Geolocation.checkPermissions();
+        if (geoStatus.location !== 'granted') {
+          await Geolocation.requestPermissions();
+        }
+
+        // 2. Notifications (Push & Local)
+        // Requesting for Push usually covers the OS permission for showing notifications
+        const pushStatus = await PushNotifications.checkPermissions();
+        if (pushStatus.receive !== 'granted') {
+          await PushNotifications.requestPermissions();
+        }
+
+        const localStatus = await LocalNotifications.checkPermissions();
+        if (localStatus.display !== 'granted') {
+          await LocalNotifications.requestPermissions();
+        }
+      } catch (err) {
+        console.warn("Permissions request failed or was dismissed:", err);
+      }
+    };
+
+    requestAppPermissions();
   }, []);
 
   useEffect(() => {
