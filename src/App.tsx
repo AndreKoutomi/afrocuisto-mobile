@@ -92,7 +92,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { PushNotifBanner, NotifCenter, usePushNotifications, PushNotif } from './components/PushNotifications';
 import { NotifDetail } from './components/NotifDetail';
 import { Geolocation } from '@capacitor/geolocation';
-import { PushNotifications } from '@capacitor/push-notifications';
+import { PushNotifications, PushNotificationSchema, Token, ActionPerformed } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 // --- Constants & Config ---
@@ -1763,7 +1763,42 @@ export default function App() {
     };
 
     requestAppPermissions();
-  }, []);
+
+    // --- Configure Push Notifications Listeners ---
+    if (Capacitor.isNativePlatform()) {
+      // Register with FCM/APNS
+      PushNotifications.register();
+
+      // On successful registration, you get a token
+      // This token should be sent to your backend (Supabase) to target this specific device
+      PushNotifications.addListener('registration', (token: Token) => {
+        console.log('Push registration success, token: ' + token.value);
+        // Tip: Save this token to currentUser record in Supabase user_profiles
+        if (currentUser) {
+          dbService.supabase?.from('user_profiles')
+            .update({ push_token: token.value })
+            .eq('id', currentUser.id);
+        }
+      });
+
+      // Some issue with registration
+      PushNotifications.addListener('registrationError', (error: any) => {
+        console.error('Error on registration: ' + JSON.stringify(error));
+      });
+
+      // Show a banner even if the app is in the foreground
+      PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+        console.log('Push received: ' + JSON.stringify(notification));
+        // You can use LocalNotifications here to "re-trigger" the display if needed
+      });
+
+      // Method called when tapping on a notification
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
+        console.log('Push action performed: ' + JSON.stringify(notification));
+        // Logic to navigate to a specific recipe or section
+      });
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     // Initial Auth Check
@@ -1921,6 +1956,43 @@ export default function App() {
   const [showAddShoppingModal, setShowAddShoppingModal] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [ordersCount, setOrdersCount] = useState(0);
+
+  useEffect(() => {
+    if (!currentUser || !dbService.supabase) {
+      setOrdersCount(0);
+      return;
+    }
+
+    const fetchOrdersCount = async () => {
+      try {
+        const orders = await dbService.getUserOrders(currentUser.id);
+        setOrdersCount(orders?.length || 0);
+      } catch (err) {
+        console.error("Error fetching orders count:", err);
+      }
+    };
+
+    fetchOrdersCount();
+
+    // Listen for new orders to update count
+    const channel = dbService.supabase
+      .channel(`orders-count-${currentUser.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'orders',
+        filter: `user_id=eq.${currentUser.id}`
+      }, () => {
+        fetchOrdersCount();
+      })
+      .subscribe();
+
+    return () => {
+      dbService.supabase?.removeChannel(channel);
+    };
+  }, [currentUser]);
+
   const [bannerIdx, setBannerIdx] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setBannerIdx(i => (i + 1) % SHOPPING_BANNERS.length), 4000);
@@ -4800,16 +4872,26 @@ export default function App() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setIsOrdersOpen(true)}
-                    className={`flex items-center justify-center w-[42px] h-[42px] rounded-full transition-all active:scale-95 shadow-md shadow-[#38b000]/10 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-stone-200 text-[#38b000]'}`}
+                    className={`relative flex items-center justify-center w-[42px] h-[42px] rounded-full transition-all active:scale-95 shadow-md shadow-[#38b000]/10 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-stone-200 text-[#38b000]'}`}
                     title="Mes Commandes"
                   >
                     <ClipboardList size={20} />
+                    {ordersCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white pointer-events-none">
+                        {ordersCount}
+                      </span>
+                    )}
                   </button>
                   <button
                     onClick={() => setIsCartOpen(true)}
-                    className={`flex items-center justify-center w-[42px] h-[42px] rounded-full transition-all active:scale-95 shadow-md shadow-[#38b000]/10 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-stone-200 text-[#38b000]'}`}
+                    className={`relative flex items-center justify-center w-[42px] h-[42px] rounded-full transition-all active:scale-95 shadow-md shadow-[#38b000]/10 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-stone-200 text-[#38b000]'}`}
                   >
                     <ShoppingBag size={20} />
+                    {list.filter(i => i.isInCart).length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#38b000] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white pointer-events-none">
+                        {list.filter(i => i.isInCart).length}
+                      </span>
+                    )}
                   </button>
                   <button
                     onClick={() => setShowAddShoppingModal(true)}
