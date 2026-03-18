@@ -6,9 +6,9 @@ const config: CapacitorConfig = {
     webDir: 'dist',
     plugins: {
         StatusBar: {
-            style: 'DARK',          // DARK = icônes noires → visibles sur fond blanc
-            backgroundColor: '#00000000', // Status bar transparente depuis le tout début !
-            overlaysWebView: true,  // La barre superpose le contenu web dès le chargement natif
+            style: 'DARK',
+            backgroundColor: '#f3f4f6', // Vous pouvez ajuster cette couleur si besoin
+            overlaysWebView: false,  // Empêche la barre de se superposer au contenu web
         },
     },
 };
