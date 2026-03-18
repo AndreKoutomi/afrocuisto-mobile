@@ -3554,10 +3554,10 @@ export default function App() {
   };
 
   const renderProfile = () => (
-    <div className={`flex-1 flex flex-col pb-44 pt-4 relative ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
+    <div className={`flex-1 flex flex-col pb-44 relative ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '16px' }}>
       <AnimatePresence>
         {profileSubView && (
-          <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={springTransition} className={`absolute inset-0 z-50 p-6 pt-6 flex flex-col ${isDark ? 'bg-black' : 'bg-white'}`}>
+          <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={springTransition} className={`absolute inset-0 z-50 p-6 flex flex-col ${isDark ? 'bg-black' : 'bg-white'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 24px)' : '24px' }}>
             <header className="flex items-center justify-between mb-8 shrink-0">
               <div className="flex items-center gap-4">
                 <button onClick={() => setProfileSubView(null)} className="p-2 btn-back-circle bg-stone-50 rounded-full"><ChevronLeft size={20} /></button>
@@ -4515,7 +4515,7 @@ export default function App() {
           className={`absolute inset-0 z-[850] overflow-hidden w-full flex flex-col ${isDark ? 'bg-[#000000]' : 'bg-[#FFFFFF]'}`}
         >
           {/* Header Custom design */}
-          <div className="px-6 pt-12 pb-6 flex items-center justify-between">
+          <div className="px-6 pb-6 flex items-center justify-between" style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 24px)' : '48px' }}>
             <button onClick={goBack} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 ${isDark ? 'bg-white/5 text-white' : 'text-stone-800'}`}>
               <ArrowLeft size={22} strokeWidth={2.5} />
             </button>
@@ -4840,7 +4840,7 @@ export default function App() {
     });
 
     return (
-      <div className={`flex-1 flex flex-col pb-44 ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>
+      <div className={`flex-1 flex flex-col pb-44 ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 8px)' : '8px' }}>
 
         {/* ── Promo Banner ── */}
         <div className="mx-4 mt-4 mb-2 rounded-[24px] overflow-hidden relative" style={{ background: banner.bg, minHeight: 150 }}>
