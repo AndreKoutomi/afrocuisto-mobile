@@ -2659,9 +2659,8 @@ export default function App() {
     if (Capacitor.isNativePlatform()) {
       const applyStatusBar = async () => {
         try {
-          // L'overlay n'est plus forcé à "true" au runtime.
-          // La configuration (overlaysWebView: false dans capacitor.config.ts) s'en charge.
-          // Android pousse automatiquement le contenu web en-dessous de la status bar.
+          // On active l'overlay pour que le CSS env(safe-area-inset-top) calcule la status bar
+          await StatusBar.setOverlaysWebView({ overlay: true });
           if (isDark) {
             await StatusBar.setStyle({ style: Style.Dark });
           } else {
@@ -2701,7 +2700,7 @@ export default function App() {
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '16px 24px',
-          paddingTop: '24px',
+          paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 12px)' : '24px',
           position: 'sticky',
           top: 0,
           background: isDark ? '#000000ff' : '#f3f4f6',
@@ -3172,7 +3171,7 @@ export default function App() {
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '16px 24px',
-        paddingTop: '24px',
+        paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 12px)' : '24px',
         position: 'sticky',
         top: 0,
         background: isDark ? '#000000ff' : '#f3f4f6',
@@ -3511,7 +3510,7 @@ export default function App() {
       <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
         <header
           className="px-6 pb-8 flex items-center justify-between"
-          style={{ paddingTop: '24px' }}
+          style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px' }}
         >
           <h1 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.favorites}</h1>
           {isOffline && (
@@ -3906,7 +3905,7 @@ export default function App() {
 
           {/* Sticky floating menu (moved outside scroll view) */}
           <div className="absolute left-6 flex flex-col gap-3 z-[800] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
-            top: '32px',
+            top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 12px)' : '32px',
             backgroundColor: isDark ? 'rgba(31, 41, 55, 0.65)' : 'rgba(243, 244, 246, 0.85)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)'
           }}>
@@ -4157,7 +4156,7 @@ export default function App() {
         >
           {/* Floating Back Button - Style matched with RecipeDetail */}
           <div className="absolute left-6 flex flex-col gap-3 z-[800] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
-            top: '32px',
+            top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 12px)' : '32px',
             backgroundColor: isDark ? 'rgba(31, 41, 55, 0.65)' : 'rgba(243, 244, 246, 0.85)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)'
           }}>
@@ -5269,7 +5268,7 @@ export default function App() {
         {/* ── Scrollable content ── */}
         <div
           className="flex-1 flex flex-col overflow-y-auto no-scrollbar px-7 pb-10 w-full max-w-md mx-auto relative z-10"
-          style={{ paddingTop: '56px' }}
+          style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 32px)' : '56px' }}
         >
 
           {/* ── Brand / OTP header ── */}
