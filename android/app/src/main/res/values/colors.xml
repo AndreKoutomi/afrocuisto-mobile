@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Couleur principale de l'app (orange AfroCuisto) -->
+    <color name="colorPrimary">#FB5607</color>
+    <!-- Couleur de la status bar → transparent pour laisser Capacitor gérer -->
+    <color name="colorPrimaryDark">@android:color/transparent</color>
+    <!-- Couleur d'accent -->
+    <color name="colorAccent">#FB5607</color>
+    <!-- Fond du splash screen -->
+    <color name="splashBackground">#FFFFFF</color>
+</resources>
