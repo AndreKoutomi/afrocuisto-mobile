@@ -3928,7 +3928,7 @@ export default function App() {
 
           </div>
 
-          <div ref={detailScrollRef} className="flex-1 overflow-y-auto no-scrollbar pb-36 relative min-h-0 bg-white">
+          <div ref={detailScrollRef} className={`flex-1 overflow-y-auto no-scrollbar relative min-h-0 bg-white transition-[padding] duration-300 ${selectedIngs.length > 0 ? 'pb-36' : 'pb-10'}`}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={recipe.id}
@@ -4066,44 +4066,53 @@ export default function App() {
             </AnimatePresence>
           </div>
 
-          <div className={`absolute bottom-0 inset-x-0 p-6 pb-10 flex items-center gap-4 z-[850] ${isDark ? 'bg-black/80 backdrop-blur-xl' : 'bg-white/80 backdrop-blur-xl border-t border-stone-100'}`}>
-            <button
-              onClick={() => {
-                const selectedList = (recipe.ingredients || [])
-                  .filter((_, i) => selectedIngs.includes(i))
-                  .map(ing => ({
-                    id: Math.random().toString(36).substr(2, 9),
-                    item: ing.item,
-                    amount: ing.amount,
-                    isPurchased: false,
-                    recipeName: recipe.name,
-                    recipeId: recipe.id
-                  }));
+          <AnimatePresence>
+            {selectedIngs.length > 0 && (
+              <motion.div
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                className={`absolute bottom-0 inset-x-0 p-6 pb-10 flex items-center gap-4 z-[850] ${isDark ? 'bg-black/80 backdrop-blur-xl' : 'bg-white/90 backdrop-blur-xl border-t border-stone-200 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]'}`}
+              >
+                <button
+                  onClick={() => {
+                    const selectedList = (recipe.ingredients || [])
+                      .filter((_, i) => selectedIngs.includes(i))
+                      .map(ing => ({
+                        id: Math.random().toString(36).substr(2, 9),
+                        item: ing.item,
+                        amount: ing.amount,
+                        isPurchased: false,
+                        recipeName: recipe.name,
+                        recipeId: recipe.id
+                      }));
 
-                const currentList = currentUser?.shoppingList || [];
-                updateShoppingList([...currentList, ...selectedList]);
-                setIsAdded(true);
-                setTimeout(() => {
-                  setIsAdded(false);
-                  setSelectedIngs([]);
-                }, 1500);
-              }}
-              disabled={selectedIngs.length === 0 || isAdded}
-              className={`w-full h-14 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl ${isAdded ? 'bg-emerald-500 shadow-emerald-500/20' : (selectedIngs.length > 0 ? 'bg-[#fb5607] text-white shadow-[#fb5607]/20 active:scale-95' : 'bg-stone-100 text-stone-400 opacity-60 grayscale cursor-not-allowed hidden')}`}
-            >
-              {isAdded ? (
-                <>
-                  <Check size={20} className="text-white" strokeWidth={3} />
-                  <span>Ingrédients Ajoutés !</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={20} />
-                  <span>Ajouter à ma liste de courses ({selectedIngs.length})</span>
-                </>
-              )}
-            </button>
-          </div>
+                    const currentList = currentUser?.shoppingList || [];
+                    updateShoppingList([...currentList, ...selectedList]);
+                    setIsAdded(true);
+                    setTimeout(() => {
+                      setIsAdded(false);
+                      setSelectedIngs([]);
+                    }, 1500);
+                  }}
+                  disabled={isAdded}
+                  className={`w-full h-14 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-xl ${isAdded ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-[#fb5607] text-white shadow-[#fb5607]/20 active:scale-95'}`}
+                >
+                  {isAdded ? (
+                    <>
+                      <Check size={20} className="text-white" strokeWidth={3} />
+                      <span>Ingrédients Ajoutés !</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={20} />
+                      <span>Ajouter à ma liste ({selectedIngs.length})</span>
+                    </>
+                  )}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       );
     };
