@@ -1712,9 +1712,9 @@ export default function App() {
       if (!Capacitor.isNativePlatform()) {
         document.documentElement.style.setProperty('--nav-inset-bottom', 'env(safe-area-inset-bottom, 0px)');
       } else {
-        // Force un padding minimum (40px) pour éviter que les boutons Android (Home/Back/Recent)
-        // ne masquent la barre de navigation flottante de l'app.
-        document.documentElement.style.setProperty('--nav-inset-bottom', 'max(env(safe-area-inset-bottom, 0px), 40px)');
+        // Force un padding minimum plus discret (24px) pour éviter que la barre de navigation
+        // ne soit masquée, mais sans pour autant flotter trop haut sur l'écran.
+        document.documentElement.style.setProperty('--nav-inset-bottom', 'max(env(safe-area-inset-bottom, 0px), 24px)');
       }
     };
 
