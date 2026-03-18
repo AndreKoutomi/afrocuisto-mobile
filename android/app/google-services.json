@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "983989027916",
+    "project_id": "afrocuisto-b023d",
+    "storage_bucket": "afrocuisto-b023d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:983989027916:android:0dca148173228e094c60e9",
+        "android_client_info": {
+          "package_name": "com.afrocuisto.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKdwEG_a6XLtay3dzvYaS6lKderXCgUJ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

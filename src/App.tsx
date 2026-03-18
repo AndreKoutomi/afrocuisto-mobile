@@ -1735,7 +1735,12 @@ export default function App() {
 
   // --- Request Permissions (Location & Notifications) ---
   useEffect(() => {
-    const requestAppPermissions = async () => {
+    let pushListener: any;
+    let errListener: any;
+    let receiveListener: any;
+    let actionListener: any;
+
+    const initNotifications = async () => {
       // Only run on native platforms (Android/iOS)
       if (!Capacitor.isNativePlatform()) return;
 
@@ -1747,7 +1752,6 @@ export default function App() {
         }
 
         // 2. Notifications (Push & Local)
-        // Requesting for Push usually covers the OS permission for showing notifications
         const pushStatus = await PushNotifications.checkPermissions();
         if (pushStatus.receive !== 'granted') {
           await PushNotifications.requestPermissions();
@@ -1757,60 +1761,68 @@ export default function App() {
         if (localStatus.display !== 'granted') {
           await LocalNotifications.requestPermissions();
         }
+
+        // --- Configure Push Notifications Listeners ---
+        // Register with FCM/APNS ONLY AFTER permissions
+        await PushNotifications.register();
+
+        // On successful registration, you get a token
+        pushListener = await PushNotifications.addListener('registration', (token: Token) => {
+          console.log('Push registration success, token: ' + token.value);
+          if (currentUser) {
+            dbService.supabase?.from('user_profiles')
+              .update({ push_token: token.value })
+              .eq('id', currentUser.id)
+              .then(({ error }) => {
+                if (error) console.error("Error saving token to Supabase:", error);
+              });
+          }
+        });
+
+        // Some issue with registration
+        errListener = await PushNotifications.addListener('registrationError', (error: any) => {
+          console.error('Error on registration: ' + JSON.stringify(error));
+        });
+
+        // Show a banner even if the app is in the foreground
+        receiveListener = await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+          console.log('Push received: ' + JSON.stringify(notification));
+        });
+
+        // Method called when tapping on a notification
+        actionListener = await PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
+          console.log('Push action performed: ' + JSON.stringify(notification));
+        });
+
       } catch (err) {
-        console.warn("Permissions request failed or was dismissed:", err);
+        console.warn("Notifications initialization failed:", err);
       }
     };
 
-    requestAppPermissions();
+    initNotifications();
 
-    // --- Configure Push Notifications Listeners ---
-    if (Capacitor.isNativePlatform()) {
-      // Register with FCM/APNS
-      PushNotifications.register();
-
-      // On successful registration, you get a token
-      // This token should be sent to your backend (Supabase) to target this specific device
-      PushNotifications.addListener('registration', (token: Token) => {
-        console.log('Push registration success, token: ' + token.value);
-        // Tip: Save this token to currentUser record in Supabase user_profiles
-        if (currentUser) {
-          dbService.supabase?.from('user_profiles')
-            .update({ push_token: token.value })
-            .eq('id', currentUser.id);
-        }
-      });
-
-      // Some issue with registration
-      PushNotifications.addListener('registrationError', (error: any) => {
-        console.error('Error on registration: ' + JSON.stringify(error));
-      });
-
-      // Show a banner even if the app is in the foreground
-      PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-        console.log('Push received: ' + JSON.stringify(notification));
-        // You can use LocalNotifications here to "re-trigger" the display if needed
-      });
-
-      // Method called when tapping on a notification
-      PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
-        console.log('Push action performed: ' + JSON.stringify(notification));
-        // Logic to navigate to a specific recipe or section
-      });
-    }
-  }, [currentUser]);
+    return () => {
+      // Cleanup listeners to avoid memory leaks and multiple registrations
+      if (pushListener) pushListener.remove();
+      if (errListener) errListener.remove();
+      if (receiveListener) receiveListener.remove();
+      if (actionListener) actionListener.remove();
+    };
+  }, [currentUser?.id]); // Use id to avoid re-running on every object reference change
 
   useEffect(() => {
     // Initial Auth Check
     const initAuth = async () => {
       if (!dbService.supabase) return;
-      const { data: { session } } = await dbService.supabase.auth.getSession();
+      const sessionRes = await dbService.supabase.auth.getSession();
+      const session = sessionRes?.data?.session;
 
       const updateUserObject = async (sessionUser: any) => {
         setIsSyncing(true);
         try {
           // Force fetch the freshest user auth data to catch instant bans
-          const { data: { user: freshestUser } } = await dbService.supabase!.auth.getUser();
+          const userRes = await dbService.supabase!.auth.getUser();
+          const freshestUser = userRes?.data?.user;
           const targetUser = freshestUser || sessionUser;
 
           if (targetUser?.user_metadata?.banned) {

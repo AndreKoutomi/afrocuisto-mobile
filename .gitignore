@@ -8,3 +8,11 @@ coverage/
 !.env.example
 .idea/
 *.apk
+
+# Firebase/Google secrets
+afrocuisto-b023d-firebase-adminsdk-*.json
+google-services.json
+!android/app/google-services.json
+
+# Supabase
+supabase/.temp/

@@ -125,9 +125,14 @@ export const dbService = {
         }
 
         // Fallback to local storage if offline/error
-        const cached = localStorage.getItem(REMOTE_RECIPES_KEY);
-        if (cached) {
-            return JSON.parse(cached);
+        try {
+            const cached = localStorage.getItem(REMOTE_RECIPES_KEY);
+            if (cached) {
+                return JSON.parse(cached);
+            }
+        } catch (e) {
+            console.error('Error parsing cached recipes:', e);
+            localStorage.removeItem(REMOTE_RECIPES_KEY);
         }
 
         throw new Error('Internet connection required for initial data load.');
@@ -150,8 +155,12 @@ export const dbService = {
         } catch (err) {
             console.error('Merchants sync error:', err);
         }
-        const cached = localStorage.getItem(REMOTE_MERCHANTS_KEY);
-        return cached ? JSON.parse(cached) : [];
+        try {
+            const cached = localStorage.getItem(REMOTE_MERCHANTS_KEY);
+            return cached ? JSON.parse(cached) : [];
+        } catch (e) {
+            return [];
+        }
     },
 
     async getRemoteSections(): Promise<any[]> {
@@ -201,8 +210,12 @@ export const dbService = {
         } catch (err) {
             console.error('Products sync error:', err);
         }
-        const cached = localStorage.getItem(REMOTE_PRODUCTS_KEY);
-        return cached ? JSON.parse(cached) : [];
+        try {
+            const cached = localStorage.getItem(REMOTE_PRODUCTS_KEY);
+            return cached ? JSON.parse(cached) : [];
+        } catch (e) {
+            return [];
+        }
     },
 
     // ── Email/Password Auth ─────────────────────────────────────────────────
@@ -380,8 +393,12 @@ export const dbService = {
 
     // ── User Management (Local Sync Fallback for Favorites/Settings) ────────
     getUsers: (): User[] => {
-        const data = localStorage.getItem(USERS_KEY);
-        return data ? JSON.parse(data) : [];
+        try {
+            const data = localStorage.getItem(USERS_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            return [];
+        }
     },
 
     saveUser: (user: User) => {
@@ -402,8 +419,14 @@ export const dbService = {
     },
 
     getCurrentUser: (): User | null => {
-        const data = localStorage.getItem(CURRENT_USER_KEY);
-        return data ? JSON.parse(data) : null;
+        try {
+            const data = localStorage.getItem(CURRENT_USER_KEY);
+            return data ? JSON.parse(data) : null;
+        } catch (e) {
+            console.error('Corrupt user data in localStorage:', e);
+            localStorage.removeItem(CURRENT_USER_KEY);
+            return null;
+        }
     },
 
     setCurrentUser: (user: User | null) => {
