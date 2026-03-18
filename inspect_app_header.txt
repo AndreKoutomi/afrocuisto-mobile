@@ -1,0 +1,60 @@
+﻿              </motion.div>
+            )}
+            {isSyncing && !isOffline && (
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}>
+                <Wifi size={14} style={{ color: '#fb5607' }} />
+              </motion.div>
+            )}
+            <button onClick={() => setIsNotifCenterOpen(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, position: 'relative' }}>
+              <Bell size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
+              {unreadCount > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -4, background: '#F94D00', color: '#fff', fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${isDark ? '#000' : '#f3f4f6'}` }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <button onClick={() => setIsSearchExpanded(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
+              <Search size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
+            </button>
+          </div>
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+        {/* Dynamic Sections from Admin CMS */}
+        {dynamicSections.filter((section: any) => !section.config?.page || section.config.page === 'home').map((section, sidx) => {
+          let sectionRecipes: Recipe[] = [];
+
+          if (section.type === 'category') {
+            sectionRecipes = allRecipes.filter(r => r.category === section.config?.category);
+          } else if (section.type === 'region') {
+            sectionRecipes = allRecipes.filter(r => r.region?.toLowerCase().includes(section.config?.region?.toLowerCase() || ''));
+          } else if (section.type === 'quick') {
+            const maxTime = parseInt(section.config?.max_prep_time) || 30;
+            sectionRecipes = allRecipes.filter(r => (parseInt(r.prep_time) || 60) <= maxTime);
+          } else if (section.type === 'all') {
+            sectionRecipes = [...allRecipes];
+          } else if (section.type === 'advertising') {
+            const productIds = section.config?.merchant_ids || section.merchant_ids || [];
+            sectionRecipes = allProducts.filter(p => productIds.includes(p.id));
+          } else {
+            // Default to manual selection or 'query' (backwards compatibility)
+            sectionRecipes = allRecipes.filter(r => section.recipe_ids?.includes(r.id));
+          }
+
+          // Apply limit only if explicitly configured — default to 200 to show all selected recipes
+          sectionRecipes = sectionRecipes.slice(0, section.config?.limit || 200);
+
+          if (sectionRecipes.length === 0) return null;
+
+          if (section.type === 'dynamic_carousel' || section.type === 'featured' || section.type === 'banner' || section.type === 'advertising') {
+            return (

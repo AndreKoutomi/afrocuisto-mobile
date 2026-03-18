@@ -5245,21 +5245,38 @@ export default function App() {
     );
 
     return (
-      <div className={`flex-1 flex flex-col min-h-screen relative overflow-hidden ${isDark ? 'bg-[#000000]' : 'bg-white'}`}>
+      <div className={`flex-1 flex flex-col min-h-screen relative overflow-hidden ${isDark ? 'bg-[#000000]' : 'bg-white'}`} style={{ isolation: 'isolate' }}>
 
-        {/* ── Decorative circles ── */}
-        <div className="absolute top-0 right-0 pointer-events-none select-none overflow-hidden" style={{ width: 220, height: 220 }}>
+        {/* ── Masque status bar : couvre la zone en haut pour tout débordement éventuel ── */}
+        {Capacitor.isNativePlatform() && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 'env(safe-area-inset-top, 44px)',
+              background: isDark ? '#000000' : '#ffffff',
+              zIndex: 9999,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+
+        {/* ── Decorative circles ── repositionnés pour ne pas déborder dans la status bar */}
+        <div className="absolute top-0 right-0 pointer-events-none select-none" style={{ width: 220, height: 220, overflow: 'hidden' }}>
           <div className="absolute rounded-full" style={{
-            width: 220, height: 220, top: -80, right: -60,
+            width: 220, height: 220, top: 10, right: -60,
             background: 'rgba(251,86,7,0.08)',
           }} />
           <div className="absolute rounded-full" style={{
-            width: 130, height: 130, top: -40, right: -30,
+            width: 110, height: 110, top: 20, right: -20,
             background: 'linear-gradient(135deg,#fb5607 0%,#e04e00 100%)',
             boxShadow: '0 8px 32px rgba(251,86,7,0.35)',
           }} />
         </div>
-        <div className="absolute bottom-16 left-0 pointer-events-none select-none" style={{ width: 80, height: 80 }}>
+        <div className="absolute bottom-16 left-0 pointer-events-none select-none" style={{ width: 80, height: 80, overflow: 'hidden' }}>
           <div className="absolute rounded-full" style={{
             width: 80, height: 80, bottom: 0, left: -30, opacity: 0.7,
             background: 'linear-gradient(135deg,#fb5607 0%,#e04e00 100%)',
