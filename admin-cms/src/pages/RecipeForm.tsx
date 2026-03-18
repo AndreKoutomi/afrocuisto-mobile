@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseAdmin } from '../lib/supabase';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, ImagePlus, X, Clock, Flame, Globe, Tag, BookOpen, Sparkles, ChefHat, Leaf, Wand2, Zap, Youtube } from 'lucide-react';
 import { aiService } from '../lib/ai';
@@ -166,10 +166,10 @@ export function RecipeForm() {
 
         const trySave = async (data: Record<string, any>) => {
             if (id) {
-                return supabase.from('recipes').update(data).eq('id', id);
+                return supabaseAdmin.from('recipes').update(data).eq('id', id);
             } else {
                 (data as any).id = `rec_${Date.now()}`;
-                return supabase.from('recipes').insert([data]);
+                return supabaseAdmin.from('recipes').insert([data]);
             }
         };
 

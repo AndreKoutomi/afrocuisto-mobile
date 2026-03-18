@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseAdmin } from '../lib/supabase';
 import { aiService } from '../lib/ai';
 import {
     Sparkles, X, ChefHat, ArrowRight, ArrowLeft, Check,
@@ -137,7 +137,7 @@ export function RecipeAIWizard({ onClose, onSaved }: Props) {
                 servings: generated.servings ?? 4,
             };
 
-            const { error: dbError } = await supabase.from('recipes').insert([payload]);
+            const { error: dbError } = await supabaseAdmin.from('recipes').insert([payload]);
             if (dbError) throw dbError;
             setStep('done');
             onSaved?.();

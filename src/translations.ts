@@ -61,6 +61,7 @@ export const translations = {
         french: "Français",
         english: "Anglais",
         spanish: "Espagnol",
+        offlineMessage: "Vous êtes hors ligne. Vérifiez votre connexion.",
 
         // --- Accueil (Home) ---
         hello: "Bonjour",
@@ -214,6 +215,7 @@ export const translations = {
         french: "French",
         english: "English",
         spanish: "Spanish",
+        offlineMessage: "You are offline. Please check your connection.",
         hello: "Hello",
         homeSlogan: "The soul of Beninese cuisine",
         searchPlaceholder: "Search for a dish, a craving...",
@@ -351,6 +353,7 @@ export const translations = {
         french: "Francés",
         english: "Inglés",
         spanish: "Español",
+        offlineMessage: "Estás desconectado. Revisa ton conexión.",
         hello: "Hola",
         homeSlogan: "El alma de la cocina beninesa",
         searchPlaceholder: "Buscar un plato, un antojo...",

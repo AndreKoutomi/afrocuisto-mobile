@@ -14,7 +14,7 @@
 import { CATEGORIES } from '../pages/RecipeForm'; // Importation des catégories de recettes
 import { supabase } from '../lib/supabase'; // Importation du client de base de données
 
-const DEFAULT_MODEL = 'gemini-1.5-flash'; // Modèle d'intelligence artificielle utilisé par défaut
+const DEFAULT_MODEL = 'gemini-flash-latest'; // Modèle d'intelligence artificielle utilisé par défaut (stable sur Free Tier)
 
 // Structure d'une réponse renvoyée par ce service
 export interface AIServiceResponse {
@@ -165,8 +165,7 @@ class AIService {
                 body = {
                     contents: [{ parts: [{ text: `${systemPrompt}\n\nUser request: ${prompt}` }] }],
                     generationConfig: {
-                        temperature: 0.8,
-                        responseMimeType: 'application/json'
+                        temperature: 0.8
                     },
                 };
 
@@ -178,7 +177,8 @@ class AIService {
             };
 
             let response = await tryFetch('v1beta', model);
-            if (response.status === 404) response = await tryFetch('v1', model);
+
+            // Fallback stable si le modèle spécifique de l'env n'est pas trouvé
             if (response.status === 404 && model !== DEFAULT_MODEL) {
                 response = await tryFetch('v1beta', DEFAULT_MODEL);
             }
@@ -309,14 +309,26 @@ Réponds avec un JSON :
     // Crée une section entière de l'accueil
     async generateSection(type: string, theme: string, recipes: { id: string; name: string }[]): Promise<AIServiceResponse> {
         const catalogContext = recipes.map(r => `ID: ${r.id} | Nom: ${r.name}`).join('\n');
-        const systemPrompt = `Tu es un expert UX pour l'app AfroCuisto.
-Génère une section de type "${type}" sur le thème "${theme}".
-Utilise ces recettes :
+        const systemPrompt = `Tu es un expert UX pour l'app AfroCuisto. Ton rôle est de créer une section attractive pour la page d'accueil de l'application mobile.
+Type de section : "${type}"
+Thème/Objectif : "${theme}"
+
+Catalogue disponible (Choisis UNIQUEMENT parmi ces IDs) :
 ${catalogContext}
 
-Réponds uniquement en JSON sans texte autour.`;
+Réponds avec un objet JSON PUR ayant EXACTEMENT cette structure :
+{
+  "title": "Titre accrocheur (ex: Spécialités Épicées)",
+  "subtitle": "Un sous-titre invitant à la découverte",
+  "type": "${type}",
+  "page": "home",
+  "recipe_ids": ["id1", "id2", "id3"], 
+  "reasoning": "Explication courte du choix des plats"
+}
+
+IMPORTANT : Ne mets aucun texte avant ou après le JSON. Retourne entre 3 et 8 IDs de recettes pertinents.`;
         try {
-            const text = await this.callModel('Generate the section JSON now.', systemPrompt);
+            const text = await this.callModel('Génère le JSON de la section maintenant.', systemPrompt);
             return { data: this.extractJson(text) };
         } catch (err: any) {
             console.error('AI Generation error:', err);

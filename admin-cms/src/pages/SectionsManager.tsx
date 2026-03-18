@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseAdmin } from '../lib/supabase';
 import {
     Plus, Trash2, ArrowUp, ArrowDown, LayoutGrid, GalleryHorizontal,
     List, AlignJustify, Smartphone, Compass, Sparkles, RefreshCw
@@ -384,9 +384,9 @@ export function SectionsManager() {
                                             const res = await aiService.generateSection(selectedType, theme, sample);
                                             if (res.data) {
                                                 setGeneratedSection(res.data);
-                                                setEditedTitle(res.data.title);
-                                                setEditedSubtitle(res.data.subtitle);
-                                                setEditedRecipeIds(res.data.recipe_ids);
+                                                setEditedTitle(res.data.title || '');
+                                                setEditedSubtitle(res.data.subtitle || '');
+                                                setEditedRecipeIds(Array.isArray(res.data.recipe_ids) ? res.data.recipe_ids : []);
                                                 setWizardStep(4);
                                             } else {
                                                 alert(res.error || 'Erreur IA : Recommencez ou vérifiez votre clé API.');
@@ -422,15 +422,17 @@ export function SectionsManager() {
                                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#9ca3af', marginBottom: '5px', textTransform: 'uppercase' }}>Sous-titre</label>
                                     <input type="text" value={editedSubtitle} onChange={e => setEditedSubtitle(e.target.value)} style={{ width: '100%', padding: '8px', background: 'none', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '15px' }} />
 
-                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#9ca3af', marginBottom: '5px', textTransform: 'uppercase' }}>Recettes ({editedRecipeIds.length})</label>
-                                    <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>{editedRecipeIds.join(', ')}</p>
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#9ca3af', marginBottom: '5px', textTransform: 'uppercase' }}>Recettes ({editedRecipeIds?.length || 0})</label>
+                                    <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>
+                                        {Array.isArray(editedRecipeIds) ? editedRecipeIds.join(', ') : 'Aucune recette sélectionnée'}
+                                    </p>
                                 </div>
 
                                 <button
                                     onClick={async () => {
                                         try {
                                             const newId = `${Date.now()}`;
-                                            const { error } = await supabase.from('home_sections').insert([{
+                                            const { error } = await supabaseAdmin.from('home_sections').insert([{
                                                 id: newId,
                                                 title: editedTitle,
                                                 subtitle: editedSubtitle,
