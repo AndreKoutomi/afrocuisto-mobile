@@ -1706,26 +1706,16 @@ export default function App() {
 
   // --- Adaptive Android System Navigation Bar ---
   // Automatically detects the height of the Android system navigation bar
-  // (gesture / 2-button / 3-button) and injects it as a CSS variable.
+  // and injects it as a CSS variable using env() with a robust max() fallback.
   useEffect(() => {
     const applyNavInset = () => {
       if (!Capacitor.isNativePlatform()) {
-        // On web: rely on CSS env(safe-area-inset-bottom)
         document.documentElement.style.setProperty('--nav-inset-bottom', 'env(safe-area-inset-bottom, 0px)');
-        return;
+      } else {
+        // Force un padding minimum (40px) pour éviter que les boutons Android (Home/Back/Recent)
+        // ne masquent la barre de navigation flottante de l'app.
+        document.documentElement.style.setProperty('--nav-inset-bottom', 'max(env(safe-area-inset-bottom, 0px), 40px)');
       }
-
-      // On native Android: calculate actual nav bar height
-      // screen.height is the physical screen height in CSS pixels
-      // window.innerHeight is the visible content area (excludes nav bar)
-      const screenH = window.screen.height;
-      const windowH = window.innerHeight;
-      const navBarH = Math.max(0, screenH - windowH);
-
-      // Also check for status bar by reading the existing pt applied
-      // We give a minimum of 16px for gesture navigation overlap
-      const minInset = navBarH > 0 ? navBarH : 0;
-      document.documentElement.style.setProperty('--nav-inset-bottom', `${minInset}px`);
     };
 
     applyNavInset();
