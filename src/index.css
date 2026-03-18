@@ -654,9 +654,11 @@
    FEDAPAY & IFRAMES GLOBAL FIX (Status Bar)
    ========================================================================== */
 /* Décale les overlays externes (ex: FedaPay) sous la barre d'état physique */
-body>iframe {
-  top: 44px !important;
-  height: calc(100% - 44px) !important;
+body>iframe,
+.modal.micromodal-slide,
+.modal__overlay {
+  top: calc(env(safe-area-inset-top, 44px)) !important;
+  height: calc(100% - env(safe-area-inset-top, 44px)) !important;
 }
 
 .featured-cta {
