@@ -2659,13 +2659,14 @@ export default function App() {
     if (Capacitor.isNativePlatform()) {
       const applyStatusBar = async () => {
         try {
-          // L'overlay est réactivé (true) car FedaPay ne respecte pas les limites système.
-          // Nous reprenons le contrôle total avec padding interne (pt-[44px]) + le hack CSS sur index.css.
-          await StatusBar.setOverlaysWebView({ overlay: false });
+          // Nous activons l'overlay pour un look immersif, mais nous gérons le padding manuellement
+          // via env(safe-area-inset-top) et pt-[44px] en fallback.
+          await StatusBar.setOverlaysWebView({ overlay: true });
 
           if (isDark) {
             await StatusBar.setStyle({ style: Style.Dark });
           } else {
+            // Style.Light = icônes sombres pour fond clair
             await StatusBar.setStyle({ style: Style.Light });
           }
         } catch (error) {
@@ -2696,7 +2697,19 @@ export default function App() {
         minHeight: '100vh',
       }}>
         {/* Top bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 24px 16px', position: 'sticky', top: 0, background: isDark ? '#000000ff' : '#f3f4f6', zIndex: 50 }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px 24px',
+          paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 24px) + 12px)' : '24px',
+          position: 'sticky',
+          top: 0,
+          background: isDark ? '#000000ff' : '#f3f4f6',
+          zIndex: 100,
+          backdropFilter: 'blur(20px)',
+          borderBottom: isDark ? '1px solid #ffffff10' : '1px solid #00000005'
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <img src="/icon.png" alt="AfroCuisto Logo" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
             <span style={{ fontSize: '22px', fontWeight: 900, color: isDark ? '#ffffff' : '#111827', letterSpacing: '-0.02em' }}>AfroCuisto</span>
@@ -3155,7 +3168,19 @@ export default function App() {
   const renderExplorer = () => (
     <div className="flex-1 flex flex-col pb-44">
       {/* Immersive Search Header -> Now using Home page style button */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 24px 16px', position: 'sticky', top: 0, background: isDark ? '#000000ff' : '#f3f4f6', zIndex: 50 }}>
+      <header style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '16px 24px',
+        paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 24px) + 12px)' : '24px',
+        position: 'sticky',
+        top: 0,
+        background: isDark ? '#000000ff' : '#f3f4f6',
+        zIndex: 50,
+        backdropFilter: 'blur(20px)',
+        borderBottom: isDark ? '1px solid #ffffff10' : '1px solid #00000005'
+      }}>
         <h1 className={`text-2xl font-black shrink-0 ${isDark ? 'text-white' : 'text-stone-900'} tracking-tight`}>
           {selectedCategory || t.explorer}
         </h1>
@@ -3484,8 +3509,11 @@ export default function App() {
     const favoriteRecipes = dbService.getFavorites(currentUser!, allRecipes);
 
     return (
-      <div className={`flex-1 flex flex-col pb-44 pt-4 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
-        <header className="px-6 pt-4 pb-8 flex items-center justify-between">
+      <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
+        <header
+          className="px-6 pb-8 flex items-center justify-between"
+          style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 24px) + 16px)' : '24px' }}
+        >
           <h1 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.favorites}</h1>
           {isOffline && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
@@ -3878,7 +3906,8 @@ export default function App() {
           </div>
 
           {/* Sticky floating menu (moved outside scroll view) */}
-          <div className="absolute left-6 top-8 flex flex-col gap-3 z-[800] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
+          <div className="absolute left-6 flex flex-col gap-3 z-[800] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
+            top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 24px) + 12px)' : '32px',
             backgroundColor: isDark ? 'rgba(31, 41, 55, 0.65)' : 'rgba(243, 244, 246, 0.85)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)'
           }}>
@@ -4128,7 +4157,8 @@ export default function App() {
           className={`absolute inset-0 z-[700] overflow-hidden w-full flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.15)] ${isDark ? 'bg-[#000000]' : 'bg-[#F9F9F9]'}`}
         >
           {/* Floating Back Button - Style matched with RecipeDetail */}
-          <div className="absolute left-6 top-8 flex flex-col gap-3 z-[800] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
+          <div className="absolute left-6 flex flex-col gap-3 z-[800] items-center p-2.5 rounded-full backdrop-blur-xl border transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.08)]" style={{
+            top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 24px) + 12px)' : '32px',
             backgroundColor: isDark ? 'rgba(31, 41, 55, 0.65)' : 'rgba(243, 244, 246, 0.85)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)'
           }}>
@@ -5237,7 +5267,10 @@ export default function App() {
         </div>
 
         {/* ── Scrollable content ── */}
-        <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar px-7 pt-14 pb-10 w-full max-w-md mx-auto relative z-10">
+        <div
+          className="flex-1 flex flex-col overflow-y-auto no-scrollbar px-7 pb-10 w-full max-w-md mx-auto relative z-10"
+          style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 24px) + 32px)' : '56px' }}
+        >
 
           {/* ── Brand / OTP header ── */}
           <AnimatePresence mode="wait">
@@ -5631,7 +5664,7 @@ export default function App() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-      className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl ${Capacitor.isNativePlatform() ? 'pt-[44px]' : 'pt-[env(safe-area-inset-top,4px)]'} transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-white'}`}
+      className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-white'}`}
     >
       {renderAuth()}
       <ModernAlertComponent
@@ -5649,7 +5682,7 @@ export default function App() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${Capacitor.isNativePlatform() ? 'pt-[44px]' : 'pt-[env(safe-area-inset-top,4px)]'} ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
+      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
     >
       <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative min-h-0">
         <AnimatePresence mode="wait">
