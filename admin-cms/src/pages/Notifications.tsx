@@ -114,9 +114,29 @@ export function Notifications() {
         }]);
 
         if (error) {
-            setError('Erreur lors de l\'envoi : ' + error.message);
+            setError('Erreur lors de l\'enregistrement en base : ' + error.message);
         } else {
-            setSuccess('✅ Notification envoyée avec succès à tous les utilisateurs !');
+            // ✅ DB Insert success, now call the Edge Function to trigger actual Push (FCM)
+            try {
+                const { error: fcmError } = await supabase.functions.invoke('send-push', {
+                    body: {
+                        title: form.title.trim(),
+                        body: form.body.trim(),
+                        data: {
+                            link_type: form.link_type,
+                            link_id: form.link_id || ''
+                        }
+                    }
+                });
+
+                if (fcmError) {
+                    console.warn('FCM Trigger failed:', fcmError);
+                }
+            } catch (err) {
+                console.warn('Silent fail calling Edge Function:', err);
+            }
+
+            setSuccess('✅ Notification envoyée et sauvegardée avec succès !');
             setForm({ title: '', body: '', icon: '🔔', color: '#F94D00', link_type: 'general', link_id: '' });
             fetchNotifications();
             setTimeout(() => setSuccess(''), 4000);

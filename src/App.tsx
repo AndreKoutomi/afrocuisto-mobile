@@ -1753,10 +1753,10 @@ export default function App() {
         // 3. Android Channels (CRITICAL for background notifications on Android 8+)
         if (Capacitor.getPlatform() === 'android') {
           await PushNotifications.createChannel({
-            id: 'fcm_default_channel',
-            name: 'Default',
-            description: 'Canal par défaut pour les notifications AfroCuisto',
-            importance: 5, // High importance
+            id: 'fcm_default_channel_v2',
+            name: 'AfroCuisto Notifications',
+            description: 'Canal pour les alertes gourmandes AfroCuisto',
+            importance: 5, // High importance (Sound + Banner)
             visibility: 1, // Public
             vibration: true,
           });

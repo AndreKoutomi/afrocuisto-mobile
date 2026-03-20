@@ -76,7 +76,9 @@ serve(async (req) => {
                             notification: {
                                 sound: "default",
                                 click_action: "OPEN_APP_NOTIFICATION",
-                                channel_id: "fcm_default_channel"
+                                channel_id: "fcm_default_channel_v2",
+                                default_sound_config: true,
+                                default_vibrate_config: true
                             }
                         }
                     }
