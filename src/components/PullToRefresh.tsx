@@ -6,21 +6,25 @@ interface PullToRefreshProps {
     onRefresh: () => Promise<void>;
     children: React.ReactNode;
     isDark?: boolean;
+    scrollRef?: React.RefObject<HTMLElement>;
 }
 
-export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, children, isDark }) => {
+export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, children, isDark, scrollRef }) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const y = useMotionValue(0);
-    const THRESHOLD = 100;
+    const THRESHOLD = 90;
 
     // Transform for visual feedback
     const rotate = useTransform(y, [0, THRESHOLD], [0, 360]);
-    const opacity = useTransform(y, [0, 40, THRESHOLD], [0, 0.4, 1]);
-    const scale = useTransform(y, [0, THRESHOLD], [0.8, 1]);
+    const opacity = useTransform(y, [0, 30, THRESHOLD], [0, 0.4, 1]);
+    const scale = useTransform(y, [0, THRESHOLD], [0.7, 1]);
 
     const handleTouchStart = (e: React.TouchEvent) => {
-        // Only allow pull-to-refresh if we are at the top of the scroll
-        if (window.scrollY > 5 || isRefreshing) return;
+        // Obtenir le scrollTop du conteneur parent ou de la fenêtre
+        const scrollTop = scrollRef?.current?.scrollTop ?? window.scrollY;
+
+        // On ne permet le pull-to-refresh QUE si on est tout en haut (scrollTop strict)
+        if (scrollTop > 2 || isRefreshing) return;
 
         const touch = e.touches[0];
         const startY = touch.clientY;
@@ -29,22 +33,22 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
         const handleTouchMove = (moveEvent: TouchEvent) => {
             const currentY = moveEvent.touches[0].clientY;
             const diff = currentY - startY;
+            const currentScrollTop = scrollRef?.current?.scrollTop ?? window.scrollY;
 
-            if (diff > 0 && window.scrollY <= 5) {
-                // We are pulling down from the top
+            // On ne pull que si on est en haut et qu'on tire vers le bas
+            if (diff > 0 && currentScrollTop <= 2) {
                 isPulling = true;
-                // Apply resistance: pull gets harder as you pull more
-                const resistance = 0.45;
-                const pull = Math.min(diff * resistance, THRESHOLD * 1.6);
+                const resistance = 0.4;
+                const pull = Math.min(diff * resistance, THRESHOLD * 1.4);
                 y.set(pull);
 
-                // Prevent default only if we are actually pulling, to not break normal scroll
+                // Bloquer le scroll natif pendant qu'on "pull"
                 if (pull > 5 && moveEvent.cancelable) {
                     moveEvent.preventDefault();
                 }
-            } else {
-                isPulling = false;
-                y.set(0);
+            } else if (isPulling) {
+                // Si on a commencé à pull mais qu'on remonte, on suit le doigt
+                y.set(Math.max(0, diff * 0.4));
             }
         };
 
@@ -54,25 +58,21 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 
             if (y.get() >= THRESHOLD) {
                 setIsRefreshing(true);
-                // Snap to threshold while refreshing
                 animate(y, THRESHOLD, { type: 'spring', stiffness: 300, damping: 30 });
 
                 try {
                     await onRefresh();
                 } catch (err) {
-                    console.error('Pull to refresh failed:', err);
+                    console.error('Refresh failed:', err);
                 } finally {
                     setIsRefreshing(false);
-                    // Snap back to 0
-                    animate(y, 0, { type: 'spring', stiffness: 300, damping: 30 });
+                    animate(y, 0, { type: 'spring', stiffness: 400, damping: 40 });
                 }
             } else {
-                // Snap back to 0 if threshold not reached
-                animate(y, 0, { type: 'spring', stiffness: 300, damping: 30 });
+                animate(y, 0, { type: 'spring', stiffness: 400, damping: 40 });
             }
         };
 
-        // Use non-passive to allow preventDefault
         window.addEventListener('touchmove', handleTouchMove, { passive: false });
         window.addEventListener('touchend', handleTouchEnd);
     };
@@ -80,53 +80,94 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
     return (
         <div
             className="pull-to-refresh-container"
-            style={{ position: 'relative', width: '100%', minHeight: '100%' }}
+            style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
             onTouchStart={handleTouchStart}
         >
-            {/* Loading Indicator Indicator */}
+            {/* Premium Loading Indicator */}
             <motion.div
                 style={{
                     position: 'absolute',
-                    top: 0,
+                    top: 20,
                     left: 0,
                     right: 0,
                     height: THRESHOLD,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    zIndex: 9999, // Above everything
-                    y,
+                    zIndex: 200,
+                    y: useTransform(y, [0, THRESHOLD], [-80, 0]), // Entry from top
                     opacity,
                     scale,
-                    pointerEvents: 'none' // Don't block touches
+                    pointerEvents: 'none'
                 }}
             >
                 <div style={{
                     background: isDark ? '#1a1a1a' : '#ffffff',
-                    width: '44px',
-                    height: '44px',
+                    width: '48px',
+                    height: '48px',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
-                    border: isDark ? '1px solid #ffffff15' : '1px solid #00000008',
+                    boxShadow: isDark
+                        ? '0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1)'
+                        : '0 8px 32px rgba(251, 86, 7, 0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+                    position: 'relative'
                 }}>
+                    {/* Ring background / progress */}
+                    <svg width="40" height="40" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
+                        <circle
+                            cx="20"
+                            cy="20"
+                            r="18"
+                            stroke={isDark ? '#333' : '#eee'}
+                            strokeWidth="3"
+                            fill="none"
+                        />
+                        <motion.circle
+                            cx="20"
+                            cy="20"
+                            r="18"
+                            stroke="#fb5607"
+                            strokeWidth="3"
+                            fill="none"
+                            strokeDasharray="113.1" // 2 * PI * 18
+                            style={{
+                                strokeDashoffset: useTransform(y, [0, THRESHOLD], [113.1, 0])
+                            }}
+                            strokeLinecap="round"
+                        />
+                    </svg>
+
+                    {/* Icon container */}
                     <motion.div
-                        style={{ rotate }}
-                        animate={isRefreshing ? { rotate: 360 } : {}}
-                        transition={isRefreshing ? { repeat: Infinity, duration: 1, ease: 'linear' } : { duration: 0 }}
-                        className="flex items-center justify-center"
+                        animate={isRefreshing ? {
+                            rotate: 360,
+                            scale: [1, 1.1, 1]
+                        } : {
+                            rotate: 0,
+                            scale: 1
+                        }}
+                        transition={isRefreshing ? {
+                            rotate: { repeat: Infinity, duration: 1.2, ease: 'linear' },
+                            scale: { repeat: Infinity, duration: 2, ease: 'easeInOut' }
+                        } : { duration: 0.2 }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}
                     >
-                        <RefreshCw size={22} color="#fb5607" strokeWidth={3} />
+                        <RefreshCw
+                            size={20}
+                            color="#fb5607"
+                            strokeWidth={3}
+                            style={{ opacity: isRefreshing ? 1 : 0.6 }}
+                        />
                     </motion.div>
                 </div>
             </motion.div>
 
-            {/* Main Content with subtle push down */}
+            {/* Main Content with elegant push down */}
             <motion.div
                 style={{
-                    y: useTransform(y, [0, THRESHOLD], [0, 15]), // Slight push down for content
+                    y: useTransform(y, [0, THRESHOLD], [0, THRESHOLD + 30]),
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column'

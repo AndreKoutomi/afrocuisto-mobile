@@ -1768,13 +1768,11 @@ export default function App() {
 
         // On successful registration, save token to ref
         pushListener = await PushNotifications.addListener('registration', (token: Token) => {
-          console.log('Push token renewal: ' + token.value);
+          console.log('Push token received: ' + token.value);
           lastPushToken.current = token.value;
 
-          // If already logged in, sync immediately
-          if (currentUser?.id) {
-            dbService.saveUserFCMToken(currentUser.id, token.value, Capacitor.getPlatform());
-          }
+          // Sync immediately regardless of login (allow Guest broadcast)
+          dbService.saveUserFCMToken(currentUser?.id || null, token.value, Capacitor.getPlatform());
         });
 
         errListener = await PushNotifications.addListener('registrationError', (error: any) => {
@@ -2697,7 +2695,7 @@ export default function App() {
     const populaires = otherRecipes.slice(0, 10);
 
     return (
-      <PullToRefresh onRefresh={refreshHome} isDark={isDark}>
+      <PullToRefresh onRefresh={refreshHome} isDark={isDark} scrollRef={mainScrollRef as any}>
         <div className="flex-1 flex flex-col pb-44" style={{
           background: isDark ? '#000000ff' : '#f3f4f6',
           minHeight: '100vh',
