@@ -80,22 +80,22 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
     return (
         <div
             className="pull-to-refresh-container"
-            style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+            style={{ position: 'relative', width: '100%', minHeight: '100%' }}
             onTouchStart={handleTouchStart}
         >
-            {/* Premium Loading Indicator */}
+            {/* Premium Loading Indicator Overlay */}
             <motion.div
                 style={{
                     position: 'absolute',
-                    top: 20,
+                    top: 0,
                     left: 0,
                     right: 0,
-                    height: THRESHOLD,
+                    height: THRESHOLD + 20,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    zIndex: 200,
-                    y: useTransform(y, [0, THRESHOLD], [-80, 0]), // Entry from top
+                    zIndex: 9999, // Floating ABOVE everything
+                    y: useTransform(y, [0, THRESHOLD], [-60, 40]),
                     opacity,
                     scale,
                     pointerEvents: 'none'
@@ -114,67 +114,33 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
                         : '0 8px 32px rgba(251, 86, 7, 0.15), 0 0 0 1px rgba(0,0,0,0.05)',
                     position: 'relative'
                 }}>
-                    {/* Ring background / progress */}
-                    <svg width="40" height="40" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
-                        <circle
-                            cx="20"
-                            cy="20"
-                            r="18"
-                            stroke={isDark ? '#333' : '#eee'}
-                            strokeWidth="3"
-                            fill="none"
-                        />
-                        <motion.circle
-                            cx="20"
-                            cy="20"
-                            r="18"
-                            stroke="#fb5607"
-                            strokeWidth="3"
-                            fill="none"
-                            strokeDasharray="113.1" // 2 * PI * 18
-                            style={{
-                                strokeDashoffset: useTransform(y, [0, THRESHOLD], [113.1, 0])
-                            }}
-                            strokeLinecap="round"
-                        />
-                    </svg>
-
-                    {/* Icon container */}
                     <motion.div
-                        animate={isRefreshing ? {
-                            rotate: 360,
-                            scale: [1, 1.1, 1]
-                        } : {
-                            rotate: 0,
-                            scale: 1
+                        className="refresh-spinner-container"
+                        animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
+                        transition={isRefreshing ? { repeat: Infinity, duration: 0.8, ease: 'linear' } : { duration: 0.3 }}
+                        style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            // Gradient ring effect
+                            background: isRefreshing
+                                ? `conic-gradient(transparent, #fb5607)`
+                                : (isDark ? '#333' : '#eee'),
+                            WebkitMaskImage: 'radial-gradient(transparent 58%, black 62%)',
+                            maskImage: 'radial-gradient(transparent 58%, black 62%)',
+                            opacity: isRefreshing ? 1 : useTransform(y, [0, THRESHOLD], [0.1, 1])
                         }}
-                        transition={isRefreshing ? {
-                            rotate: { repeat: Infinity, duration: 1.2, ease: 'linear' },
-                            scale: { repeat: Infinity, duration: 2, ease: 'easeInOut' }
-                        } : { duration: 0.2 }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}
-                    >
-                        <RefreshCw
-                            size={20}
-                            color="#fb5607"
-                            strokeWidth={3}
-                            style={{ opacity: isRefreshing ? 1 : 0.6 }}
-                        />
-                    </motion.div>
+                    />
                 </div>
             </motion.div>
 
-            {/* Main Content with elegant push down */}
-            <motion.div
-                style={{
-                    y: useTransform(y, [0, THRESHOLD], [0, THRESHOLD + 30]),
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column'
-                }}
-            >
+            {/* Static Content (No-push for stability) */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 {children}
-            </motion.div>
+            </div>
         </div>
     );
 };

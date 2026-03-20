@@ -1762,9 +1762,7 @@ export default function App() {
           });
         }
 
-        // --- Configure Push Notifications Listeners ---
-        // Register with FCM/APNS
-        await PushNotifications.register();
+        // --- Configure Push Notifications Listeners (Must be before register) ---
 
         // On successful registration, save token to ref
         pushListener = await PushNotifications.addListener('registration', (token: Token) => {
@@ -1786,9 +1784,11 @@ export default function App() {
         });
 
         actionListener = await PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
-          console.log('Push action tapped: ' + JSON.stringify(notification));
-          // Handle navigation if needed
+          console.log('👉 Push action tapped: ' + JSON.stringify(notification));
         });
+
+        // 4. NOW Register with FCM/APNS (LAST STEP)
+        await PushNotifications.register();
 
       } catch (err) {
         console.warn("Notifications initialization failed:", err);
