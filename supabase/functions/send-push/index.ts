@@ -24,58 +24,67 @@ serve(async (req) => {
         const payload: NotificationPayload = await req.json()
         const { user_id, title, body, data } = payload
 
-        // 1. Initialiser le client Supabase avec la clé de service (Service Role)
+        // 1. Initialiser le client Supabase
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL')!,
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
         )
 
-        // 2. Récupérer le token FCM de l'utilisateur visé
-        const { data: profile, error: dbError } = await supabaseClient
-            .from('user_profiles')
-            .select('push_token')
-            .eq('id', user_id)
-            .single()
+        // 2. Récupérer les tokens (soit un seul utilisateur, soit TOUS si user_id est vide)
+        let fcmTokens: string[] = [];
 
-        if (dbError || !profile?.push_token) {
-            console.error("Aucun token trouvé pour l'utilisateur:", user_id);
-            return new Response("User has no push token", { status: 404 })
+        if (user_id) {
+            // Un seul utilisateur
+            const { data: profile } = await supabaseClient
+                .from('user_fcm_tokens')
+                .select('token')
+                .eq('user_id', user_id);
+
+            if (profile) fcmTokens = profile.map(p => p.token);
+        } else {
+            // Tous les utilisateurs (BROADCAST)
+            const { data: profiles } = await supabaseClient
+                .from('user_fcm_tokens')
+                .select('token');
+
+            if (profiles) fcmTokens = profiles.map(p => p.token);
+        }
+
+        if (fcmTokens.length === 0) {
+            return new Response("No push tokens found", { status: 404 })
         }
 
         // 3. Obtenir un jeton d'accès Google pour FCM v1
         const accessToken = await getGoogleAccessToken()
-
-        // 4. Envoyer la notification à Google (FCM)
         const fcmProjectId = Deno.env.get('FCM_PROJECT_ID')
-        const fcmResponse = await fetch(`https://fcm.googleapis.com/v1/projects/${fcmProjectId}/messages:send`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                message: {
-                    token: profile.push_token,
-                    notification: { title, body },
-                    data: data || {},
-                    android: {
-                        priority: "high",
-                        notification: {
-                            sound: "default",
-                            click_action: "OPEN_APP_NOTIFICATION"
+
+        // 4. Envoyer les notifications (Boucle sur les tokens)
+        const results = await Promise.all(fcmTokens.map(async (token) => {
+            return fetch(`https://fcm.googleapis.com/v1/projects/${fcmProjectId}/messages:send`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: {
+                        token: token,
+                        notification: { title, body },
+                        data: data || {},
+                        android: {
+                            priority: "high",
+                            notification: {
+                                sound: "default",
+                                click_action: "OPEN_APP_NOTIFICATION",
+                                channel_id: "fcm_default_channel"
+                            }
                         }
                     }
-                }
-            })
-        })
+                })
+            }).then(r => r.json());
+        }));
 
-        const result = await fcmResponse.json()
-        if (!fcmResponse.ok) {
-            console.error("Erreur FCM:", result);
-            return new Response(JSON.stringify(result), { status: fcmResponse.status })
-        }
-
-        return new Response(JSON.stringify({ success: true, message_id: result.name }), {
+        return new Response(JSON.stringify({ success: true, count: results.length }), {
             headers: { 'Content-Type': 'application/json' }
         })
 

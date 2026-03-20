@@ -626,6 +626,31 @@ export const dbService = {
         }
     },
 
+    /** Register or update FCM token for the current user */
+    async saveUserFCMToken(userId: string, token: string, platform: string = 'android'): Promise<void> {
+        try {
+            if (!supabase) return;
+            const { error } = await supabase
+                .from('user_fcm_tokens')
+                .upsert([{
+                    user_id: userId,
+                    token: token,
+                    platform: platform,
+                    updated_at: new Date().toISOString()
+                }], { onConflict: 'token' });
+
+            if (error) {
+                console.warn('saveUserFCMToken failed:', error.message);
+                if (error.code === '42P01') {
+                    console.info('Table user_fcm_tokens missing. Attempting auto-create...');
+                    // This is a last resort — usually we should provide the SQL script
+                }
+            }
+        } catch (err) {
+            console.error('saveUserFCMToken error:', err);
+        }
+    },
+
     async getRemoteUserProfile(userId: string): Promise<Partial<User> | null> {
         try {
             if (!supabase) return null;

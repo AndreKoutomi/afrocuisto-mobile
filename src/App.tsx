@@ -1725,6 +1725,8 @@ export default function App() {
   }, []);
 
   // --- Request Permissions (Location & Notifications) ---
+  const lastPushToken = useRef<string | null>(null);
+
   useEffect(() => {
     let pushListener: any;
     let errListener: any;
@@ -1742,47 +1744,52 @@ export default function App() {
           await Geolocation.requestPermissions();
         }
 
-        // 2. Notifications (Push & Local)
+        // 2. Notifications Permissions
         const pushStatus = await PushNotifications.checkPermissions();
         if (pushStatus.receive !== 'granted') {
           await PushNotifications.requestPermissions();
         }
 
-        const localStatus = await LocalNotifications.checkPermissions();
-        if (localStatus.display !== 'granted') {
-          await LocalNotifications.requestPermissions();
+        // 3. Android Channels (CRITICAL for background notifications on Android 8+)
+        if (Capacitor.getPlatform() === 'android') {
+          await PushNotifications.createChannel({
+            id: 'fcm_default_channel',
+            name: 'Default',
+            description: 'Canal par défaut pour les notifications AfroCuisto',
+            importance: 5, // High importance
+            visibility: 1, // Public
+            vibration: true,
+          });
         }
 
         // --- Configure Push Notifications Listeners ---
-        // Register with FCM/APNS ONLY AFTER permissions
+        // Register with FCM/APNS
         await PushNotifications.register();
 
-        // On successful registration, you get a token
+        // On successful registration, save token to ref
         pushListener = await PushNotifications.addListener('registration', (token: Token) => {
-          console.log('Push registration success, token: ' + token.value);
-          if (currentUser) {
-            dbService.supabase?.from('user_profiles')
-              .update({ push_token: token.value })
-              .eq('id', currentUser.id)
-              .then(({ error }) => {
-                if (error) console.error("Error saving token to Supabase:", error);
-              });
+          console.log('Push token renewal: ' + token.value);
+          lastPushToken.current = token.value;
+
+          // If already logged in, sync immediately
+          if (currentUser?.id) {
+            dbService.saveUserFCMToken(currentUser.id, token.value, Capacitor.getPlatform());
           }
         });
 
-        // Some issue with registration
         errListener = await PushNotifications.addListener('registrationError', (error: any) => {
-          console.error('Error on registration: ' + JSON.stringify(error));
+          console.error('Push Registration Error: ' + JSON.stringify(error));
         });
 
-        // Show a banner even if the app is in the foreground
         receiveListener = await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-          console.log('Push received: ' + JSON.stringify(notification));
+          console.log('Push received in foreground: ' + JSON.stringify(notification));
+          // Foreground notifications show up as a banner via usePushNotifications (Supabase Realtime)
+          // but we log here for FCM debugging
         });
 
-        // Method called when tapping on a notification
         actionListener = await PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
-          console.log('Push action performed: ' + JSON.stringify(notification));
+          console.log('Push action tapped: ' + JSON.stringify(notification));
+          // Handle navigation if needed
         });
 
       } catch (err) {
@@ -1792,14 +1799,18 @@ export default function App() {
 
     initNotifications();
 
+    // Trigger sync if we already have a token but just logged in
+    if (currentUser?.id && lastPushToken.current) {
+      dbService.saveUserFCMToken(currentUser.id, lastPushToken.current, Capacitor.getPlatform());
+    }
+
     return () => {
-      // Cleanup listeners to avoid memory leaks and multiple registrations
       if (pushListener) pushListener.remove();
       if (errListener) errListener.remove();
       if (receiveListener) receiveListener.remove();
       if (actionListener) actionListener.remove();
     };
-  }, [currentUser?.id]); // Use id to avoid re-running on every object reference change
+  }, [currentUser?.id]);
 
   useEffect(() => {
     // Initial Auth Check
@@ -2937,12 +2948,12 @@ export default function App() {
                             {recipe.region || recipe.category || 'Mets Local'}
                           </div>
 
-                          <h3 style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#f3f4f6' : '#4b5563', margin: '0 0 20px', lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          <h3 style={{ fontSize: 17, fontWeight: 600, color: isDark ? '#f3f4f6' : '#000000ff', margin: '0 0 10px', lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                             {recipe.name}
                           </h3>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto' }}>
-                            <span style={{ fontSize: 18, fontWeight: 900, color: isDark ? '#ffffff' : '#111827' }}>
+                            <span style={{ fontSize: 13, fontWeight: 900, color: isDark ? '#ffffff' : '#111827' }}>
                               {recipe.prepTime ? `${recipe.prepTime} min` : '30 min'}
                             </span>
                             <button
@@ -5097,7 +5108,7 @@ export default function App() {
             >
               {/* Search Bar */}
               <div className="px-5 pt-6 pb-4">
-                <div className={`flex items-center gap-3 px-5 h-14 rounded-[22px] border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-stone-100 shadow-sm'}`}>
+                <div className={`flex items-center gap-3 px-5 h-14 rounded-[50px] border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-stone-100 shadow-sm'}`}>
                   <Search size={22} className="text-stone-300" />
                   <input
                     type="text"
@@ -5107,7 +5118,6 @@ export default function App() {
                     className="flex-1 bg-transparent border-none outline-none text-[15px] font-medium placeholder:text-stone-300"
                   />
                   <button className="text-stone-400">
-                    <SlidersHorizontal size={20} />
                   </button>
                 </div>
               </div>

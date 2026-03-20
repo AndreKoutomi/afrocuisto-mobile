@@ -81,11 +81,6 @@ export function usePushNotifications() {
 
             setNotifications(data);
             setUnreadCount(unseen.length);
-
-            // Show the most recent unseen notification as banner
-            if (unseen.length > 0) {
-                showBanner(unseen[0]);
-            }
         } catch (e) {
             // Silent fail — notifications are non-critical
         }
