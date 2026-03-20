@@ -115,9 +115,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
                     position: 'relative'
                 }}>
                     <motion.div
-                        className="refresh-spinner-container"
-                        animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
-                        transition={isRefreshing ? { repeat: Infinity, duration: 0.8, ease: 'linear' } : { duration: 0.3 }}
+                        animate={{ rotate: isRefreshing ? 360 : 0 }}
+                        transition={{
+                            repeat: isRefreshing ? Infinity : 0,
+                            duration: isRefreshing ? 1 : 0.5,
+                            ease: "linear"
+                        }}
                         style={{
                             width: '32px',
                             height: '32px',
@@ -125,15 +128,18 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            // Gradient ring effect
                             background: isRefreshing
-                                ? `conic-gradient(transparent, #fb5607)`
-                                : (isDark ? '#333' : '#eee'),
-                            WebkitMaskImage: 'radial-gradient(transparent 58%, black 62%)',
-                            maskImage: 'radial-gradient(transparent 58%, black 62%)',
-                            opacity: isRefreshing ? 1 : useTransform(y, [0, THRESHOLD], [0.1, 1])
+                                ? 'linear-gradient(45deg, #fb5607, #ffbe0b)'
+                                : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                            boxShadow: isRefreshing ? '0 0 15px rgba(251, 86, 7, 0.4)' : 'none',
                         }}
-                    />
+                    >
+                        <RefreshCw
+                            size={18}
+                            color={isRefreshing ? "#fff" : (isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)")}
+                            strokeWidth={3}
+                        />
+                    </motion.div>
                 </div>
             </motion.div>
 

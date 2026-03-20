@@ -2083,7 +2083,9 @@ export default function App() {
   const syncSections = async () => {
     try {
       const sections = await dbService.getRemoteSections();
-      setDynamicSections(sections || []);
+      if (sections && sections.length > 0) {
+        setDynamicSections(sections);
+      }
     } catch (err) {
       console.error('Sections sync failed:', err);
     }
@@ -2101,7 +2103,9 @@ export default function App() {
   const syncMerchants = async () => {
     try {
       const merchants = await dbService.getRemoteMerchants();
-      setAllMerchants(merchants || []);
+      if (merchants && merchants.length > 0) {
+        setAllMerchants(merchants);
+      }
     } catch (err) {
       console.error('Merchants sync failed:', err);
     }
@@ -2725,8 +2729,12 @@ export default function App() {
                 </motion.div>
               )}
               {isSyncing && !isOffline && (
-                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}>
-                  <Wifi size={14} style={{ color: '#fb5607' }} />
+                <motion.div
+                  className="flex items-center justify-center text-[#fb5607]"
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                >
+                  <RefreshCw size={14} />
                 </motion.div>
               )}
               <button onClick={() => setIsNotifCenterOpen(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, position: 'relative' }}>
@@ -3196,8 +3204,8 @@ export default function App() {
             </motion.div>
           )}
           {isSyncing && !isOffline && (
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}>
-              <Wifi size={14} style={{ color: '#fb5607' }} />
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }} className="text-[#fb5607]">
+              <RefreshCw size={22} />
             </motion.div>
           )}
           <button onClick={() => setIsSearchExpanded(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
@@ -3525,6 +3533,11 @@ export default function App() {
               <WifiOff size={20} />
             </motion.div>
           )}
+          {isSyncing && !isOffline && (
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }} className="text-[#fb5607]">
+              <RefreshCw size={18} />
+            </motion.div>
+          )}
         </header>
         <div className="px-6 space-y-4">
           {favoriteRecipes.length > 0 ? (
@@ -3628,7 +3641,7 @@ export default function App() {
 
                       <button
                         onClick={() => {
-                          showAlert("Voulez-vous vraiment vider toute votre liste de courses ?", "info", () => updateShoppingList([]));
+                          updateShoppingList([]);
                         }}
                         className="w-full py-4 text-rose-500 font-bold text-xs uppercase tracking-widest mt-4"
                       >
@@ -3692,13 +3705,17 @@ export default function App() {
             </span>
           </div>
           <motion.button
-            whileTap={{ scale: 0.85, rotate: 180 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            whileTap={{ scale: 0.85 }}
             onClick={() => window.location.reload()}
             title="Actualiser les recettes"
             className={`w-8 h-8 rounded-full flex items-center justify-center border shadow-sm transition-colors ${isDark ? 'bg-white/8 border-white/10' : 'bg-white border-stone-100'} ${isSyncing ? 'text-[#fb5607]' : (isDark ? 'text-white/40 hover:text-white/70' : 'text-stone-400 hover:text-stone-600')}`}
           >
-            <RefreshCw size={14} strokeWidth={2.5} />
+            <motion.div
+              animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
+              transition={isSyncing ? { repeat: Infinity, duration: 1.5, ease: 'linear' } : { duration: 0.3 }}
+            >
+              <RefreshCw size={14} strokeWidth={2.5} />
+            </motion.div>
           </motion.button>
         </div>
       </header>
@@ -5088,7 +5105,7 @@ export default function App() {
                       )}
                     </AnimatePresence>
                     <button
-                      onClick={() => { if (window.confirm(t.clearList + "?")) { updateShoppingList([]); } }}
+                      onClick={() => { updateShoppingList([]); }}
                       className="w-full py-4 rounded-full border-2 border-stone-100 text-stone-400 font-black text-[10px] uppercase tracking-widest hover:bg-stone-50 hover:text-stone-600 transition-all active:scale-95 mt-4"
                     >
                       {t.clearList}
