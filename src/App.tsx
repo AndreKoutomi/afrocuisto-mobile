@@ -1789,7 +1789,8 @@ const StoreProductCard: React.FC<{
 export default function App() {
   // --- ÉTATS (MÉMOIRE) DE L'APPLICATION ---
   const [currentUser, setCurrentUser] = useState<User | null>(dbService.getCurrentUser()); // Utilisateur actuellement connecté
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login'); // Mode choisi : Connexion ou Inscription
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot' | 'updatePassword'>('login'); // Mode choisi
+  const [resetEmail, setResetEmail] = useState('');
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email'); // Méthode d'auth : email ou téléphone
   const [authFormData, setAuthFormData] = useState({ name: '', email: '', password: '', phone: '' }); // Données saisies dans le formulaire
   const [showPassword, setShowPassword] = useState(false); // Masquer/Afficher le mot de passe
@@ -1996,7 +1997,13 @@ export default function App() {
         updateUserObject(session.user);
       }
 
-      dbService.supabase.auth.onAuthStateChange((_event, curSession) => {
+      dbService.supabase.auth.onAuthStateChange(async (event, curSession) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log('Recovery link clicked! Switching to updatePassword mode');
+          setAuthMode('updatePassword');
+          return;
+        }
+
         if (curSession?.user) {
           updateUserObject(curSession.user);
         } else {
@@ -2662,6 +2669,7 @@ export default function App() {
         }
       }
     } catch (err: any) {
+      console.error("Login catch error:", err);
       let msg = err.message || "Identifiants incorrects";
       if (msg.includes("Email not confirmed")) {
         msg = "Veuillez confirmer votre adresse email. Vérifiez vos spams !";
@@ -2674,6 +2682,46 @@ export default function App() {
       }
       setAuthError(msg);
       showAlert(msg, "error");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      setAuthError("Veuillez saisir votre adresse email.");
+      return;
+    }
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      const { error } = await dbService.sendResetPasswordEmail(resetEmail.trim());
+      if (error) throw error;
+      showAlert("Veuillez vérifier votre boîte mail pour réinitialiser votre mot de passe.", "success");
+      setAuthMode('login');
+    } catch (err: any) {
+      setAuthError(err.message || "Erreur lors de l'envoi de l'email.");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (authFormData.password.length < 6) {
+      setAuthError("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      const { error } = await dbService.updatePassword(authFormData.password);
+      if (error) throw error;
+      showAlert("Votre mot de passe a été mis à jour avec succès !", "success");
+      setAuthMode('login');
+    } catch (err: any) {
+      setAuthError(err.message || "Erreur lors de la mise à jour.");
     } finally {
       setIsAuthLoading(false);
     }
@@ -5838,22 +5886,19 @@ export default function App() {
                       </button>
                     </div>
                     <div className="flex justify-end mt-1.5">
-                      <button type="button" className={`text-[11.5px] font-bold transition-colors ${isDark ? 'text-white/30 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'}`}>
+                      <button type="button" onClick={() => { setAuthMode('forgot'); setAuthError(null); }} className={`text-[11.5px] font-bold transition-colors ${isDark ? 'text-white/30 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'}`}>
                         Mot de passe oublié ?
                       </button>
                     </div>
                   </div>
 
                   {/* Error */}
-                  <AnimatePresence>
-                    {authError && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                        className={`overflow-hidden rounded-[12px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
-                        <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
-                        <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {authError && (
+                    <div className={`rounded-[12px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                      <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
+                      <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
+                    </div>
+                  )}
 
                   {/* CTA */}
                   <motion.button type="submit" disabled={isAuthLoading} whileTap={{ scale: 0.97 }}
@@ -5892,6 +5937,91 @@ export default function App() {
                     Pas encore de compte ?{' '}
                     <button type="button" onClick={() => { setAuthMode('signup'); setAuthError(null); }} className="text-[#fb5607] font-bold">S'inscrire</button>
                   </p>
+                </form>
+              </motion.div>
+            )}
+
+            {/* ─── FORGOT PASSWORD FORM ─── */}
+            {authMode === 'forgot' && authStep === 'form' && (
+              <motion.div key="forgot-form" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 18 }} transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}>
+                <form onSubmit={handleResetPassword} className="space-y-5">
+                  <div className="text-center mb-2">
+                    <p className={`text-[13px] font-medium leading-relaxed ${isDark ? 'text-white/60' : 'text-stone-500'}`}>
+                      Saisissez votre e-mail pour recevoir un lien de réinitialisation.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Votre e-mail</label>
+                    <div className="relative group">
+                      <Mail size={15} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'}`} />
+                      <input type="email" placeholder="exemple@email.com" required value={resetEmail} onChange={e => { setResetEmail(e.target.value); setAuthError(null); }}
+                        className={`w-full rounded-[14px] border py-3.5 pl-10 pr-4 text-[14px] font-semibold focus:outline-none transition-all ${isDark
+                          ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/8'
+                          : 'bg-stone-50 border-stone-200 text-stone-900 placeholder:text-stone-300 focus:border-[#fb5607]/50 focus:bg-white focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'}`} />
+                    </div>
+                  </div>
+
+                  {authError && (
+                    <div className={`rounded-[12px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                      <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
+                      <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
+                    </div>
+                  )}
+
+                  <motion.button type="submit" disabled={isAuthLoading} whileTap={{ scale: 0.97 }}
+                    className="w-full bg-[#fb5607] text-white py-4 rounded-[16px] font-black text-[14px] flex justify-center items-center gap-2 transition-all mt-1 shadow-lg shadow-[#fb5607]/20">
+                    {isAuthLoading ? <Loader size={18} className="animate-spin" /> : <span>Envoyer le lien</span>}
+                  </motion.button>
+
+                  <button type="button" onClick={() => { setAuthMode('login'); setAuthError(null); }} className={`w-full text-center text-[12.5px] font-bold ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+                    Retour à la connexion
+                  </button>
+                </form>
+              </motion.div>
+            )}
+
+            {/* ─── UPDATE PASSWORD FORM ─── */}
+            {authMode === 'updatePassword' && authStep === 'form' && (
+              <motion.div key="update-password-form" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.28 }}>
+                <form onSubmit={handleUpdatePassword} className="space-y-5">
+                  <div className="text-center mb-2">
+                    <div className="w-14 h-14 bg-[#fb5607]/10 rounded-full flex items-center justify-center mx-auto mb-4 text-[#fb5607]">
+                      <Lock size={24} />
+                    </div>
+                    <h3 className={`text-lg font-black mb-1 ${isDark ? 'text-white' : 'text-stone-800'}`}>Nouveau mot de passe</h3>
+                    <p className={`text-[13px] font-medium leading-relaxed ${isDark ? 'text-white/60' : 'text-stone-500'}`}>
+                      Presque fini ! Saisissez votre nouveau mot de passe sécurisé.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Nouveau mot de passe</label>
+                    <div className="relative group">
+                      <Lock size={15} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#fb5607] ${isDark ? 'text-white/25' : 'text-stone-400'}`} />
+                      <input type={showPassword ? 'text' : 'password'} placeholder="••••••••••••" required minLength={6}
+                        value={authFormData.password} onChange={e => { setAuthFormData({ ...authFormData, password: e.target.value }); setAuthError(null); }}
+                        className={`w-full rounded-[14px] border py-3.5 pl-10 pr-12 text-[14px] font-semibold focus:outline-none transition-all ${isDark
+                          ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/50 focus:bg-white/8'
+                          : 'bg-stone-50 border-stone-200 text-stone-900 placeholder:text-stone-300 focus:border-[#fb5607]/50 focus:bg-white focus:shadow-[0_0_0_3px_rgba(251,86,7,0.08)]'}`} />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                        className={`absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${isDark ? 'text-white/25 hover:text-[#fb5607]' : 'text-stone-400 hover:text-[#fb5607]'}`}>
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {authError && (
+                    <div className={`rounded-[12px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                      <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
+                      <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
+                    </div>
+                  )}
+
+                  <motion.button type="submit" disabled={isAuthLoading} whileTap={{ scale: 0.97 }}
+                    className="w-full bg-[#fb5607] text-white py-4 rounded-[16px] font-black text-[14px] flex justify-center items-center gap-2 transition-all mt-1 shadow-lg shadow-[#fb5607]/20">
+                    {isAuthLoading ? <Loader size={18} className="animate-spin" /> : <span>Changer le mot de passe</span>}
+                  </motion.button>
                 </form>
               </motion.div>
             )}
@@ -5979,15 +6109,12 @@ export default function App() {
                   </div>
 
                   {/* Error */}
-                  <AnimatePresence>
-                    {authError && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                        className={`overflow-hidden rounded-[12px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
-                        <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
-                        <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {authError && (
+                    <div className={`rounded-[12px] border flex items-start gap-2.5 p-3 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                      <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
+                      <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
+                    </div>
+                  )}
 
                   {/* CTA */}
                   <motion.button type="submit" disabled={isAuthLoading} whileTap={{ scale: 0.97 }}
@@ -6052,15 +6179,12 @@ export default function App() {
                   </div>
 
                   {/* Error */}
-                  <AnimatePresence>
-                    {authError && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                        className={`overflow-hidden rounded-[12px] border flex items-start gap-2.5 p-3 mb-4 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
-                        <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
-                        <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {authError && (
+                    <div className={`rounded-[12px] border flex items-start gap-2.5 p-3 mb-4 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                      <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
+                      <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
+                    </div>
+                  )}
 
                   {/* Resend */}
                   <p className={`text-center text-[12.5px] font-medium mb-5 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
@@ -6098,7 +6222,7 @@ export default function App() {
             </motion.div>
           )}
         </div>
-      </div>
+      </div >
     );
   };
 

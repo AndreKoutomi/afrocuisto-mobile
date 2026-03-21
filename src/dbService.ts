@@ -1182,5 +1182,18 @@ export const dbService = {
 
         if (error) return null;
         return data;
+    },
+
+    // --- Authentication Flow Extension ---
+    async sendResetPasswordEmail(email: string): Promise<{ data: any; error: any }> {
+        if (!supabase) return { data: null, error: { message: "Supabase not connected" } };
+        return await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin,
+        });
+    },
+
+    async updatePassword(password: string): Promise<{ data: any; error: any }> {
+        if (!supabase) return { data: null, error: { message: "Supabase not connected" } };
+        return await supabase.auth.updateUser({ password });
     }
 };
