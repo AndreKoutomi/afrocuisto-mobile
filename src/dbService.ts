@@ -618,7 +618,8 @@ export const dbService = {
                     shopping_list: user.shoppingList || [],
                     saved_posts: user.savedPosts || [],
                     following: user.following || [],
-                    avatar: user.avatar
+                    avatar: user.avatar || null,
+                    is_admin: user.is_admin ?? false
                 }], { onConflict: 'id' });
             if (error) {
                 console.warn('user_profiles upsert failed:', error.message);
@@ -676,6 +677,7 @@ export const dbService = {
                     savedPosts: data.saved_posts || [],
                     following: data.following || [],
                     avatar: data.avatar,
+                    is_admin: data.is_admin ?? false,
                     settings: {
                         darkMode: data.dark_mode ?? false,
                         language: data.language ?? 'fr',
@@ -966,37 +968,58 @@ export const dbService = {
     },
 
     // --- Community Management ---
-    async getCommunityPosts(currentUserId?: string): Promise<CommunityPost[]> {
+    async getCommunityPosts(currentUserId?: string, page: number = 0, pageSize: number = 10): Promise<CommunityPost[]> {
         if (!supabase) return [];
 
         try {
+            const start = page * pageSize;
+            const end = start + pageSize - 1;
+
+            // Requête sans jointure FK pour éviter les erreurs de cache Supabase
             const { data: posts, error } = await supabase
                 .from('community_posts')
-                .select(`
-                    *,
-                    author:user_profiles ( name, avatar )
-                `)
-                .order('created_at', { ascending: false });
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(start, end);
 
             if (error) throw error;
+            if (!posts || posts.length === 0) return [];
 
+            // Récupérer les profils séparément
+            const userIds = [...new Set(posts.map((p: any) => p.user_id).filter(Boolean))];
+            let profilesMap: Record<string, { name: string; avatar?: string }> = {};
+
+            if (userIds.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('user_profiles')
+                    .select('id, name, avatar')
+                    .in('id', userIds);
+                if (profiles) {
+                    profiles.forEach((p: any) => { profilesMap[p.id] = { name: p.name, avatar: p.avatar }; });
+                }
+            }
+
+            // Récupérer les likes de l'utilisateur connecté
             let userLikes: string[] = [];
             if (currentUserId) {
+                const postIds = posts.map((p: any) => p.id);
                 const { data: likes } = await supabase
                     .from('post_likes')
                     .select('post_id')
-                    .eq('user_id', currentUserId);
-                if (likes) userLikes = likes.map(l => l.post_id);
+                    .eq('user_id', currentUserId)
+                    .in('post_id', postIds);
+                if (likes) userLikes = likes.map((l: any) => l.post_id);
             }
 
-            return (posts || []).map(p => ({
+            return posts.map((p: any) => ({
                 id: p.id,
                 user_id: p.user_id,
-                author_name: p.author?.name || 'Utilisateur',
-                author_avatar: p.author?.avatar,
+                author_name: profilesMap[p.user_id]?.name || 'Utilisateur',
+                author_avatar: profilesMap[p.user_id]?.avatar,
                 title: p.title,
                 content: p.content,
                 image_url: p.image_url,
+                category: p.category,
                 created_at: p.created_at,
                 likes_count: p.likes_count || 0,
                 comments_count: p.comments_count || 0,
@@ -1012,7 +1035,6 @@ export const dbService = {
     async createPost(post: Partial<CommunityPost>): Promise<CommunityPost | null> {
         if (!supabase) return null;
 
-        // Try cloud sync first to ensure foreign key 'user_id' exists
         try {
             const userObj: any = {
                 id: post.user_id,
@@ -1029,6 +1051,7 @@ export const dbService = {
                     title: post.title || '',
                     content: post.content || '',
                     image_url: post.image_url,
+                    category: post.category || 'Autre',
                     created_at: new Date().toISOString()
                 }])
                 .select()
@@ -1036,7 +1059,7 @@ export const dbService = {
 
             if (error) {
                 console.error('CRITICAL: Supabase post creation failed:', error.message, error.details);
-                return null;
+                throw new Error(`Erreur Supabase: ${error.message} (${error.details || ''})`);
             }
 
             return {
@@ -1048,9 +1071,9 @@ export const dbService = {
                 views_count: 0,
                 is_liked: false
             } as CommunityPost;
-        } catch (err) {
+        } catch (err: any) {
             console.error('Unexpected error in createPost:', err);
-            return null;
+            throw err;
         }
     },
 
@@ -1062,7 +1085,8 @@ export const dbService = {
             .update({
                 title: updates.title,
                 content: updates.content,
-                image_url: updates.image_url
+                image_url: updates.image_url,
+                category: updates.category
             })
             .eq('id', postId)
             .eq('user_id', userId);
@@ -1072,6 +1096,15 @@ export const dbService = {
             return false;
         }
         return true;
+    },
+
+    /** Real-time subscription helper for community posts */
+    subscribeToCommunityUpdates(callback: (payload: any) => void) {
+        if (!supabase) return null;
+        return supabase
+            .channel('community_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'community_posts' }, callback)
+            .subscribe();
     },
 
     async deleteCommunityPost(postId: string, userId: string): Promise<boolean> {
@@ -1138,7 +1171,7 @@ export const dbService = {
             .from('post_comments')
             .select(`
                 *,
-                author:user_profiles ( name, avatar )
+                author:user_profiles ( name )
             `)
             .eq('post_id', postId)
             .order('created_at', { ascending: true });
@@ -1183,5 +1216,202 @@ export const dbService = {
     async updatePassword(password: string): Promise<{ data: any; error: any }> {
         if (!supabase) return { data: null, error: { message: "Supabase not connected" } };
         return await supabase.auth.updateUser({ password });
+    },
+
+    // --- Admin Community Management ---
+
+    async adminGetAllPosts(): Promise<CommunityPost[]> {
+        try {
+            if (!supabase) return [];
+            const { data, error } = await supabase
+                .from('community_posts')
+                .select('*, user_profiles(name)')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return (data || []).map(p => ({
+                ...p,
+                author_name: (p.user_profiles as any)?.name || 'Anonyme',
+                author_avatar: (p.user_profiles as any)?.avatar
+            }));
+        } catch (err) {
+            console.error('adminGetAllPosts error:', err);
+            return [];
+        }
+    },
+
+    async adminGetAllComments(): Promise<any[]> {
+        try {
+            if (!supabase) return [];
+            const { data, error } = await supabase
+                .from('post_comments')
+                .select('*, user_profiles(name), community_posts(title)')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return (data || []).map(c => ({
+                ...c,
+                author_name: (c.user_profiles as any)?.name || 'Anonyme',
+                post_title: (c.community_posts as any)?.title || 'Post sans titre'
+            }));
+        } catch (err) {
+            console.error('adminGetAllComments error:', err);
+            return [];
+        }
+    },
+
+    async adminGetAllUsers(): Promise<User[]> {
+        try {
+            if (!supabase) return [];
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .order('joined_date', { ascending: false });
+
+            if (error) throw error;
+            return (data || []).map(d => ({
+                id: d.id,
+                name: d.name,
+                email: d.email,
+                phone: d.phone,
+                avatar: d.avatar,
+                is_admin: d.is_admin,
+                joinedDate: d.joined_date,
+                favorites: d.favorites || [],
+                shoppingList: d.shopping_list || [],
+                settings: { darkMode: d.dark_mode, language: d.language, unitSystem: d.unit_system }
+            } as User));
+        } catch (err) {
+            console.error('adminGetAllUsers error:', err);
+            return [];
+        }
+    },
+
+    async adminDeletePost(postId: string): Promise<boolean> {
+        try {
+            if (!supabase) return false;
+            const { error } = await supabase.from('community_posts').delete().eq('id', postId);
+            if (error) throw error;
+            return true;
+        } catch (err) {
+            console.error('adminDeletePost error:', err);
+            return false;
+        }
+    },
+
+    async adminDeleteComment(commentId: string): Promise<boolean> {
+        try {
+            if (!supabase) return false;
+            const { error } = await supabase.from('post_comments').delete().eq('id', commentId);
+            if (error) throw error;
+            return true;
+        } catch (err) {
+            console.error('adminDeleteComment error:', err);
+            return false;
+        }
+    },
+
+    async adminToggleUserBan(userId: string, is_banned: boolean): Promise<boolean> {
+        try {
+            const url = import.meta.env.VITE_SUPABASE_URL || 'https://ewoiqbhqtcdatpzhdaef.supabase.co';
+            const serviceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3b2lxYmhxdGNkYXRwemhkYWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIxNzk5MSwiZXhwIjoyMDg3NzkzOTkxfQ.7tYsh8vXStkJqhk4T-IA6rYgONJ7evPEFbbpfHR1fDc';
+            const adminClient = createClient(url, serviceKey);
+
+            const { error: authError } = await adminClient.auth.admin.updateUserById(userId, {
+                user_metadata: { banned: is_banned }
+            });
+            if (authError) throw authError;
+            return true;
+        } catch (err) {
+            console.error('adminToggleUserBan error:', err);
+            return false;
+        }
+    },
+
+    async adminGetCommunityStats(): Promise<any> {
+        try {
+            if (!supabase) return { totalPosts: 0, totalComments: 0, totalUsers: 0, totalLikes: 0, totalViews: 0 };
+
+            const [postsCount, commentsCount, usersCount, likesCount] = await Promise.all([
+                supabase.from('community_posts').select('*', { count: 'exact', head: true }),
+                supabase.from('post_comments').select('*', { count: 'exact', head: true }),
+                supabase.from('user_profiles').select('*', { count: 'exact', head: true }),
+                supabase.from('post_likes').select('*', { count: 'exact', head: true })
+            ]);
+
+            // For total views, we could sum views_count in community_posts
+            const { data: viewsData } = await supabase.from('community_posts').select('views_count');
+            const totalViews = (viewsData || []).reduce((acc, curr) => acc + (curr.views_count || 0), 0);
+
+            return {
+                totalPosts: postsCount.count || 0,
+                totalComments: commentsCount.count || 0,
+                totalUsers: usersCount.count || 0,
+                totalLikes: likesCount.count || 0,
+                totalViews: totalViews || 0
+            };
+        } catch (err) {
+            console.error('adminGetCommunityStats error:', err);
+            return { totalPosts: 0, totalComments: 0, totalUsers: 0, totalLikes: 0, totalViews: 0 };
+        }
+    },
+
+    async adminGetAllReports(): Promise<any[]> {
+        if (!supabase) return [];
+        try {
+            const { data, error } = await supabase
+                .from('post_reports')
+                .select(`
+                    *,
+                    reporter:user_profiles!post_reports_user_id_fkey(name, email),
+                    post:community_posts(content, image_url, author_name)
+                `)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            return data || [];
+        } catch (err) {
+            console.error('Fetch reports failed:', err);
+            return [];
+        }
+    },
+
+    async adminDeleteReport(reportId: string): Promise<boolean> {
+        if (!supabase) return false;
+        try {
+            const { error } = await supabase.from('post_reports').delete().eq('id', reportId);
+            return !error;
+        } catch (err) {
+            return false;
+        }
+    },
+
+    async adminUpdateSection(sectionId: string, updates: any): Promise<boolean> {
+        if (!supabase) return false;
+        try {
+            const { error } = await supabase.from('home_sections').update(updates).eq('id', sectionId);
+            return !error;
+        } catch (err) {
+            return false;
+        }
+    },
+
+    async adminDeleteSection(sectionId: string): Promise<boolean> {
+        if (!supabase) return false;
+        try {
+            const { error } = await supabase.from('home_sections').delete().eq('id', sectionId);
+            return !error;
+        } catch (err) {
+            return false;
+        }
+    },
+
+    async adminCreateSection(section: any): Promise<boolean> {
+        if (!supabase) return false;
+        try {
+            const { error } = await supabase.from('home_sections').insert([section]);
+            return !error;
+        } catch (err) {
+            return false;
+        }
     }
 };

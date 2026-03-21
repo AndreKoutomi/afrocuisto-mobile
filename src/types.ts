@@ -88,6 +88,7 @@ export interface User {
   savedPosts?: string[];  // Posts de la communauté sauvegardés/enregistrés
   following?: string[];   // Utilisateurs de la communauté suivis
   joinedDate: string;     // Date d'inscription
+  is_admin?: boolean;      // Admin status
   settings?: UserSettings; // Ses préférences (sombre/clair, langue...)
 }
 
@@ -115,6 +116,8 @@ export interface Product {
 }
 
 // --- Community Types ---
+export type PostCategory = 'Recette' | 'Astuce' | 'Question' | 'Moment' | 'Autre';
+
 export interface CommunityPost {
   id: string;
   user_id: string;
@@ -123,6 +126,7 @@ export interface CommunityPost {
   title?: string;
   content?: string;
   image_url?: string;
+  category?: PostCategory;
   created_at: string;
   likes_count: number;
   comments_count: number;

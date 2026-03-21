@@ -11,6 +11,20 @@ async function checkResources() {
     // 1. Check for 'dish_suggestions' directly
     console.log('\nChecking table: dish_suggestions...');
     const { error: dishError } = await supabase.from('dish_suggestions').select('*').limit(0);
+    const { count, error: countErr } = await supabase.from('community_posts').select('*', { count: 'exact', head: true });
+    if (!countErr) {
+        console.log(`✅ Table "community_posts" has ${count} rows.`);
+    } else {
+        console.error('❌ Table "community_posts" count failed:', countErr.message);
+    }
+
+    const { count: usersCount, error: usersErr } = await supabase.from('user_profiles').select('*', { count: 'exact', head: true });
+    if (!usersErr) {
+        console.log(`✅ Table "user_profiles" has ${usersCount} rows.`);
+    } else {
+        console.error('❌ Table "user_profiles" count failed:', usersErr.message);
+    }
+
     if (dishError) {
         console.error('❌ Table "dish_suggestions" NOT FOUND (Error:', dishError.message, ')');
     } else {
@@ -35,7 +49,7 @@ async function checkResources() {
 
             if (schemaError) {
                 console.log('Could not query tables directly. Attempting to probe common names...');
-                const probes = ['dish_suggestions', 'suggestions', 'user_suggestions', 'contributions', 'dish_contributions'];
+                const probes = ['dish_suggestions', 'community_posts', 'user_profiles', 'post_comments', 'post_likes', 'post_reports'];
                 for (const probe of probes) {
                     const { error } = await supabase.from(probe).select('*').limit(0);
                     if (!error) console.log(`✅ FOUND: "${probe}"`);

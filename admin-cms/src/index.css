@@ -93,6 +93,20 @@ button {
   gap: 0.5rem;
 }
 
+.nav-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 1.5rem 1.25rem 0.5rem 1.25rem;
+  display: block;
+}
+
+.sidebar.collapsed .nav-label {
+  display: none;
+}
+
 .nav-item {
   display: flex;
   align-items: center;

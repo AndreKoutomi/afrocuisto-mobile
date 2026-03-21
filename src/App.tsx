@@ -17,6 +17,7 @@ import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { motion, AnimatePresence } from 'motion/react';
 import { PullToRefresh } from './components/PullToRefresh';
 import { CommunityFeed } from './components/community/CommunityFeed';
+import { AdminCommunityDashboard } from './components/AdminCommunityDashboard';
 import {
   ChefHat,
   Clock,
@@ -84,7 +85,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { recipes } from './data';
-import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product, CommunityPost, PostComment } from './types';
+import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product, CommunityPost, PostComment, PostCategory } from './types';
 import { getAIRecipeRecommendation } from './aiService';
 import { dbService } from './dbService';
 import { translations, LanguageCode } from './translations';
@@ -1922,76 +1923,84 @@ export default function App() {
     };
   }, [currentUser?.id]);
 
+  const updateUserObject = async (sessionUser: any) => {
+    setIsSyncing(true);
+    try {
+      if (!dbService.supabase) return;
+      const userRes = await dbService.supabase.auth.getUser();
+      const freshestUser = userRes?.data?.user;
+      const targetUser = freshestUser || sessionUser;
+
+      if (targetUser?.user_metadata?.banned) {
+        console.warn("User is banned, auto-logging out.");
+        await dbService.signOut();
+        setCurrentUser(null);
+        dbService.setCurrentUser(null);
+        setAuthError("Votre compte a été désactivé par un administrateur.");
+        return;
+      }
+
+      const remoteProfile = await dbService.getRemoteUserProfile(targetUser.id);
+      const existingLocal = dbService.getUsers().find(u => u.email === sessionUser.email) || null;
+
+      const localDarkMode = typeof window !== 'undefined'
+        ? localStorage.getItem('afrocuisto_dark_mode')
+        : null;
+
+      const mergedSettings = {
+        darkMode: localDarkMode !== null
+          ? localDarkMode === 'true'
+          : (existingLocal?.settings?.darkMode ?? remoteProfile?.settings?.darkMode ?? false),
+        language: existingLocal?.settings?.language || remoteProfile?.settings?.language || 'fr',
+        unitSystem: existingLocal?.settings?.unitSystem || remoteProfile?.settings?.unitSystem || 'metric',
+      };
+
+      const userObj: User = {
+        id: targetUser.id,
+        name: remoteProfile?.name || targetUser.user_metadata?.full_name || existingLocal?.name || targetUser.email?.split('@')[0] || "User",
+        email: targetUser.email || sessionUser.email!,
+        phone: remoteProfile?.phone || targetUser.phone || sessionUser.phone || existingLocal?.phone || '',
+        favorites: remoteProfile?.favorites || existingLocal?.favorites || [],
+        shoppingList: remoteProfile?.shoppingList || existingLocal?.shoppingList || [],
+        savedPosts: remoteProfile?.savedPosts || existingLocal?.savedPosts || currentUser?.savedPosts || [],
+        following: remoteProfile?.following || existingLocal?.following || currentUser?.following || [],
+        joinedDate: existingLocal?.joinedDate || new Date(targetUser.created_at || Date.now()).toLocaleDateString(),
+        is_admin: remoteProfile?.is_admin || existingLocal?.is_admin || false,
+        settings: mergedSettings,
+        avatar: remoteProfile?.avatar || existingLocal?.avatar || currentUser?.avatar
+      };
+
+      setCurrentUser(userObj);
+      dbService.setCurrentUser(userObj);
+      setHasLoadedAtLeastOnce(true);
+
+      if (!remoteProfile && targetUser.id) {
+        await dbService.syncUserToCloud(userObj);
+      }
+    } catch (err) {
+      console.error('Error syncing user object:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const syncUserProfile = async () => {
+    if (!currentUser?.id || !dbService.supabase) return;
+    try {
+      const { data: { session } } = await dbService.supabase.auth.getSession();
+      if (session?.user) {
+        await updateUserObject(session.user);
+      }
+    } catch (err) {
+      console.error('Profile sync failed:', err);
+    }
+  };
+
   useEffect(() => {
-    // Initial Auth Check
     const initAuth = async () => {
       if (!dbService.supabase) return;
       const sessionRes = await dbService.supabase.auth.getSession();
       const session = sessionRes?.data?.session;
-
-      const updateUserObject = async (sessionUser: any) => {
-        setIsSyncing(true);
-        try {
-          // Force fetch the freshest user auth data to catch instant bans
-          const userRes = await dbService.supabase!.auth.getUser();
-          const freshestUser = userRes?.data?.user;
-          const targetUser = freshestUser || sessionUser;
-
-          if (targetUser?.user_metadata?.banned) {
-            console.warn("User is banned, auto-logging out.");
-            await dbService.signOut();
-            setCurrentUser(null);
-            dbService.setCurrentUser(null);
-            setAuthError("Votre compte a été désactivé par un administrateur.");
-            return;
-          }
-
-          // Fetch remote profile
-          const remoteProfile = await dbService.getRemoteUserProfile(targetUser.id);
-          const existingLocal = dbService.getUsers().find(u => u.email === sessionUser.email) || null;
-
-          // localStorage dark mode is ALWAYS the source of truth for the current session
-          // It is set explicitly every time the user toggles dark mode.
-          const localDarkMode = typeof window !== 'undefined'
-            ? localStorage.getItem('afrocuisto_dark_mode')
-            : null;
-
-          const mergedSettings = {
-            darkMode: localDarkMode !== null
-              ? localDarkMode === 'true'
-              : (existingLocal?.settings?.darkMode ?? remoteProfile?.settings?.darkMode ?? false),
-            language: existingLocal?.settings?.language || remoteProfile?.settings?.language || 'fr',
-            unitSystem: existingLocal?.settings?.unitSystem || remoteProfile?.settings?.unitSystem || 'metric',
-          };
-
-          const userObj: User = {
-            id: targetUser.id,
-            name: remoteProfile?.name || targetUser.user_metadata?.full_name || existingLocal?.name || targetUser.email?.split('@')[0] || "User",
-            email: targetUser.email || sessionUser.email!,
-            phone: remoteProfile?.phone || targetUser.phone || sessionUser.phone || existingLocal?.phone || '',
-            favorites: remoteProfile?.favorites || existingLocal?.favorites || [],
-            shoppingList: remoteProfile?.shoppingList || existingLocal?.shoppingList || [],
-            savedPosts: remoteProfile?.savedPosts || existingLocal?.savedPosts || currentUser?.savedPosts || [],
-            following: remoteProfile?.following || existingLocal?.following || currentUser?.following || [],
-            joinedDate: existingLocal?.joinedDate || new Date(targetUser.created_at || Date.now()).toLocaleDateString(),
-            settings: mergedSettings,
-            avatar: remoteProfile?.avatar || existingLocal?.avatar || currentUser?.avatar
-          };
-
-          setCurrentUser(userObj);
-          dbService.setCurrentUser(userObj);
-          setHasLoadedAtLeastOnce(true);
-
-          // ONLY re-create remote profile if it's missing AND the user is actually logged in
-          if (!remoteProfile && targetUser.id) {
-            await dbService.syncUserToCloud(userObj);
-          }
-        } catch (err) {
-          console.error('Error syncing user object:', err);
-        } finally {
-          setIsSyncing(false);
-        }
-      };
 
       if (session?.user) {
         updateUserObject(session.user);
@@ -1999,11 +2008,9 @@ export default function App() {
 
       dbService.supabase.auth.onAuthStateChange(async (event, curSession) => {
         if (event === 'PASSWORD_RECOVERY') {
-          console.log('Recovery link clicked! Switching to updatePassword mode');
           setAuthMode('updatePassword');
           return;
         }
-
         if (curSession?.user) {
           updateUserObject(curSession.user);
         } else {
@@ -2130,6 +2137,7 @@ export default function App() {
     const timer = setInterval(() => setBannerIdx(i => (i + 1) % SHOPPING_BANNERS.length), 4000);
     return () => clearInterval(timer);
   }, []);
+  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{
     show: boolean;
     message: string;
@@ -2240,7 +2248,8 @@ export default function App() {
       syncRecipes(),
       syncSections(),
       syncProducts(),
-      syncMerchants()
+      syncMerchants(),
+      syncUserProfile()
     ]);
   };
 
@@ -2349,17 +2358,35 @@ export default function App() {
   const [postComments, setPostComments] = useState<PostComment[]>([]);
   const [isCommentsLoading, setIsCommentsLoading] = useState(false);
 
+  // Sync community when switching to tab
+  useEffect(() => {
+    if (activeTab === 'community' && communityPosts.length === 0) {
+      syncCommunity(0);
+    }
+  }, [activeTab]);
+
   const [homeCarouselIndex, setHomeCarouselIndex] = useState(0);
   const homeTouchRef = useRef({ startX: 0, startY: 0 });
 
   const juicesRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLElement>(null);
 
-  const syncCommunity = async () => {
+  const [communityPage, setCommunityPage] = useState(0);
+  const [hasMoreCommunityPosts, setHasMoreCommunityPosts] = useState(true);
+
+  const syncCommunity = async (page: number = 0) => {
+    if (isCommunityLoading && page === 0) return; // Avoid double initial sync
     setIsCommunityLoading(true);
     try {
-      const posts = await dbService.getCommunityPosts(currentUser?.id);
-      setCommunityPosts(posts);
+      const posts = await dbService.getCommunityPosts(currentUser?.id, page, 10);
+      if (page === 0) {
+        setCommunityPosts(posts || []);
+        setCommunityPage(0);
+      } else if (posts && posts.length > 0) {
+        setCommunityPosts(prev => [...prev, ...posts]);
+        setCommunityPage(page);
+      }
+      if (posts) setHasMoreCommunityPosts(posts.length === 10);
     } catch (err) {
       console.error('Community sync failed:', err);
     } finally {
@@ -2367,39 +2394,15 @@ export default function App() {
     }
   };
 
-  /** Pull-to-refresh : re-fetch + shuffle Fisher-Yates pour varier l'ordre */
-  const refreshCommunity = async () => {
-    try {
-      const posts = await dbService.getCommunityPosts(currentUser?.id);
-      // Fisher-Yates shuffle
-      const shuffled = [...posts];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      setCommunityPosts(shuffled);
-    } catch (err) {
-      console.error('Community refresh failed:', err);
-    }
+  const loadMoreCommunityPosts = async () => {
+    if (isCommunityLoading || !hasMoreCommunityPosts) return;
+    const nextPage = communityPage + 1;
+    await syncCommunity(nextPage);
   };
 
-  useEffect(() => {
-    if (activeTab === 'community') {
-      syncCommunity();
-
-      // Realtime subscription for community
-      const channel = dbService.supabase
-        ?.channel('community-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'community_posts' }, () => syncCommunity())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, () => syncCommunity())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_comments' }, () => syncCommunity())
-        .subscribe();
-
-      return () => {
-        if (channel) dbService.supabase?.removeChannel(channel);
-      };
-    }
-  }, [activeTab, currentUser?.id]);
+  const refreshCommunity = async () => {
+    await syncCommunity(0);
+  };
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -2419,6 +2422,37 @@ export default function App() {
     };
     fetchComments();
   }, [selectedPostForComments]);
+
+  /** Real-time Community Updates */
+  useEffect(() => {
+    if (!dbService.supabase || activeTab !== 'community') return;
+
+    // Listen to community_posts changes
+    const channel = dbService.supabase
+      .channel('community-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'community_posts' }, async (payload) => {
+        // Full sync if we are at the top, otherwise ignore to avoid scroll jump
+        if (window.scrollY < 300) {
+          refreshCommunity();
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'community_posts' }, (payload) => {
+        const updatedPost = payload.new;
+        setCommunityPosts(prev => prev.map(p =>
+          // IMPORTANT: Merge with existing post to keep joined fields (author_name, author_avatar)
+          p.id === updatedPost.id ? { ...p, ...updatedPost } : p
+        ));
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'community_posts' }, (payload) => {
+        const deletedPostId = payload.old.id;
+        setCommunityPosts(prev => prev.filter(p => p.id !== deletedPostId));
+      })
+      .subscribe();
+
+    return () => {
+      dbService.supabase?.removeChannel(channel);
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab !== 'home' || !juicesRef.current) return;
@@ -2472,6 +2506,7 @@ export default function App() {
   const goBack = () => {
     // Top-most overlays (z-index 2000+)
     if (selectedNotifDetail) { setSelectedNotifDetail(null); return; }
+    if (isAdminDashboardOpen) { setIsAdminDashboardOpen(false); return; }
     if (isNotifCenterOpen) { setIsNotifCenterOpen(false); return; }
     if (isCartOpen) { setIsCartOpen(false); return; }
     if (isOrdersOpen) { setIsOrdersOpen(false); return; }
@@ -3812,34 +3847,51 @@ export default function App() {
       }
     };
 
-    const handleCreatePost = async (postData: { title?: string; content?: string; image_url?: string }) => {
+    const handleCreatePost = async (postData: { title?: string; content?: string; image_url?: string; category?: PostCategory }) => {
       if (!currentUser) { navigateTo('profile'); return; }
 
-      const res = await dbService.createPost({
-        user_id: currentUser.id,
-        author_name: currentUser.name,
-        author_avatar: currentUser.avatar,
-        title: postData.title,
-        content: postData.content,
-        image_url: postData.image_url
-      });
+      setIsCommunityLoading(true);
+      try {
+        const res = await dbService.createPost({
+          user_id: currentUser.id,
+          author_name: currentUser.name,
+          author_avatar: currentUser.avatar,
+          title: postData.title,
+          content: postData.content,
+          image_url: postData.image_url,
+          category: postData.category
+        });
 
-      if (res) {
-        setCommunityPosts(prev => [res, ...prev]);
-        showAlert("Publication partagée avec succès !", "success");
-      } else {
-        showAlert("Erreur lors de la publication.", "error");
+        if (res) {
+          setCommunityPosts(prev => [res, ...prev]);
+          showAlert("Publication partagée avec succès !", "success");
+        } else {
+          showAlert("Erreur lors de la publication. Vérifiez votre connexion ou les permissions Supabase.", "error");
+        }
+      } catch (err: any) {
+        console.error("CreatePost error:", err);
+        showAlert(`Erreur: ${err.message || 'Échec de publication'}`, "error");
+      } finally {
+        setIsCommunityLoading(false);
       }
     };
 
-    const handleUpdatePost = async (postId: string, postData: { title?: string; content?: string; image_url?: string }) => {
+    const handleUpdatePost = async (postId: string, postData: { title?: string; content?: string; image_url?: string; category?: PostCategory }) => {
       if (!currentUser) return;
-      const success = await dbService.updateCommunityPost(postId, currentUser.id, postData);
-      if (success) {
-        setCommunityPosts(prev => prev.map(p => p.id === postId ? { ...p, ...postData } : p));
-        showAlert("Publication modifiée avec succès.", "success");
-      } else {
-        showAlert("Erreur lors de la modification.", "error");
+      setIsCommunityLoading(true);
+      try {
+        const success = await dbService.updateCommunityPost(postId, currentUser.id, postData);
+        if (success) {
+          setCommunityPosts(prev => prev.map(p => p.id === postId ? { ...p, ...postData } : p));
+          showAlert("Publication modifiée avec succès.", "success");
+        } else {
+          showAlert("Erreur lors de la modification.", "error");
+        }
+      } catch (err: any) {
+        console.error("UpdatePost error:", err);
+        showAlert(`Erreur: ${err.message || 'Échec de modification'}`, "error");
+      } finally {
+        setIsCommunityLoading(false);
       }
     };
 
@@ -3960,6 +4012,8 @@ export default function App() {
               onFollowAuthor={handleFollowAuthor}
               onCreatePost={handleCreatePost}
               onUpdatePost={handleUpdatePost}
+              onLoadMore={loadMoreCommunityPosts}
+              hasMore={hasMoreCommunityPosts}
               jumpToPostId={jumpToPostId}
               showSavedOnly={showSavedPosts}
             />
@@ -4169,7 +4223,14 @@ export default function App() {
             {getInitials(currentUser?.name)}
           </span>
         </div>
-        <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-stone-800'}`}>{currentUser?.name}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-stone-800'}`}>{currentUser?.name}</h2>
+          {currentUser?.is_admin && (
+            <div className="bg-[#fb5607] text-[8px] text-white px-2 py-0.5 rounded-full font-black uppercase tracking-widest shadow-lg shadow-[#fb5607]/20 flex items-center gap-1">
+              <ShieldAlert size={10} /> ADMIN
+            </div>
+          )}
+        </div>
         <p className={`text-sm ${isDark ? 'text-white/50' : 'text-stone-500'}`}>{currentUser?.email}</p>
 
         {/* Cloud Connection Status + Refresh */}
@@ -4250,6 +4311,24 @@ export default function App() {
           <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
         </a>
 
+
+        {currentUser?.is_admin && (
+          <button
+            onClick={() => setIsAdminDashboardOpen(true)}
+            className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all outline-none mb-3 ${isDark ? 'bg-[#fb5607]/10 border-[#fb5607]/30 hover:bg-[#fb5607]/20' : 'bg-orange-50 border-orange-100 hover:bg-orange-100'}`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-[#fb5607]/20 text-[#fb5607]' : 'bg-[#fb5607] text-white'}`}>
+                <ShieldAlert size={20} />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>Administration</span>
+                <span className="text-[10px] font-bold text-[#fb5607] uppercase">Community & Flux</span>
+              </div>
+            </div>
+            <ChevronRight size={18} className={isDark ? 'text-[#fb5607]/40' : 'text-[#fb5607]/60'} />
+          </button>
+        )}
 
         <button onClick={handleLogout} className={`w-full flex items-center gap-3 p-4 rounded-3xl font-bold mt-6 ${isDark ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-rose-50 text-rose-600'}`}><LogOut size={20} /> {t.logout}</button>
       </section>
@@ -5642,28 +5721,98 @@ export default function App() {
                 })}
               </div>
 
-              {/* Product Grid */}
-              <div className="px-5 grid grid-cols-2 gap-4">
+              {/* Product List — design horizontal card */}
+              <div className="px-4 flex flex-col gap-3">
                 {filteredProducts.length > 0 ? (
-                  filteredProducts.map(product => (
-                    <StoreProductCard
-                      key={product.id}
-                      product={product}
-                      list={list}
-                      updateShoppingList={updateShoppingList}
-                      isDark={isDark}
-                      allMerchants={allMerchants}
-                      setSelectedProduct={setSelectedProduct}
-                    />
-                  ))
+                  filteredProducts.map((product, idx) => {
+                    const mName = product.merchant_id
+                      ? (allMerchants.find((m: any) => m.id === product.merchant_id)?.name || product.brand)
+                      : product.brand;
+                    const shopItem = list.find((i: any) => i.id.startsWith(`store_${product.id}`));
+                    const isInList = !!shopItem;
+
+                    return (
+                      <motion.div
+                        key={product.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.04 }}
+                        onClick={() => setSelectedProduct(product)}
+                        className={`flex items-center gap-4 rounded-[22px] p-3 cursor-pointer active:scale-[0.98] transition-all ${isDark ? 'bg-white/6 border border-white/8' : 'bg-white shadow-sm'}`}
+                        style={isDark ? {} : { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
+                      >
+                        {/* Image */}
+                        <div className={`w-[88px] h-[88px] rounded-[16px] flex-shrink-0 overflow-hidden ${isDark ? 'bg-white/5' : 'bg-[#f4f7f5]'}`}>
+                          {product.image_url
+                            ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                            : <span className="text-4xl flex items-center justify-center w-full h-full">{product.emoji || '📦'}</span>
+                          }
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h4 className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}>
+                              {product.name}
+                            </h4>
+                          </div>
+
+                          <p className="text-[12px] text-stone-400 font-medium leading-snug line-clamp-2 mb-2">
+                            {(product as any).description || mName}
+                          </p>
+
+                          <div className="flex items-center justify-between">
+                            {/* Price */}
+                            <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-[#1a1a2e]'}`}>
+                              {product.price.toLocaleString()} <span className="text-[11px] font-bold text-stone-400">XOF</span>
+                            </span>
+
+                            {/* Cart button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isInList) {
+                                  // Remove from list
+                                  const newList = list.filter((i: any) => !i.id.startsWith(`store_${product.id}`));
+                                  updateShoppingList(newList);
+                                } else {
+                                  // Add to list
+                                  const newItem = {
+                                    id: `store_${product.id}_${Date.now()}`,
+                                    item: product.name,
+                                    amount: '1',
+                                    quantity: '1',
+                                    unit: product.unit,
+                                    priceXOF: String(product.price),
+                                    isPurchased: false,
+                                    recipeName: mName
+                                  };
+                                  updateShoppingList([...list, newItem]);
+                                }
+                              }}
+                              className={`w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all active:scale-90 flex-shrink-0 ${isInList
+                                ? 'bg-emerald-100'
+                                : 'bg-[#2563eb]'
+                                }`}
+                            >
+                              {isInList
+                                ? <Check size={18} strokeWidth={3} className="text-emerald-500" />
+                                : <ShoppingBag size={17} strokeWidth={2.5} className="text-white" />
+                              }
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })
                 ) : (
-                  <div className="col-span-2 py-20 text-center">
+                  <div className="py-20 text-center">
                     <div className={`w-20 h-20 mx-auto rounded-[32px] flex items-center justify-center mb-6 ${isDark ? 'bg-white/5' : 'bg-stone-50'}`}>
                       <ShoppingBag size={32} className="text-stone-300" />
                     </div>
                     <h3 className={`text-lg font-black mb-2 ${isDark ? 'text-white' : 'text-stone-800'}`}>Aucun produit</h3>
                     <p className="text-stone-400 text-sm font-medium px-12 leading-relaxed">
-                      Nous n'avons trouvé aucun article correspondant à "{productSearchQuery}" dans cette catégorie.
+                      Aucun article correspondant à votre recherche dans cette catégorie.
                     </p>
                   </div>
                 )}
@@ -6571,6 +6720,16 @@ export default function App() {
               <OrdersHistoryView currentUser={currentUser} t={t} isDark={isDark} />
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isAdminDashboardOpen && (
+          <AdminCommunityDashboard
+            isDark={isDark}
+            onClose={() => setIsAdminDashboardOpen(false)}
+            t={t}
+          />
         )}
       </AnimatePresence>
 

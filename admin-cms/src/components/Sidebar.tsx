@@ -12,7 +12,7 @@
  */
 
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users, Sparkles, CreditCard, Bell, ChevronLeft, ChevronRight, Store, ShoppingBag, ShoppingBasket, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users, Sparkles, CreditCard, Bell, ChevronLeft, ChevronRight, Store, ShoppingBag, ShoppingBasket, LogOut, Share2 } from 'lucide-react';
 import logoAdmin from '../assets/logo_admin.png';
 
 interface SidebarProps {
@@ -69,7 +69,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }:
 
             {/* Navigation : la liste des liens vers les différentes pages */}
             <nav className="sidebar-nav">
-                {/* Lien vers le Tableau de bord */}
+                <span className="nav-label">Général</span>
+
                 <NavLink
                     to="/dashboard"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -78,7 +79,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }:
                     <span>Tableau de bord</span>
                 </NavLink>
 
-                {/* Lien vers la liste des Recettes */}
+                <span className="nav-label">Contenu</span>
+
                 <NavLink
                     to="/recipes"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -87,7 +89,6 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }:
                     <span>Recettes</span>
                 </NavLink>
 
-                {/* Lien vers la gestion des Sections (rubriques de l'accueil) */}
                 <NavLink
                     to="/sections"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -96,61 +97,6 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }:
                     <span>Sections</span>
                 </NavLink>
 
-                {/* Lien vers la liste des Utilisateurs */}
-                <NavLink
-                    to="/users"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Users size={20} style={{ marginRight: '8px' }} />
-                    <span>Utilisateurs</span>
-                </NavLink>
-
-                {/* Lien vers la gestion des Marchands */}
-                <NavLink
-                    to="/merchants"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Store size={20} style={{ marginRight: '8px' }} />
-                    <span>Marchands</span>
-                </NavLink>
-
-                {/* Lien vers la gestion des Commandes */}
-                <NavLink
-                    to="/orders"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <ShoppingBasket size={20} style={{ marginRight: '8px' }} />
-                    <span>Commandes</span>
-                </NavLink>
-
-                {/* Lien vers la gestion des Produits du Store */}
-                <NavLink
-                    to="/products"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <ShoppingBag size={20} style={{ marginRight: '8px' }} />
-                    <span>Produits Store</span>
-                </NavLink>
-
-                {/* Lien vers les Transactions financières */}
-                <NavLink
-                    to="/transactions"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <CreditCard size={20} style={{ marginRight: '8px' }} />
-                    <span>Transactions</span>
-                </NavLink>
-
-                {/* Lien vers les Retours clients (avis) */}
-                <NavLink
-                    to="/feedback"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <MessageSquare size={20} style={{ marginRight: '8px' }} />
-                    <span>Retour client</span>
-                </NavLink>
-
-                {/* Lien vers les Contributions (suggestions de plats par les gens) */}
                 <NavLink
                     to="/contributions"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -159,13 +105,74 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }:
                     <span>Contributions</span>
                 </NavLink>
 
-                {/* Lien vers les Notifications Push */}
+                <span className="nav-label">Utilisateurs & Social</span>
+
+                <NavLink
+                    to="/users"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <Users size={20} style={{ marginRight: '8px' }} />
+                    <span>Utilisateurs</span>
+                </NavLink>
+
+                <NavLink
+                    to="/community"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <Share2 size={20} style={{ marginRight: '8px' }} />
+                    <span>Communauté</span>
+                </NavLink>
+
+                <NavLink
+                    to="/feedback"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <MessageSquare size={20} style={{ marginRight: '8px' }} />
+                    <span>Retours Clients</span>
+                </NavLink>
+
+                <span className="nav-label">Boutique & Ventes</span>
+
+                <NavLink
+                    to="/merchants"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <Store size={20} style={{ marginRight: '8px' }} />
+                    <span>Marchands</span>
+                </NavLink>
+
+                <NavLink
+                    to="/orders"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <ShoppingBasket size={20} style={{ marginRight: '8px' }} />
+                    <span>Commandes</span>
+                </NavLink>
+
+                <NavLink
+                    to="/products"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <ShoppingBag size={20} style={{ marginRight: '8px' }} />
+                    <span>Produits Store</span>
+                </NavLink>
+
+                <NavLink
+                    to="/transactions"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <CreditCard size={20} style={{ marginRight: '8px' }} />
+                    <span>Transactions</span>
+                </NavLink>
+
+                <span className="nav-label">Communication</span>
+
                 <NavLink
                     to="/notifications"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >
                     <Bell size={20} style={{ marginRight: '8px' }} />
-                    <span>Notifications</span>
+                    <span>Notifications Push</span>
                 </NavLink>
 
                 <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>

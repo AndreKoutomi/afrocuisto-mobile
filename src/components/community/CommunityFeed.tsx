@@ -5,7 +5,7 @@ import {
     ArrowLeft, Eye, MoreHorizontal, Bookmark, Flag, Trash2,
     UserPlus, UserMinus, Camera, Loader2, Edit2
 } from 'lucide-react';
-import { CommunityPost, User } from '../../types';
+import { CommunityPost, User, PostCategory } from '../../types';
 import { dbService } from '../../dbService';
 
 // ─── Utilitaires ────────────────────────────────────────────────────────────
@@ -67,18 +67,21 @@ const compressImage = (file: File, maxWidth = 1024, quality = 0.75): Promise<str
 
 const FullScreenCreatePostForm: React.FC<{
     currentUser: User | null;
-    onSubmit: (data: { title?: string; content?: string; image_url?: string }) => void;
+    onSubmit: (data: { title?: string; content?: string; image_url?: string; category?: PostCategory }) => void;
     onCancel: () => void;
     isDark: boolean;
     initialData?: CommunityPost | null;
 }> = ({ currentUser, onSubmit, onCancel, isDark, initialData }) => {
     const [title, setTitle] = useState(initialData?.title || '');
     const [content, setContent] = useState(initialData?.content || '');
+    const [category, setCategory] = useState<PostCategory>(initialData?.category || 'Autre');
     const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image_url || null);   // local blob preview
     const [imageBase64, setImageBase64] = useState<string | null>(initialData?.image_url || null);     // persisted data
     const [isUploading, setIsUploading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const categories: PostCategory[] = ['Recette', 'Astuce', 'Question', 'Moment', 'Autre'];
 
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -125,6 +128,7 @@ const FullScreenCreatePostForm: React.FC<{
                 title: title.trim() || undefined,
                 content: content.trim() || undefined,
                 image_url: finalImageUrl,
+                category
             });
         } finally {
             setIsSubmitting(false);
@@ -188,6 +192,22 @@ const FullScreenCreatePostForm: React.FC<{
                             Visible par tous
                         </p>
                     </div>
+                </div>
+
+                {/* Category Selection */}
+                <div className="px-4 mb-4 flex gap-2 overflow-x-auto no-scrollbar py-2">
+                    {categories.map((cat) => (
+                        <button
+                            key={cat}
+                            onClick={() => setCategory(cat)}
+                            className={`px-4 py-2 rounded-2xl text-[12px] font-bold whitespace-nowrap transition-all active:scale-95 ${category === cat
+                                ? 'bg-[#fb5607] text-white shadow-lg shadow-[#fb5607]/20 scale-105'
+                                : isDark ? 'bg-white/5 text-white/40 hover:bg-white/10' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                                }`}
+                        >
+                            {cat}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Formulaire */}
@@ -280,11 +300,69 @@ const MenuItem = ({ icon, label, onClick, isDark, danger }: any) => (
     </button>
 );
 
+// ─── Filtre par Catégorie ─────────────────────────────────────────────────────
+
+const CategoryFilter = ({ selected, onSelect, isDark }: { selected: string; onSelect: (c: any) => void; isDark: boolean }) => {
+    const categories: PostCategory[] = ['Recette', 'Astuce', 'Question', 'Moment', 'Autre'];
+    return (
+        <div className="flex gap-2 overflow-x-auto pb-4 pt-1 no-scrollbar -mx-1 px-1">
+            <button
+                onClick={() => onSelect('All')}
+                className={`px-4 py-2 rounded-2xl text-[12px] font-bold whitespace-nowrap transition-all ${selected === 'All'
+                    ? 'bg-[#fb5607] text-white shadow-lg shadow-[#fb5607]/20 scale-105'
+                    : isDark ? 'bg-white/5 text-white/40 hover:bg-white/10' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                    }`}
+            >
+                Tout voir
+            </button>
+            {categories.map(cat => (
+                <button
+                    key={cat}
+                    onClick={() => onSelect(cat)}
+                    className={`px-4 py-2 rounded-2xl text-[12px] font-bold whitespace-nowrap transition-all ${selected === cat
+                        ? 'bg-[#fb5607] text-white shadow-lg shadow-[#fb5607]/20 scale-105'
+                        : isDark ? 'bg-white/5 text-white/40 hover:bg-white/10' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                        }`}
+                >
+                    {cat}
+                </button>
+            ))}
+        </div>
+    );
+};
+
+// ─── Image Lightbox ──────────────────────────────────────────────────────────
+
+const ImageLightbox = ({ imageUrl, onClose }: { imageUrl: string; onClose: () => void }) => {
+    return (
+        <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+            <motion.button
+                whileTap={{ scale: 0.9 }}
+                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white"
+            >
+                <X size={24} />
+            </motion.button>
+            <motion.img
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                src={imageUrl}
+                className="max-w-full max-h-screen object-contain rounded-lg shadow-2xl shadow-black/50"
+                onClick={(e) => e.stopPropagation()}
+            />
+        </motion.div>
+    );
+};
+
 // ─── Carte de post ───────────────────────────────────────────────────────────
 
-const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDeletePost, onSavePost, onFollowAuthor, onEdit, isDark }: any) => {
+const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDeletePost, onSavePost, onFollowAuthor, onEdit, onZoom, isDark }: any) => {
     const hasViewedRef = useRef(false);
     const [showOptions, setShowOptions] = useState(false);
+    const [isLiking, setIsLiking] = useState(false); // animation de double-tap
     const isSaved = currentUser?.savedPosts?.includes(post.id);
     const isOwner = currentUser?.id === post.user_id;
     const isFollowing = currentUser?.following?.includes(post.user_id);
@@ -296,19 +374,27 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
         }
     }, [post.id]);
 
+    const handleDoubleTap = (e: React.MouseEvent) => {
+        if (!post.is_liked) {
+            onLike(post);
+        }
+        setIsLiking(true);
+        setTimeout(() => setIsLiking(false), 800);
+    };
+
     return (
         <motion.article
             id={`post-${post.id}`}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            className="mb-4"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="mb-6"
         >
             {/* Author row */}
             <div className="flex items-center justify-between px-1 mb-2.5">
                 <div className="flex items-center gap-2.5">
                     <div className="relative">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607]/70 to-[#ff9a6c]/50 p-[1.5px]">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607] to-[#ff9a6c] p-[1.5px]">
                             <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
                                 {post.author_avatar
                                     ? <img src={post.author_avatar} className="w-full h-full object-cover" alt="" />
@@ -316,10 +402,17 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
                                 }
                             </div>
                         </div>
-                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white" style={{ borderColor: isDark ? '#0a0a0a' : 'white' }} />
                     </div>
                     <div>
-                        <p className={`text-[14px] font-bold leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>{post.author_name}</p>
+                        <div className="flex items-center gap-2">
+                            <p className={`text-[14px] font-bold leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>{post.author_name}</p>
+                            {post.category && (
+                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${isDark ? 'bg-white/10 text-white/50' : 'bg-[#fb5607]/10 text-[#fb5607]'
+                                    }`}>
+                                    {post.category}
+                                </span>
+                            )}
+                        </div>
                         <p className={`text-[11px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{formatTimeAgo(post.created_at)}</p>
                     </div>
                 </div>
@@ -375,60 +468,89 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
                 </div>
             </div>
 
-            {/* Card body */}
-            <div className={`rounded-3xl overflow-hidden ${isDark ? 'bg-[#141414]' : 'bg-white'} shadow-[0_2px_14px_rgba(0,0,0,0.05)]`}>
-                {/* Image */}
+            {/* Content Body */}
+            <div className={`rounded-3xl overflow-hidden ${isDark ? 'bg-[#141414] border border-white/5' : 'bg-white border border-stone-100'} shadow-sm`}>
+                {/* Image Section */}
                 {post.image_url && (
-                    <div className="w-full overflow-hidden" style={{ aspectRatio: '4/3' }}>
+                    <div className="relative w-full overflow-hidden bg-stone-100" style={{ aspectRatio: '1/1' }}>
                         <img
                             src={post.image_url}
                             alt={post.title || 'Photo du plat'}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover cursor-zoom-in active:scale-105 transition-transform duration-500"
                             loading="lazy"
+                            onClick={() => onZoom(post.image_url)}
+                            onDoubleClick={handleDoubleTap}
                         />
+
+                        {/* Double tap heart animation */}
+                        <AnimatePresence>
+                            {isLiking && (
+                                <motion.div
+                                    initial={{ scale: 0, opacity: 0 }}
+                                    animate={{ scale: 1.2, opacity: 1 }}
+                                    exit={{ scale: 0.8, opacity: 0 }}
+                                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                                >
+                                    <Heart size={100} fill="#fff" className="text-white drop-shadow-2xl" />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 )}
 
-                {/* Text */}
+                {/* Text Content */}
                 {(post.title || post.content) && (
-                    <div className={`px-4 ${post.image_url ? 'pt-3.5' : 'pt-4'} pb-3`}>
+                    <div className={`px-4 ${post.image_url ? 'pt-4' : 'pt-5'} pb-4`}>
                         {post.title && (
-                            <h3 className={`font-black text-[16px] leading-snug tracking-tight mb-1 ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                            <h3 className={`font-black text-[17px] leading-tight mb-1.5 ${isDark ? 'text-white' : 'text-stone-900'}`}>
                                 {post.title}
                             </h3>
                         )}
                         {post.content && (
-                            <p className={`text-[13.5px] leading-relaxed ${isDark ? 'text-white/55' : 'text-stone-500'}`}>
+                            <p className={`text-[14px] leading-relaxed ${isDark ? 'text-white/60' : 'text-stone-500'}`}>
                                 {post.content}
                             </p>
                         )}
                     </div>
                 )}
 
-                {/* Action bar */}
-                <div className={`flex items-center justify-between px-4 py-3 ${(post.title || post.content) ? `border-t ${isDark ? 'border-white/5' : 'border-stone-50'}` : ''}`}>
-                    <div className={`flex items-center gap-1 ${isDark ? 'text-white/18' : 'text-stone-300'}`}>
-                        <Eye size={13} />
-                        <span className="text-[11px] font-bold">{post.views_count ?? 0}</span>
-                    </div>
-                    <div className="flex items-center gap-5">
-                        <motion.button whileTap={{ scale: 0.72 }} onClick={() => onLike(post)}
-                            className={`flex items-center gap-1.5 transition-colors ${post.is_liked ? 'text-[#ff2a5f]' : isDark ? 'text-white/25 hover:text-white/60' : 'text-stone-300 hover:text-stone-500'}`}
+                {/* Footer Actions */}
+                <div className={`flex items-center justify-between px-4 py-3.5 ${(post.title || post.content) ? `border-t ${isDark ? 'border-white/5' : 'border-stone-50'}` : ''
+                    }`}>
+                    <div className="flex items-center gap-6">
+                        <motion.button
+                            whileTap={{ scale: 0.8 }}
+                            onClick={() => onLike(post)}
+                            className={`flex items-center gap-2 group ${post.is_liked ? 'text-[#ff2a5f]' : isDark ? 'text-white/30' : 'text-stone-400'}`}
                         >
-                            <Heart size={17} fill={post.is_liked ? 'currentColor' : 'none'} strokeWidth={2} />
-                            <span className="text-[12px] font-bold">{post.likes_count ?? 0}</span>
+                            <div className={`p-2 rounded-full transition-colors ${post.is_liked ? 'bg-[#ff2a5f]/10' : 'hover:bg-stone-100 group-hover:text-stone-600'
+                                }`}>
+                                <Heart size={20} fill={post.is_liked ? 'currentColor' : 'none'} strokeWidth={2.5} />
+                            </div>
+                            <span className="text-[13px] font-black">{post.likes_count ?? 0}</span>
                         </motion.button>
-                        <button onClick={() => onCommentClick(post)}
-                            className={`flex items-center gap-1.5 transition-colors ${isDark ? 'text-white/25 hover:text-white/60' : 'text-stone-300 hover:text-stone-500'}`}
+
+                        <button
+                            onClick={() => onCommentClick(post)}
+                            className={`flex items-center gap-2 group ${isDark ? 'text-white/30' : 'text-stone-400'}`}
                         >
-                            <MessageCircle size={17} strokeWidth={2} />
-                            <span className="text-[12px] font-bold">{post.comments_count ?? 0}</span>
+                            <div className="p-2 rounded-full hover:bg-stone-100 transition-colors group-hover:text-stone-600">
+                                <MessageCircle size={20} strokeWidth={2.5} />
+                            </div>
+                            <span className="text-[13px] font-black">{post.comments_count ?? 0}</span>
                         </button>
-                        <button onClick={() => onShare?.(post)}
-                            className={`transition-colors ${isDark ? 'text-white/25 hover:text-white/60' : 'text-stone-300 hover:text-stone-500'}`}
+
+                        <button
+                            onClick={() => onShare?.(post)}
+                            className={`p-2 rounded-full hover:bg-stone-100 transition-colors ${isDark ? 'text-white/30' : 'text-stone-400 hover:text-stone-600'}`}
                         >
-                            <Share2 size={16} strokeWidth={2} />
+                            <Share2 size={19} strokeWidth={2.5} />
                         </button>
+                    </div>
+
+                    <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/10' : 'text-stone-300'}`}>
+                        <Eye size={14} />
+                        <span className="text-[11px] font-bold">{post.views_count ?? 0}</span>
                     </div>
                 </div>
             </div>
@@ -453,7 +575,9 @@ export const CommunityFeed = ({
     onCreatePost,
     onUpdatePost,
     jumpToPostId,
-    showSavedOnly
+    showSavedOnly,
+    onLoadMore,
+    hasMore
 }: {
     posts: CommunityPost[];
     currentUser: User | null;
@@ -466,13 +590,23 @@ export const CommunityFeed = ({
     onDeletePost?: (post: CommunityPost) => void;
     onSavePost?: (post: CommunityPost) => void;
     onFollowAuthor?: (post: CommunityPost) => void;
-    onCreatePost: (post: { title?: string; content?: string; image_url?: string }) => void;
-    onUpdatePost: (postId: string, post: { title?: string; content?: string; image_url?: string }) => void;
+    onCreatePost: (post: { title?: string; content?: string; image_url?: string; category?: PostCategory }) => void;
+    onUpdatePost: (postId: string, post: { title?: string; content?: string; image_url?: string; category?: PostCategory }) => void;
     jumpToPostId?: string | null;
     showSavedOnly?: boolean;
+    onLoadMore?: () => void;
+    hasMore?: boolean;
 }) => {
     const [isCreatingPost, setIsCreatingPost] = useState(false);
     const [postToEdit, setPostToEdit] = useState<CommunityPost | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<string>('All');
+    const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
+
+    const filteredPosts = posts.filter(p => {
+        if (showSavedOnly) return currentUser?.savedPosts?.includes(p.id);
+        if (selectedCategory === 'All') return true;
+        return p.category === selectedCategory;
+    });
 
     React.useEffect(() => {
         if (jumpToPostId && posts.length > 0) {
@@ -510,9 +644,26 @@ export const CommunityFeed = ({
                         initialData={postToEdit}
                     />
                 )}
+                {zoomImageUrl && (
+                    <ImageLightbox
+                        imageUrl={zoomImageUrl}
+                        onClose={() => setZoomImageUrl(null)}
+                    />
+                )}
             </AnimatePresence>
 
             <div className="w-full">
+                {/* ── Filtres de Catégories (Sticky) ── */}
+                {!showSavedOnly && (
+                    <div className={`sticky top-0 z-30 pt-1 -mx-6 px-6 mb-2 ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
+                        <CategoryFilter
+                            selected={selectedCategory}
+                            onSelect={setSelectedCategory}
+                            isDark={isDark}
+                        />
+                    </div>
+                )}
+
                 {/* ── Bouton Créer un post ── */}
                 {currentUser && !showSavedOnly && (
                     <motion.button
@@ -523,7 +674,7 @@ export const CommunityFeed = ({
                             : 'bg-white border border-stone-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)]'
                             }`}
                     >
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607]/70 to-[#ff9a6c]/50 p-[1.5px] shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607] to-[#ff9a6c] p-[1.5px] shrink-0">
                             <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-black overflow-hidden ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
                                 {currentUser.avatar
                                     ? <img src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
@@ -534,7 +685,7 @@ export const CommunityFeed = ({
                         <span className={`flex-1 text-left text-[13.5px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
                             Partagez une recette ou astuce...
                         </span>
-                        <div className="w-8 h-8 rounded-full bg-[#fb5607] flex items-center justify-center shadow-md shadow-[#fb5607]/25 shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[#fb5607] flex items-center justify-center shadow-lg shadow-[#fb5607]/25 shrink-0">
                             <Plus size={17} className="text-white" strokeWidth={2.5} />
                         </div>
                     </motion.button>
@@ -548,23 +699,39 @@ export const CommunityFeed = ({
                             Chargement...
                         </p>
                     </div>
-                ) : posts.length > 0 ? (
-                    posts.map((post: CommunityPost) => (
-                        <PostCard
-                            key={post.id}
-                            post={post}
-                            currentUser={currentUser}
-                            onLike={onLike}
-                            onCommentClick={onCommentClick}
-                            onShare={onShare}
-                            onDeletePost={onDeletePost}
-                            onSavePost={onSavePost}
-                            onFollowAuthor={onFollowAuthor}
-                            onEdit={setPostToEdit}
-                            isDark={isDark}
-                            t={t}
-                        />
-                    ))
+                ) : filteredPosts.length > 0 ? (
+                    <>
+                        {filteredPosts.map((post: CommunityPost) => (
+                            <PostCard
+                                key={post.id}
+                                post={post}
+                                currentUser={currentUser}
+                                onLike={onLike}
+                                onCommentClick={onCommentClick}
+                                onShare={onShare}
+                                onDeletePost={onDeletePost}
+                                onSavePost={onSavePost}
+                                onFollowAuthor={onFollowAuthor}
+                                onEdit={setPostToEdit}
+                                onZoom={setZoomImageUrl}
+                                isDark={isDark}
+                                t={t}
+                            />
+                        ))}
+
+                        {hasMore && (
+                            <div className="flex justify-center pt-2 pb-10">
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={onLoadMore}
+                                    className={`px-6 py-2.5 rounded-2xl text-[12px] font-black uppercase tracking-wider transition-all ${isDark ? 'bg-white/5 text-white/40 hover:bg-white/10' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                                        }`}
+                                >
+                                    Voir plus de pépites
+                                </motion.button>
+                            </div>
+                        )}
+                    </>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className={`w-14 h-14 rounded-3xl flex items-center justify-center mb-4 ${isDark ? 'bg-white/5' : 'bg-stone-100'}`}>

@@ -28,6 +28,7 @@ import { Notifications } from './pages/Notifications';
 import { Merchants } from './pages/Merchants';
 import { Products } from './pages/Products';
 import { Orders } from './pages/Orders';
+import { Community } from './pages/Community';
 import { Login } from './pages/Login';
 import { supabase } from './lib/supabase';
 
@@ -62,6 +63,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
     if (location.pathname === '/merchants') return 'Partenaires Marchands';
     if (location.pathname === '/products') return 'Gestion des Produits Store';
     if (location.pathname === '/orders') return 'Gestion des Commandes';
+    if (location.pathname === '/community') return 'Espace Communauté';
     return 'Bienvenue sur AfroCuisto';
   };
 
@@ -75,6 +77,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
     if (location.pathname.startsWith('/merchants')) return 'Pages / Marchands';
     if (location.pathname.startsWith('/products')) return 'Pages / Produits';
     if (location.pathname.startsWith('/orders')) return 'Pages / Commandes';
+    if (location.pathname.startsWith('/community')) return 'Pages / Communauté';
     return 'Pages / Tableau de bord';
   };
 
@@ -224,6 +227,7 @@ function App() {
                 <Route path="/merchants" element={<Merchants />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/community" element={<Community />} />
               </Routes>
             </AppLayout>
           }
