@@ -317,33 +317,44 @@ const NavIcon = ({ id, active, isDark }: { id: string; active: boolean; isDark?:
 
 const NavButton = ({ iconId, label, isActive, onClick, isDark }: { iconId: string; label: string; isActive: boolean; onClick: () => void; isDark?: boolean }) => {
   return (
-    <motion.button
+    <button
       onClick={onClick}
-      whileTap={{ scale: 0.92 }}
-      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-      className={`relative flex items-center justify-center transition-all duration-300 ${isActive ? 'px-4 py-2.5 rounded-[24px]' : 'p-2 rounded-full'}`}
+      className="relative flex items-center justify-center active:scale-95"
       style={{
-        backgroundColor: isActive ? (isDark ? 'rgba(249,77,0,0.15)' : 'rgba(249,77,0,0.1)') : 'transparent'
+        height: '46px',
+        minWidth: '46px',
+        padding: isActive ? '0 16px' : '0',
+        borderRadius: '24px',
+        backgroundColor: isActive ? (isDark ? 'rgba(249,77,0,0.15)' : 'rgba(249,77,0,0.1)') : 'transparent',
+        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)'
       }}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center">
         <NavIcon id={iconId} active={isActive} isDark={isDark} />
-        <AnimatePresence>
-          {isActive && (
-            <motion.span
-              key="label"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 'auto', opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className={`block text-[12px] font-black overflow-hidden whitespace-nowrap text-[#F94D00]`}
-            >
-              {label}
-            </motion.span>
-          )}
-        </AnimatePresence>
+
+        {/* Effet à 120Hz d'expansion CSS via grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isActive ? '1fr' : '0fr',
+            opacity: isActive ? 1 : 0,
+            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)'
+          }}
+        >
+          <span
+            className="text-[12px] font-black text-[#F94D00]"
+            style={{
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              paddingLeft: isActive ? '6px' : '0px',
+              transition: 'padding 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)'
+            }}
+          >
+            {label}
+          </span>
+        </div>
       </div>
-    </motion.button>
+    </button>
   );
 };
 
@@ -1495,7 +1506,7 @@ const ShoppingItemRow: React.FC<{
   const active = isStoreItem ? isSelected : item.isPurchased;
 
   return (
-    <motion.div layout key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+    <div key={item.id}
       className={`rounded-[24px] border shadow-sm overflow-hidden transition-all ${isDark ? (active ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/5') : (active ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-stone-100')}`}
     >
       <div className="p-4 flex items-center gap-3">
@@ -1570,7 +1581,7 @@ const ShoppingItemRow: React.FC<{
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
 // --- Modal de sélection de position sur carte ---
@@ -1726,12 +1737,9 @@ const StoreProductCard: React.FC<{
     const mName = product.merchant_id ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand) : product.brand;
 
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: idx * 0.04 }}
+      <div
         onClick={() => setSelectedProduct(product)}
-        className={`flex items-center gap-4 rounded-[22px] p-3 cursor-pointer active:scale-[0.98] transition-all ${isDark ? 'bg-white/6 border border-white/8' : 'bg-white shadow-sm'}`}
+        className={`flex items-center gap-4 rounded-[22px] p-3 cursor-pointer active:scale-[0.98] transition-all duration-300 ${isDark ? 'bg-white/6 border border-white/8' : 'bg-white shadow-sm'}`}
         style={isDark ? {} : { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
       >
         {/* Image */}
@@ -1815,7 +1823,7 @@ const StoreProductCard: React.FC<{
             </button>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
@@ -3330,9 +3338,6 @@ export default function App() {
                         <motion.div
                           key={recipe.id}
                           whileTap={{ scale: 0.97 }}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: ridx * 0.06 }}
                           onClick={() => setSelectedRecipe(recipe)}
                           className="cursor-pointer"
                         >
@@ -3429,9 +3434,6 @@ export default function App() {
                       <motion.div
                         key={recipe.id}
                         whileTap={{ scale: 0.98 }}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: ridx * 0.06 }}
                         onClick={() => setSelectedRecipe(recipe)}
                         style={{
                           background: '#fff',
@@ -3548,7 +3550,7 @@ export default function App() {
       {/* Dynamic Content Area */}
       {
         searchQuery || selectedCategory ? (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={springTransition} className="px-6 pt-6 grid grid-cols-2 gap-4">
+          <div className="px-6 pt-6 grid grid-cols-2 gap-4">
             {displayRecipes.map(recipe => (
               <motion.div
                 key={recipe.id}
@@ -3574,7 +3576,7 @@ export default function App() {
             {displayRecipes.length === 0 && (
               <div className="col-span-2 py-20 text-center text-stone-400 font-medium">{t.noResults}</div>
             )}
-          </motion.div>
+          </div>
         ) : (
           <div className="pt-2 space-y-12 pb-10">
 
@@ -3633,7 +3635,7 @@ export default function App() {
                     </div>
 
                     {/* Horizontal scroll tray v2 — styled like 'Nos suggestions' */}
-                    <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '32px' }} className="no-scrollbar">
+                    <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '32px', WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }} className="no-scrollbar">
                       {sectionRecipes.map((recipe) => (
                         <motion.div
                           key={recipe.id}
@@ -3685,7 +3687,7 @@ export default function App() {
                       </div>
 
                     </div>
-                    <div className="flex gap-4 overflow-x-auto px-8 no-scrollbar pb-3">
+                    <div className="flex gap-4 overflow-x-auto px-8 no-scrollbar pb-3" style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}>
                       {sectionRecipes.map((recipe, ridx) => {
                         const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
                         const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
@@ -3693,9 +3695,6 @@ export default function App() {
                           <motion.div
                             key={recipe.id}
                             whileTap={{ scale: 0.97 }}
-                            initial={{ opacity: 0, x: 24 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: ridx * 0.07 }}
                             onClick={() => setSelectedRecipe(recipe)}
                             className="flex-shrink-0 cursor-pointer"
                             style={{ width: 'min(48vw, 185px)' }}
@@ -3751,9 +3750,6 @@ export default function App() {
                           <motion.div
                             key={recipe.id}
                             whileTap={{ scale: 0.97 }}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: ridx * 0.06 }}
                             onClick={() => setSelectedRecipe(recipe)}
                             className="cursor-pointer"
                           >
@@ -3803,9 +3799,6 @@ export default function App() {
                         <motion.div
                           key={recipe.id}
                           whileTap={{ scale: 0.98 }}
-                          initial={{ opacity: 0, y: 16 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: ridx * 0.06 }}
                           onClick={() => setSelectedRecipe(recipe)}
                           className="hlist-card"
                           style={{
@@ -5518,7 +5511,7 @@ export default function App() {
 
           {/* ════════════ MA LISTE ════════════ */}
           {storeTab === 'mylist' && (
-            <motion.div key="mylist" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} transition={{ duration: 0.22 }}
+            <div key="mylist" style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}
               className="flex-1"
             >
               {/* Sub-header */}
@@ -5698,12 +5691,12 @@ export default function App() {
                   </>
                 )}
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* ════════════ STORE ════════════ */}
           {storeTab === 'store' && (
-            <motion.div key="store" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.22 }}
+            <div key="store" style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}
               className="flex-1 pb-4"
             >
               {/* Search Bar */}
@@ -5723,7 +5716,7 @@ export default function App() {
               </div>
 
               {/* Enhanced Category Filter */}
-              <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-6 px-5">
+              <div style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }} className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-6 px-5">
                 {STORE_CATEGORIES.map(cat => {
                   const icons: Record<string, string> = {
                     'Tout': '🛍️',
@@ -5785,9 +5778,8 @@ export default function App() {
                   <p className="text-[12px] font-black text-stone-300 uppercase tracking-widest">Plus de partenaires africains bientôt 🚀</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
-
         </AnimatePresence>
 
         <ShoppingAddModal
@@ -6377,7 +6369,7 @@ export default function App() {
       transition={{ duration: 0.25, ease: 'easeOut' }}
       className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
     >
-      <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative min-h-0">
+      <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative min-h-0" style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}>
         <AnimatePresence mode="wait">
           {activeTab === 'home' && <motion.div key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderHome()}</motion.div>}
           {activeTab === 'search' && <motion.div key="search" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderExplorer()}</motion.div>}
