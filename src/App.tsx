@@ -1705,86 +1705,86 @@ const MapPickerModal = ({ isOpen, onClose, onSelect, initialCoords, isDark }: an
 // --- Main Application ---
 
 // --- APPLICATION PRINCIPALE (COMPOSANT RACINE) ---
-const StoreProductCard = ({
+const StoreProductCard: React.FC<{
+  product: Product;
+  list: ShoppingItem[];
+  updateShoppingList: (nl: ShoppingItem[]) => void;
+  isDark: boolean;
+  allMerchants: any[];
+  setSelectedProduct: (p: Product | null) => void;
+}> = ({
   product,
   list,
   updateShoppingList,
   isDark,
   allMerchants,
   setSelectedProduct
-}: {
-  product: Product;
-  list: ShoppingItem[];
-  updateShoppingList: (nl: ShoppingItem[]) => void;
-  isDark: boolean;
-  allMerchants: any[];
-  setSelectedProduct: (p: Product) => void;
 }) => {
-  const [isAdded, setIsAdded] = useState(false);
-  const shopItem = list.find(i => i.id.startsWith(`store_${product.id}`));
-  const isInList = !!shopItem;
-  const isInCart = shopItem?.isInCart;
-  const mName = product.merchant_id ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand) : product.brand;
+    const [isAdded, setIsAdded] = useState(false);
+    const shopItem = list.find(i => i.id.startsWith(`store_${product.id}`));
+    const isInList = !!shopItem;
+    const isInCart = shopItem?.isInCart;
+    const mName = product.merchant_id ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand) : product.brand;
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
-      className={`rounded-[32px] overflow-hidden p-3 flex flex-col ${isDark ? 'bg-white/5' : 'bg-white shadow-sm border border-stone-50'}`}
-    >
-      <div
-        onClick={() => setSelectedProduct(product)}
-        className={`relative aspect-square rounded-[26px] flex items-center justify-center text-[54px] mb-4 cursor-pointer active:scale-95 transition-all ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}
+    return (
+      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+        className={`rounded-[32px] overflow-hidden p-3 flex flex-col ${isDark ? 'bg-white/5' : 'bg-white shadow-sm border border-stone-50'}`}
       >
-        {isInList && (
-          <div className={`absolute top-2 left-2 right-2 py-1.5 rounded-full border flex items-center justify-center gap-1.5 z-10 backdrop-blur-sm ${isInCart ? 'bg-[#38b000]/10 border-[#38b000]/20 text-[#38b000]' : 'bg-orange-500/10 border-orange-500/20 text-orange-500'}`}>
-            <Check size={10} strokeWidth={4} />
-            <span className="text-[9px] font-black uppercase tracking-wide">
-              {isInCart ? 'Au panier' : 'Dans la liste'}
-            </span>
-          </div>
-        )}
-        <div className="hover:scale-110 transition-transform duration-500 w-full h-full flex items-center justify-center overflow-hidden rounded-[22px]">
-          {product.image_url ? (
-            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-[54px]">{product.emoji || '📦'}</span>
-          )}
-        </div>
-      </div>
-
-      <div className="px-2 pb-1.5">
-        <h4
+        <div
           onClick={() => setSelectedProduct(product)}
-          className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}
+          className={`relative aspect-square rounded-[26px] flex items-center justify-center text-[54px] mb-4 cursor-pointer active:scale-95 transition-all ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}
         >
-          {product.name}
-        </h4>
-        <p className="text-[11px] font-bold text-stone-400 mt-1 truncate">
-          {mName}
-        </p>
-
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-[13px] font-bold text-stone-400">XOF</span>
-            <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{product.price.toLocaleString()}</span>
+          {isInList && (
+            <div className={`absolute top-2 left-2 right-2 py-1.5 rounded-full border flex items-center justify-center gap-1.5 z-10 backdrop-blur-sm ${isInCart ? 'bg-[#38b000]/10 border-[#38b000]/20 text-[#38b000]' : 'bg-orange-500/10 border-orange-500/20 text-orange-500'}`}>
+              <Check size={10} strokeWidth={4} />
+              <span className="text-[9px] font-black uppercase tracking-wide">
+                {isInCart ? 'Au panier' : 'Dans la liste'}
+              </span>
+            </div>
+          )}
+          <div className="hover:scale-110 transition-transform duration-500 w-full h-full flex items-center justify-center overflow-hidden rounded-[22px]">
+            {product.image_url ? (
+              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[54px]">{product.emoji || '📦'}</span>
+            )}
           </div>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const newItem = { id: `store_${product.id}_${Date.now()}`, item: product.name, amount: '1', quantity: '1', unit: product.unit, priceXOF: String(product.price), isPurchased: false, recipeName: mName };
-              updateShoppingList([...list, newItem]);
-              setIsAdded(true);
-              setTimeout(() => setIsAdded(false), 2000);
-            }}
-            className={`w-[42px] h-[42px] rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-lg ${isAdded ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-[#38b000] shadow-[#38b000]/25'}`}
-          >
-            {isAdded ? <Check size={20} strokeWidth={3} className="text-white" /> : <Plus size={20} strokeWidth={3} className="text-white" />}
-          </button>
         </div>
-      </div>
-    </motion.div>
-  );
-};
+
+        <div className="px-2 pb-1.5">
+          <h4
+            onClick={() => setSelectedProduct(product)}
+            className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}
+          >
+            {product.name}
+          </h4>
+          <p className="text-[11px] font-bold text-stone-400 mt-1 truncate">
+            {mName}
+          </p>
+
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-[13px] font-bold text-stone-400">XOF</span>
+              <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{product.price.toLocaleString()}</span>
+            </div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const newItem = { id: `store_${product.id}_${Date.now()}`, item: product.name, amount: '1', quantity: '1', unit: product.unit, priceXOF: String(product.price), isPurchased: false, recipeName: mName };
+                updateShoppingList([...list, newItem]);
+                setIsAdded(true);
+                setTimeout(() => setIsAdded(false), 2000);
+              }}
+              className={`w-[42px] h-[42px] rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-lg ${isAdded ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-[#38b000] shadow-[#38b000]/25'}`}
+            >
+              {isAdded ? <Check size={20} strokeWidth={3} className="text-white" /> : <Plus size={20} strokeWidth={3} className="text-white" />}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
 
 export default function App() {
   // --- ÉTATS (MÉMOIRE) DE L'APPLICATION ---
@@ -2357,6 +2357,22 @@ export default function App() {
       console.error('Community sync failed:', err);
     } finally {
       setIsCommunityLoading(false);
+    }
+  };
+
+  /** Pull-to-refresh : re-fetch + shuffle Fisher-Yates pour varier l'ordre */
+  const refreshCommunity = async () => {
+    try {
+      const posts = await dbService.getCommunityPosts(currentUser?.id);
+      // Fisher-Yates shuffle
+      const shuffled = [...posts];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      setCommunityPosts(shuffled);
+    } catch (err) {
+      console.error('Community refresh failed:', err);
     }
   };
 
@@ -3836,69 +3852,71 @@ export default function App() {
       : communityPosts;
 
     return (
-      <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
-        <header
-          className="px-6 pb-6 flex flex-col gap-1"
-          style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px' }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {showSavedPosts && (
+      <PullToRefresh onRefresh={refreshCommunity} isDark={isDark} scrollRef={mainScrollRef as any}>
+        <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
+          <header
+            className="px-6 pb-6 flex flex-col gap-1"
+            style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {showSavedPosts && (
+                  <button
+                    onClick={() => setShowSavedPosts(false)}
+                    className={`w-[42px] h-[42px] -ml-2 rounded-full flex items-center justify-center text-[#fb5607] shadow-sm transition-transform active:scale-95 shrink-0 border ${isDark ? 'bg-white/10 border-white/10 hover:bg-white/20' : 'bg-white border-stone-100 hover:bg-stone-50'}`}
+                  >
+                    <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
+                  </button>
+                )}
+                <h1 className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>
+                  {showSavedPosts ? "Enregistrés" : t.community}
+                </h1>
+              </div>
+              {currentUser && !showSavedPosts && (
                 <button
-                  onClick={() => setShowSavedPosts(false)}
-                  className={`w-[42px] h-[42px] -ml-2 rounded-full flex items-center justify-center text-[#fb5607] shadow-sm transition-transform active:scale-95 shrink-0 border ${isDark ? 'bg-white/10 border-white/10 hover:bg-white/20' : 'bg-white border-stone-100 hover:bg-stone-50'}`}
+                  onClick={() => setShowSavedPosts(true)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all active:scale-95 ${isDark ? 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-600 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-stone-50'}`}
                 >
-                  <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
+                  <Bookmark size={18} fill="none" />
                 </button>
               )}
-              <h1 className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                {showSavedPosts ? "Enregistrés" : t.community}
-              </h1>
             </div>
-            {currentUser && !showSavedPosts && (
-              <button
-                onClick={() => setShowSavedPosts(true)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all active:scale-95 ${isDark ? 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-600 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-stone-50'}`}
-              >
-                <Bookmark size={18} fill="none" />
-              </button>
-            )}
-          </div>
-          <p className={`text-xs font-medium opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
-            {showSavedPosts ? "Vos publications sauvegardées" : t.communityDesc}
-          </p>
-        </header>
+            <p className={`text-xs font-medium opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
+              {showSavedPosts ? "Vos publications sauvegardées" : t.communityDesc}
+            </p>
+          </header>
 
-        <div className="px-6">
-          <CommunityFeed
-            posts={displayedCommunityPosts}
-            currentUser={currentUser}
-            isLoading={isCommunityLoading}
+          <div className="px-6">
+            <CommunityFeed
+              posts={displayedCommunityPosts}
+              currentUser={currentUser}
+              isLoading={isCommunityLoading}
+              t={t}
+              isDark={isDark}
+              onLike={handleLike}
+              onCommentClick={(post) => setSelectedPostForComments(post)}
+              onShare={handleShare}
+              onDeletePost={handleDeletePost}
+              onSavePost={handleSavePost}
+              onFollowAuthor={handleFollowAuthor}
+              onCreatePost={handleCreatePost}
+              jumpToPostId={jumpToPostId}
+              showSavedOnly={showSavedPosts}
+            />
+          </div>
+
+          <CommentModal
+            isOpen={!!selectedPostForComments}
+            onClose={() => setSelectedPostForComments(null)}
+            post={selectedPostForComments}
+            comments={postComments}
+            onAddComment={handleAddComment}
+            isLoading={isCommentsLoading}
             t={t}
             isDark={isDark}
-            onLike={handleLike}
-            onCommentClick={(post) => setSelectedPostForComments(post)}
-            onShare={handleShare}
-            onDeletePost={handleDeletePost}
-            onSavePost={handleSavePost}
-            onFollowAuthor={handleFollowAuthor}
-            onCreatePost={handleCreatePost}
-            jumpToPostId={jumpToPostId}
-            showSavedOnly={showSavedPosts}
           />
         </div>
-
-        <CommentModal
-          isOpen={!!selectedPostForComments}
-          onClose={() => setSelectedPostForComments(null)}
-          post={selectedPostForComments}
-          comments={postComments}
-          onAddComment={handleAddComment}
-          isLoading={isCommentsLoading}
-          t={t}
-          isDark={isDark}
-        />
-      </div>
+      </PullToRefresh>
     );
   };
 

@@ -911,6 +911,44 @@ export const dbService = {
         return true;
     },
 
+    // --- Image Upload to Supabase Storage ---
+    async uploadPostImage(base64DataUrl: string, userId: string): Promise<string | null> {
+        try {
+            if (!supabase) return null;
+
+            // Convert base64 to Blob
+            const [meta, data] = base64DataUrl.split(',');
+            const mimeMatch = meta.match(/:(.*?);/);
+            const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const ext = mime.split('/')[1] || 'jpg';
+            const byteString = atob(data);
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+            const blob = new Blob([ab], { type: mime });
+
+            const fileName = `${userId}/${Date.now()}.${ext}`;
+
+            const { data: uploadData, error } = await supabase.storage
+                .from('community-images')
+                .upload(fileName, blob, { contentType: mime, upsert: false });
+
+            if (error) {
+                console.warn('Storage upload failed, using base64 fallback:', error.message);
+                return null;
+            }
+
+            const { data: urlData } = supabase.storage
+                .from('community-images')
+                .getPublicUrl(uploadData.path);
+
+            return urlData.publicUrl;
+        } catch (err) {
+            console.error('uploadPostImage error:', err);
+            return null;
+        }
+    },
+
     // --- Community Management ---
     async getCommunityPosts(currentUserId?: string): Promise<CommunityPost[]> {
         const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';

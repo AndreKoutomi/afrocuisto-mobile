@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseAdmin } from '../lib/supabase';
 import {
     Edit2, ShieldAlert, ShieldCheck, UserPlus, MoreHorizontal,
     History, CreditCard, Activity, Trash2, X, Users,
@@ -60,46 +60,56 @@ export function UsersPage() {
         setLoading(true);
         setError(null);
         try {
-            // 1. Récupérer les profils (données de l'app)
-            const { data: profiles, error: profilesError } = await supabase
+            // 1. Récupérer les profils (données de l'app) via le client Admin pour bypass RLS
+            const { data: profiles, error: profilesError } = await supabaseAdmin
                 .from('user_profiles')
                 .select('*');
 
-            if (profilesError && profilesError.code !== '42P01') {
-                console.warn('Erreur non critique profiles:', profilesError.message);
+            if (profilesError) {
+                console.warn('Erreur profiles:', profilesError.message);
             }
 
-            // 2. Récupérer les comptes Auth (la source de vérité pour l'inscription)
-            const { data: authData, error: authError } = await (supabase.auth.admin as any).listUsers();
+            // 2. Récupérer les comptes Auth via le client SERVICE_ROLE (obligatoire pour auth.admin)
+            const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
 
             if (authError) throw authError;
 
             const authUsers = authData?.users || [];
-            const profilesMap = new Map((profiles || []).map(p => [p.id, p]));
+            const authMap = new Map((authUsers || []).map((au: any) => [au.id, au]));
 
-            // 3. Fusionner et Filtrer (On ne garde que les clients réels de l'app)
-            const mergedUsers: UserProfile[] = authUsers
-                .filter((au: any) => {
-                    const role = au.user_metadata?.role;
-                    return role !== 'admin' && role !== 'merchant';
-                })
-                .map((au: any) => {
-                    const profile = profilesMap.get(au.id);
-                    return {
+            // 3. Fusionner (On part de TOUS les profils DATABASE comme source de vérité)
+            const mergedUsers: UserProfile[] = (profiles || []).map((profile: any) => {
+                const auth = authMap.get(profile.id);
+                return {
+                    id: profile.id,
+                    email: auth?.email || profile.email,
+                    name: profile.name || auth?.user_metadata?.full_name || 'Utilisateur',
+                    language: profile.language || 'fr',
+                    dark_mode: profile.dark_mode || false,
+                    joined_date: profile.joined_date || profile.created_at || auth?.created_at,
+                    updated_at: profile.updated_at || auth?.updated_at,
+                    favorites: profile.favorites || [],
+                    shopping_list: profile.shopping_list || [],
+                    avatar: profile.avatar || auth?.user_metadata?.avatar_url,
+                    is_banned: !!auth?.banned_until || auth?.user_metadata?.banned === true,
+                    last_sign_in: auth?.last_sign_in_at
+                };
+            });
+
+            // 4. Ajouter les comptes Auth qui n'auraient pas encore de profil (cas rare)
+            const profilesIds = new Set((profiles || []).map(p => p.id));
+            authUsers.forEach((au: any) => {
+                if (!profilesIds.has(au.id)) {
+                    mergedUsers.push({
                         id: au.id,
                         email: au.email,
-                        name: profile?.name || au.user_metadata?.full_name || 'Utilisateur',
-                        language: profile?.language || 'fr',
-                        dark_mode: profile?.dark_mode || false,
-                        joined_date: profile?.joined_date || au.created_at,
-                        updated_at: profile?.updated_at || au.updated_at,
-                        favorites: profile?.favorites || [],
-                        shopping_list: profile?.shopping_list || [],
-                        avatar: profile?.avatar || au.user_metadata?.avatar_url,
+                        name: au.user_metadata?.full_name || 'Nouveau compte',
+                        joined_date: au.created_at,
                         is_banned: !!au.banned_until || au.user_metadata?.banned === true,
                         last_sign_in: au.last_sign_in_at
-                    };
-                });
+                    });
+                }
+            });
 
             setUsers(mergedUsers);
         } catch (err: any) {
@@ -114,7 +124,7 @@ export function UsersPage() {
         e.preventDefault();
         setProcessing(true);
         try {
-            const { data, error: authError } = await (supabase.auth.admin as any).createUser({
+            const { data, error: authError } = await supabaseAdmin.auth.admin.createUser({
                 email: formData.email,
                 password: formData.password,
                 email_confirm: true,
@@ -146,7 +156,7 @@ export function UsersPage() {
         if (!confirm('Êtes-vous sûr de vouloir supprimer ce compte définitivement ?')) return;
         setProcessing(true);
         try {
-            const { error: delError } = await (supabase.auth.admin as any).deleteUser(id);
+            const { error: delError } = await supabaseAdmin.auth.admin.deleteUser(id);
             if (delError) throw delError;
             await supabase.from('user_profiles').delete().eq('id', id);
             fetchUsers();
@@ -163,7 +173,7 @@ export function UsersPage() {
         const newBanStatus = !user.is_banned;
         setProcessing(true);
         try {
-            const { error: banError } = await (supabase.auth.admin as any).updateUserById(user.id, {
+            const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
                 user_metadata: { banned: newBanStatus },
             });
             if (banError) throw banError;

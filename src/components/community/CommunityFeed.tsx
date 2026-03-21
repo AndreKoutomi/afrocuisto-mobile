@@ -1,57 +1,108 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, MessageCircle, Share2, Plus, Camera, X, Image as ImageIcon, Send, ChevronLeft, ArrowLeft, Eye, MoreHorizontal, Bookmark, Link2, Flag, Trash2, UserPlus, UserMinus } from 'lucide-react';
+import {
+    Heart, MessageCircle, Share2, Plus, X, Image as ImageIcon,
+    ArrowLeft, Eye, MoreHorizontal, Bookmark, Flag, Trash2,
+    UserPlus, UserMinus, Camera, Loader2
+} from 'lucide-react';
 import { CommunityPost, User } from '../../types';
+import { dbService } from '../../dbService';
 
-// Utilitaires copiés depuis App.tsx pour l'indépendance du composant
+// ─── Utilitaires ────────────────────────────────────────────────────────────
+
 const getInitials = (name: string | undefined | null) => {
     if (!name) return 'U';
     const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return name.substring(0, 2).toUpperCase();
 };
 
 const formatTimeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    if (diffInSeconds < 60) return "À l'instant";
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) return `Il y a ${diffInMinutes}m`;
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `Il y a ${diffInHours}h`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `Il y a ${diffInDays}j`;
+    const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (diffSec < 60) return "À l'instant";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h`;
+    return `${Math.floor(diffH / 24)}j`;
 };
 
-// --- Composant : Formulaire de création plein écran (Design exact de l'image) ---
-const FullScreenCreatePostForm = ({ currentUser, onSubmit, onCancel, isDark, t }: any) => {
+/** Lit un File et le convertit en base64 (fallback si pas de Storage) */
+const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+
+// ─── Formulaire Plein Écran — optimisé mobile ───────────────────────────────
+
+const FullScreenCreatePostForm: React.FC<{
+    currentUser: User | null;
+    onSubmit: (data: { title?: string; content?: string; image_url?: string }) => void;
+    onCancel: () => void;
+    isDark: boolean;
+}> = ({ currentUser, onSubmit, onCancel, isDark }) => {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);   // local blob preview
+    const [imageBase64, setImageBase64] = useState<string | null>(null);     // persisted data
+    const [isUploading, setIsUploading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            const url = URL.createObjectURL(file);
-            setImagePreview(url);
+        if (!file) return;
+        setIsUploading(true);
+        try {
+            // Prévisualisation immédiate (blob URL — temporaire)
+            const previewUrl = URL.createObjectURL(file);
+            setImagePreview(previewUrl);
+
+            // Conversion en base64 pour persistance (si Storage non dispo)
+            const b64 = await fileToBase64(file);
+            setImageBase64(b64);
+        } catch (err) {
+            console.error('Image read error:', err);
+        } finally {
+            setIsUploading(false);
         }
     };
 
-    const handleSubmit = () => {
-        if (!title.trim() && !content.trim() && !imagePreview) return;
-        onSubmit({
-            title: title.trim(),
-            content: content.trim(),
-            image_url: imagePreview || undefined
-        });
-        setTitle('');
-        setContent('');
+    const removeImage = () => {
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
         setImagePreview(null);
+        setImageBase64(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const canSubmit = (title.trim() || content.trim() || imageBase64) && !isUploading && !isSubmitting;
+
+    const handleSubmit = async () => {
+        if (!canSubmit) return;
+        setIsSubmitting(true);
+        try {
+            let finalImageUrl: string | undefined = undefined;
+
+            if (imageBase64 && currentUser?.id) {
+                // Tentative upload vers Supabase Storage
+                const storageUrl = await dbService.uploadPostImage(imageBase64, currentUser.id);
+                // Si Storage OK → URL publique. Sinon → base64 comme fallback
+                finalImageUrl = storageUrl ?? imageBase64;
+            }
+
+            onSubmit({
+                title: title.trim() || undefined,
+                content: content.trim() || undefined,
+                image_url: finalImageUrl,
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -59,210 +110,233 @@ const FullScreenCreatePostForm = ({ currentUser, onSubmit, onCancel, isDark, t }
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300, mass: 0.8 }}
-            className={`fixed inset-0 z-[100] flex flex-col ${isDark ? 'bg-black' : 'bg-[#f0f4f5]'}`}
-            style={{ paddingTop: 'calc(env(safe-area-inset-top, 40px) + 24px)' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 320, mass: 0.7 }}
+            className={`absolute inset-0 z-[850] flex flex-col overflow-hidden ${isDark ? 'bg-[#0a0a0a]' : 'bg-[#f7f7f5]'}`}
+            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
-            {/* Header */}
-            <header className="px-6 flex items-center justify-between mb-8">
-                <button onClick={onCancel} className={`w-12 h-12 rounded-full flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isDark ? 'bg-white/10 text-white' : 'bg-white text-stone-800'}`}>
-                    <ArrowLeft size={20} />
+            {/* ── Header compact ── */}
+            <div className={`flex items-center justify-between px-4 py-3 shrink-0 border-b ${isDark ? 'border-white/6' : 'border-stone-100'}`}
+                style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+            >
+                <button
+                    onClick={onCancel}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-100 text-stone-500'}`}
+                >
+                    <X size={18} />
                 </button>
-                <h1 className={`text-[17px] font-bold tracking-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>Nouvelle publication</h1>
-                <div className="w-12" /> {/* Spacer pour centrer */}
-            </header>
 
-            <div className="flex-1 overflow-y-auto px-6 pb-40 no-scrollbar">
-                {/* Fields Container */}
-                <div className="flex flex-col gap-4">
-                    {/* Nom du Plat Field */}
-                    <div className={`rounded-3xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.03)] border transition-colors ${isDark ? 'bg-[#1a1a1a] border-white/5 focus-within:border-white/20' : 'bg-white border-transparent focus-within:border-stone-200'}`}>
-                        <label className={`block text-[11px] font-black uppercase tracking-widest mb-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Nom du plat (Optionnel)</label>
-                        <input
-                            type="text"
-                            placeholder="Ex: Poulet Yassa"
-                            className={`w-full text-lg font-black bg-transparent outline-none ${isDark ? 'text-white placeholder-white/20' : 'text-stone-900 placeholder-stone-300'}`}
-                            value={title}
-                            onChange={e => setTitle(e.target.value)}
-                        />
-                    </div>
+                <span className={`text-[15px] font-bold ${isDark ? 'text-white' : 'text-stone-800'}`}>
+                    Nouvelle publication
+                </span>
 
+                <button
+                    onClick={handleSubmit}
+                    disabled={!canSubmit}
+                    className={`px-4 py-2 rounded-full text-[13px] font-black transition-all active:scale-95 flex items-center gap-1.5 ${canSubmit
+                        ? 'bg-[#fb5607] text-white shadow-lg shadow-[#fb5607]/30'
+                        : isDark ? 'bg-white/8 text-white/25' : 'bg-stone-200 text-stone-400'
+                        }`}
+                >
+                    {isSubmitting && <Loader2 size={13} className="animate-spin" />}
+                    Publier
+                </button>
+            </div>
 
-                    {/* Contenu et Image Field */}
-                    <div className={`rounded-3xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.03)] border transition-colors ${isDark ? 'bg-[#1a1a1a] border-white/5 focus-within:border-white/20' : 'bg-white border-transparent focus-within:border-stone-200'}`}>
-                        <label className={`block text-[11px] font-black uppercase tracking-widest mb-3 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Recette ou Astuces</label>
-                        <textarea
-                            placeholder="Partagez tous les détails ici..."
-                            className={`w-full h-32 text-[15px] font-medium bg-transparent outline-none resize-none mb-4 ${isDark ? 'text-white/80 placeholder-white/20' : 'text-stone-600 placeholder-stone-300'}`}
-                            value={content}
-                            onChange={e => setContent(e.target.value)}
-                        />
-
-                        {imagePreview && (
-                            <div className="relative rounded-2xl overflow-hidden aspect-video bg-stone-100 mb-6 border border-stone-200/50 group">
-                                <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" />
-                                <button onClick={() => setImagePreview(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md transition-transform active:scale-95">
-                                    <X size={16} />
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Media Bar */}
-                        <div className={`flex items-center justify-between pt-4 border-t ${isDark ? 'border-white/5' : 'border-stone-100'}`}>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => fileInputRef.current?.click()} className={`px-4 py-2.5 rounded-full flex items-center gap-2.5 font-bold text-[13px] tracking-wide transition-colors ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-stone-50 text-stone-600 hover:bg-stone-100'}`}>
-                                    <ImageIcon size={18} strokeWidth={2.5} className={isDark ? 'text-[#fb5607]' : 'text-[#fb5607]'} />
-                                    <span>Ajouter l'image du plat</span>
-                                </button>
-                                <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
-                            </div>
-                            <div className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${isDark ? 'border-white/10 text-white/40' : 'border-stone-200 text-stone-400'}`}>
-                                Communauté
-                            </div>
+            {/* ── Scrollable body ── */}
+            <div className="flex-1 overflow-y-auto no-scrollbar">
+                {/* Author row */}
+                <div className="flex items-center gap-3 px-4 py-4">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607]/80 to-[#ff9a6c]/60 p-[2px] shrink-0">
+                        <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-black overflow-hidden ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
+                            {currentUser?.avatar
+                                ? <img src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
+                                : getInitials(currentUser?.name)
+                            }
                         </div>
+                    </div>
+                    <div>
+                        <p className={`text-[14px] font-bold leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                            {currentUser?.name}
+                        </p>
+                        <p className={`text-[11px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
+                            Visible par tous
+                        </p>
                     </div>
                 </div>
 
-                {/* Removed Sub Menus For Cleaner App Logic */}
+                {/* Formulaire */}
+                <div className="px-4 pb-4">
+                    <input
+                        type="text"
+                        placeholder="Nom du plat (optionnel)"
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                        className={`w-full text-[20px] font-black bg-transparent outline-none mb-3 placeholder:font-medium ${isDark ? 'text-white placeholder-white/20' : 'text-stone-900 placeholder-stone-300'}`}
+                    />
+
+                    <textarea
+                        placeholder="Partagez votre recette, astuce ou moment culinaire..."
+                        value={content}
+                        onChange={e => setContent(e.target.value)}
+                        rows={5}
+                        className={`w-full text-[15px] font-medium bg-transparent outline-none resize-none leading-relaxed ${isDark ? 'text-white/80 placeholder-white/20' : 'text-stone-600 placeholder-stone-300'}`}
+                    />
+                </div>
+
+                {/* Image preview */}
+                {(imagePreview || isUploading) && (
+                    <div className="px-4 pb-4">
+                        <div className={`relative rounded-2xl overflow-hidden ${isDark ? 'bg-white/8' : 'bg-stone-100'}`} style={{ aspectRatio: '4/3' }}>
+                            {imagePreview && !isUploading && (
+                                <img src={imagePreview} className="w-full h-full object-cover" alt="Aperçu" />
+                            )}
+                            {isUploading && (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <Loader2 size={28} className="text-[#fb5607] animate-spin" />
+                                </div>
+                            )}
+                            {imagePreview && (
+                                <button
+                                    onClick={removeImage}
+                                    className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/55 text-white flex items-center justify-center backdrop-blur-sm active:scale-90 transition-all"
+                                >
+                                    <X size={15} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Bottom Actions Sticky */}
-            <div className={`fixed bottom-0 left-0 right-0 p-6 flex items-center gap-4 bg-gradient-to-t pb-[calc(env(safe-area-inset-bottom,20px)+24px)] ${isDark ? 'from-black via-black to-transparent' : 'from-[#f0f4f5] via-[#f0f4f5] to-transparent'}`}>
+            {/* ── Barre d'outils fixe en bas ── */}
+            <div
+                className={`sticky bottom-0 shrink-0 border-t px-4 py-3 flex items-center gap-3 ${isDark ? 'bg-[#0a0a0a] border-white/6' : 'bg-[#f7f7f5] border-stone-100'}`}
+                style={{ paddingBottom: '12px' }}
+            >
                 <button
-                    onClick={onCancel}
-                    className={`flex-[0.8] py-4 rounded-[28px] font-bold text-[15px] shadow-[0_4px_20px_rgba(0,0,0,0.05)] active:scale-95 transition-transform ${isDark ? 'bg-[#1a1a1a] text-white' : 'bg-white text-stone-900'}`}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-bold transition-all active:scale-95 ${isDark
+                        ? 'bg-white/8 text-white/60'
+                        : 'bg-white text-stone-600 border border-stone-200 shadow-sm'
+                        }`}
                 >
-                    Brouillon
+                    <Camera size={16} className="text-[#fb5607]" />
+                    Photo
                 </button>
-                <button
-                    onClick={handleSubmit}
-                    disabled={!title.trim() && !content.trim() && !imagePreview}
-                    className={`flex-[1.2] py-4 rounded-[28px] font-bold text-[15px] shadow-[0_8px_30px_rgba(251,86,7,0.3)] active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 bg-[#fb5607] text-white`}
-                >
-                    Publier
-                </button>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    accept="image/*"
+                    className="hidden"
+                />
+                <span className={`ml-auto text-[11px] font-medium ${isDark ? 'text-white/20' : 'text-stone-400'}`}>
+                    {content.length > 0 ? `${content.length} car.` : ''}
+                </span>
             </div>
         </motion.div>
     );
 };
 
-// --- Composant : Carte de publication ---
-const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDeletePost, onSavePost, onFollowAuthor, isDark, t }: any) => {
+// ─── MenuItem ────────────────────────────────────────────────────────────────
+
+const MenuItem = ({ icon, label, onClick, isDark, danger }: any) => (
+    <button
+        onClick={onClick}
+        className={`w-full px-4 py-2.5 flex items-center gap-3 text-[13px] font-semibold transition-colors ${danger
+            ? 'text-red-500 hover:bg-red-500/8'
+            : isDark ? 'text-white/70 hover:bg-white/5' : 'text-stone-700 hover:bg-stone-50'
+            }`}
+    >
+        {icon}
+        {label}
+    </button>
+);
+
+// ─── Carte de post ───────────────────────────────────────────────────────────
+
+const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDeletePost, onSavePost, onFollowAuthor, isDark }: any) => {
     const hasViewedRef = useRef(false);
     const [showOptions, setShowOptions] = useState(false);
+    const isSaved = currentUser?.savedPosts?.includes(post.id);
+    const isOwner = currentUser?.id === post.user_id;
+    const isFollowing = currentUser?.following?.includes(post.user_id);
 
     React.useEffect(() => {
         if (!hasViewedRef.current) {
             hasViewedRef.current = true;
-            // Ne pas utiliser await pour ne pas bloquer le rendu, on incremente silencieusement en arrière plan
-            import('../../dbService').then(({ dbService }) => {
-                dbService.incrementViewCount(post.id);
-            });
+            dbService.incrementViewCount(post.id).catch(() => { });
         }
     }, [post.id]);
-    // Animation framer-motion variants
-    const pulseVariant = {
-        liked: { scale: [1, 1.2, 1], transition: { duration: 0.3 } },
-        unliked: { scale: 1 }
-    };
 
     return (
-        <motion.div
+        <motion.article
             id={`post-${post.id}`}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`rounded-3xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.06)] mb-6 ${isDark ? 'bg-[#1a1a1a] border border-white/5' : 'bg-white'}`}
+            transition={{ duration: 0.25 }}
+            className="mb-4"
         >
-            {/* Header : Avatar + Name + Date + Options */}
-            <div className="px-5 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+            {/* Author row */}
+            <div className="flex items-center justify-between px-1 mb-2.5">
+                <div className="flex items-center gap-2.5">
                     <div className="relative">
-                        {post.author_avatar ? (
-                            <img src={post.author_avatar} alt={post.author_name} className="w-10 h-10 rounded-full object-cover" />
-                        ) : (
-                            <div className="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center font-bold text-stone-500">
-                                {getInitials(post.author_name)}
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607]/70 to-[#ff9a6c]/50 p-[1.5px]">
+                            <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
+                                {post.author_avatar
+                                    ? <img src={post.author_avatar} className="w-full h-full object-cover" alt="" />
+                                    : getInitials(post.author_name)
+                                }
                             </div>
-                        )}
-                        {/* Green indicator dot */}
-                        <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-white rounded-full"></div>
+                        </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white" style={{ borderColor: isDark ? '#0a0a0a' : 'white' }} />
                     </div>
                     <div>
-                        <h4 className={`text-[15px] font-bold leading-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{post.author_name}</h4>
-                        <p className={`text-[12px] font-medium leading-tight mt-0.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
-                            {formatTimeAgo(post.created_at)}
-                        </p>
+                        <p className={`text-[14px] font-bold leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>{post.author_name}</p>
+                        <p className={`text-[11px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{formatTimeAgo(post.created_at)}</p>
                     </div>
                 </div>
 
-                {/* Options Dropdown */}
+                {/* Options */}
                 <div className="relative">
                     <button
                         onClick={() => setShowOptions(!showOptions)}
-                        className={`p-1.5 transition-colors ${isDark ? 'text-white/30 hover:text-white/60' : 'text-stone-300 hover:text-stone-500'}`}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isDark ? 'text-white/25 hover:bg-white/5' : 'text-stone-300 hover:bg-stone-100'}`}
                     >
-                        <MoreHorizontal size={20} />
+                        <MoreHorizontal size={18} />
                     </button>
-
                     <AnimatePresence>
                         {showOptions && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowOptions(false)} />
                                 <motion.div
-                                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                    initial={{ opacity: 0, scale: 0.92, y: -6 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                    transition={{ duration: 0.2 }}
-                                    className={`absolute right-0 top-10 w-48 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border z-50 overflow-hidden ${isDark ? 'bg-[#1a1a1a] border-white/5' : 'bg-white border-stone-100'}`}
+                                    exit={{ opacity: 0, scale: 0.92, y: -6 }}
+                                    transition={{ duration: 0.14 }}
+                                    className={`absolute right-0 top-9 w-44 rounded-2xl shadow-xl border z-50 overflow-hidden py-1 ${isDark ? 'bg-[#1c1c1c] border-white/8' : 'bg-white border-stone-100'}`}
                                 >
-                                    <button
-                                        onClick={() => {
-                                            setShowOptions(false);
-                                            if (onShare) onShare(post);
-                                        }}
-                                        className={`w-full px-4 py-3 flex items-center gap-3 text-[13px] font-bold transition-colors ${isDark ? 'text-white hover:bg-white/5' : 'text-stone-700 hover:bg-stone-50'}`}
-                                    >
-                                        <Share2 size={16} /> Partager
-                                    </button>
-
-                                    {/* Action User Specific & Save */}
+                                    <MenuItem icon={<Share2 size={14} />} label="Partager" onClick={() => { setShowOptions(false); onShare?.(post); }} isDark={isDark} />
                                     {currentUser && (
-                                        <button
-                                            onClick={() => { setShowOptions(false); if (onSavePost) onSavePost(post); }}
-                                            className={`w-full px-4 py-3 flex items-center gap-3 text-[13px] font-bold transition-colors ${isDark ? 'text-white hover:bg-white/5' : 'text-stone-700 hover:bg-stone-50'}`}
-                                        >
-                                            <Bookmark size={16} fill={currentUser?.savedPosts?.includes(post.id) ? "currentColor" : "none"} />
-                                            {currentUser?.savedPosts?.includes(post.id) ? "Retirer des favoris" : "Enregistrer"}
-                                        </button>
+                                        <MenuItem
+                                            icon={<Bookmark size={14} fill={isSaved ? 'currentColor' : 'none'} />}
+                                            label={isSaved ? 'Enregistré ✓' : 'Enregistrer'}
+                                            onClick={() => { setShowOptions(false); onSavePost?.(post); }}
+                                            isDark={isDark}
+                                        />
                                     )}
-
-                                    {currentUser?.id === post.user_id ? (
-                                        <button
-                                            onClick={() => { setShowOptions(false); onDeletePost && onDeletePost(post); }}
-                                            className="w-full px-4 py-3 flex items-center gap-3 text-[13px] font-bold transition-colors text-red-500 hover:bg-red-500/10"
-                                        >
-                                            <Trash2 size={16} /> Supprimer
-                                        </button>
-                                    ) : (
+                                    {isOwner ? (
+                                        <MenuItem icon={<Trash2 size={14} />} label="Supprimer" onClick={() => { setShowOptions(false); onDeletePost?.(post); }} isDark={isDark} danger />
+                                    ) : currentUser && (
                                         <>
-                                            {currentUser && (
-                                                <button
-                                                    onClick={() => { setShowOptions(false); if (onFollowAuthor) onFollowAuthor(post); }}
-                                                    className={`w-full px-4 py-3 flex items-center gap-3 text-[13px] font-bold transition-colors ${isDark ? 'text-white hover:bg-white/5' : 'text-stone-700 hover:bg-stone-50'}`}
-                                                >
-                                                    {currentUser?.following?.includes(post.user_id) ? (
-                                                        <><UserMinus size={16} /> Ne plus suivre</>
-                                                    ) : (
-                                                        <><UserPlus size={16} /> Suivre l'auteur</>
-                                                    )}
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => setShowOptions(false)}
-                                                className="w-full px-4 py-3 flex items-center gap-3 text-[13px] font-bold transition-colors text-red-500 hover:bg-red-500/10"
-                                            >
-                                                <Flag size={16} /> Signaler
-                                            </button>
+                                            <MenuItem
+                                                icon={isFollowing ? <UserMinus size={14} /> : <UserPlus size={14} />}
+                                                label={isFollowing ? 'Ne plus suivre' : 'Suivre'}
+                                                onClick={() => { setShowOptions(false); onFollowAuthor?.(post); }}
+                                                isDark={isDark}
+                                            />
+                                            <MenuItem icon={<Flag size={14} />} label="Signaler" onClick={() => setShowOptions(false)} isDark={isDark} danger />
                                         </>
                                     )}
                                 </motion.div>
@@ -272,63 +346,69 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
                 </div>
             </div>
 
-            {/* Content Display */}
-            {(post.title || post.content) && (
-                <div className="px-5 pb-3">
-                    {post.title && (
-                        <h3 className={`font-black text-lg mb-0.5 leading-tight tracking-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>
-                            {post.title}
-                        </h3>
-                    )}
-                    {post.content && (
-                        <p className={`text-[14px] leading-relaxed ${isDark ? 'text-white/80' : 'text-stone-600'}`}>
-                            {post.content}
-                        </p>
-                    )}
-                </div>
-            )}
+            {/* Card body */}
+            <div className={`rounded-3xl overflow-hidden ${isDark ? 'bg-[#141414]' : 'bg-white'} shadow-[0_2px_14px_rgba(0,0,0,0.05)]`}>
+                {/* Image */}
+                {post.image_url && (
+                    <div className="w-full overflow-hidden" style={{ aspectRatio: '4/3' }}>
+                        <img
+                            src={post.image_url}
+                            alt={post.title || 'Photo du plat'}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                        />
+                    </div>
+                )}
 
-            {/* Image */}
-            {post.image_url && (
-                <div className="w-full aspect-video bg-stone-100 relative group overflow-hidden">
-                    <img src={post.image_url} alt="Plat" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
-                </div>
-            )}
+                {/* Text */}
+                {(post.title || post.content) && (
+                    <div className={`px-4 ${post.image_url ? 'pt-3.5' : 'pt-4'} pb-3`}>
+                        {post.title && (
+                            <h3 className={`font-black text-[16px] leading-snug tracking-tight mb-1 ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                                {post.title}
+                            </h3>
+                        )}
+                        {post.content && (
+                            <p className={`text-[13.5px] leading-relaxed ${isDark ? 'text-white/55' : 'text-stone-500'}`}>
+                                {post.content}
+                            </p>
+                        )}
+                    </div>
+                )}
 
-            {/* Action Bar (Mockup Exact Match) */}
-            <div className="px-5 py-4 flex items-center justify-between">
-                {/* Real Views Count */}
-                <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/30' : 'text-stone-300'}`}>
-                    <Eye size={18} fill="currentColor" strokeWidth={0} />
-                    <span className="text-[13px] font-bold">{post.views_count || 0}</span>
-                </div>
-
-                <div className="flex items-center gap-5">
-                    <motion.button
-                        whileTap={{ scale: 0.8 }}
-                        animate={post.is_liked ? "liked" : "unliked"}
-                        variants={pulseVariant}
-                        onClick={() => onLike(post)}
-                        className={`flex items-center gap-1.5 transition-colors ${post.is_liked ? 'text-[#ff2a5f]' : (isDark ? 'text-white/30 hover:text-white/70' : 'text-stone-300 hover:text-stone-500')}`}
-                    >
-                        <Heart size={18} fill="currentColor" strokeWidth={0} />
-                        <span className="text-[13px] font-bold">{post.likes_count || '0'}</span>
-                    </motion.button>
-
-                    <button
-                        onClick={() => onCommentClick(post)}
-                        className={`flex items-center gap-1.5 transition-colors ${isDark ? 'text-white/30 hover:text-white/70' : 'text-stone-300 hover:text-stone-500'}`}
-                    >
-                        <MessageCircle size={18} fill="currentColor" strokeWidth={0} />
-                        <span className="text-[13px] font-bold">{post.comments_count || '0'}</span>
-                    </button>
+                {/* Action bar */}
+                <div className={`flex items-center justify-between px-4 py-3 ${(post.title || post.content) ? `border-t ${isDark ? 'border-white/5' : 'border-stone-50'}` : ''}`}>
+                    <div className={`flex items-center gap-1 ${isDark ? 'text-white/18' : 'text-stone-300'}`}>
+                        <Eye size={13} />
+                        <span className="text-[11px] font-bold">{post.views_count ?? 0}</span>
+                    </div>
+                    <div className="flex items-center gap-5">
+                        <motion.button whileTap={{ scale: 0.72 }} onClick={() => onLike(post)}
+                            className={`flex items-center gap-1.5 transition-colors ${post.is_liked ? 'text-[#ff2a5f]' : isDark ? 'text-white/25 hover:text-white/60' : 'text-stone-300 hover:text-stone-500'}`}
+                        >
+                            <Heart size={17} fill={post.is_liked ? 'currentColor' : 'none'} strokeWidth={2} />
+                            <span className="text-[12px] font-bold">{post.likes_count ?? 0}</span>
+                        </motion.button>
+                        <button onClick={() => onCommentClick(post)}
+                            className={`flex items-center gap-1.5 transition-colors ${isDark ? 'text-white/25 hover:text-white/60' : 'text-stone-300 hover:text-stone-500'}`}
+                        >
+                            <MessageCircle size={17} strokeWidth={2} />
+                            <span className="text-[12px] font-bold">{post.comments_count ?? 0}</span>
+                        </button>
+                        <button onClick={() => onShare?.(post)}
+                            className={`transition-colors ${isDark ? 'text-white/25 hover:text-white/60' : 'text-stone-300 hover:text-stone-500'}`}
+                        >
+                            <Share2 size={16} strokeWidth={2} />
+                        </button>
+                    </div>
                 </div>
             </div>
-        </motion.div>
+        </motion.article>
     );
 };
 
-// --- Composant Principal : CommunityFeed ---
+// ─── Feed Principal ──────────────────────────────────────────────────────────
+
 export const CommunityFeed = ({
     posts,
     currentUser,
@@ -364,87 +444,102 @@ export const CommunityFeed = ({
 
     React.useEffect(() => {
         if (jumpToPostId && posts.length > 0) {
-            // Un petit délai pour s'assurer que le rendu est terminé
             setTimeout(() => {
-                const element = document.getElementById(`post-${jumpToPostId}`);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Highlight effect could be added here
-                    element.classList.add('ring-4', 'ring-[#fb5607]', 'ring-opacity-50', 'transition-all', 'duration-1000');
-                    setTimeout(() => element.classList.remove('ring-4', 'ring-[#fb5607]', 'ring-opacity-50'), 2000);
+                const el = document.getElementById(`post-${jumpToPostId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.add('ring-2', 'ring-[#fb5607]', 'ring-opacity-60');
+                    setTimeout(() => el.classList.remove('ring-2', 'ring-[#fb5607]', 'ring-opacity-60'), 2200);
                 }
             }, 500);
         }
     }, [jumpToPostId, posts]);
 
-    const handleSubmit = (postData: { title?: string; content?: string; image_url?: string }) => {
+    const handleSubmit = (postData: any) => {
         onCreatePost(postData);
         setIsCreatingPost(false);
     };
 
-    if (isCreatingPost && currentUser) {
-        return (
-            <AnimatePresence>
-                <FullScreenCreatePostForm
-                    currentUser={currentUser}
-                    onSubmit={handleSubmit}
-                    onCancel={() => setIsCreatingPost(false)}
-                    isDark={isDark}
-                    t={t}
-                />
-            </AnimatePresence>
-        );
-    }
-
     return (
-        <div className="w-full flex justify-center">
-            <div className="w-full max-w-md pb-24">
+        <>
+            <AnimatePresence>
+                {isCreatingPost && currentUser && (
+                    <FullScreenCreatePostForm
+                        key="create-form"
+                        currentUser={currentUser}
+                        onSubmit={handleSubmit}
+                        onCancel={() => setIsCreatingPost(false)}
+                        isDark={isDark}
+                    />
+                )}
+            </AnimatePresence>
+
+            <div className="w-full">
+                {/* ── Bouton Créer un post ── */}
                 {currentUser && !showSavedOnly && (
-                    <button
+                    <motion.button
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => setIsCreatingPost(true)}
-                        className={`w-full flex items-center gap-3 p-4 mb-6 rounded-[28px] shadow-[0_4px_12px_rgba(0,0,0,0.02)] border font-bold active:scale-[0.98] transition-all ${isDark ? 'bg-[#121212] border-white/5 text-white/80' : 'bg-white border-stone-100 text-stone-600'}`}
+                        className={`w-full flex items-center gap-3 p-3.5 mb-5 rounded-3xl transition-all ${isDark
+                            ? 'bg-[#141414] border border-white/5'
+                            : 'bg-white border border-stone-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)]'
+                            }`}
                     >
-                        <div className="w-10 h-10 rounded-full bg-[#fb5607]/10 flex items-center justify-center text-[#fb5607] shrink-0">
-                            <Plus size={20} />
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607]/70 to-[#ff9a6c]/50 p-[1.5px] shrink-0">
+                            <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-black overflow-hidden ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
+                                {currentUser.avatar
+                                    ? <img src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
+                                    : getInitials(currentUser.name)
+                                }
+                            </div>
                         </div>
-                        Créer un post...
-                    </button>
+                        <span className={`flex-1 text-left text-[13.5px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
+                            Partagez une recette ou astuce...
+                        </span>
+                        <div className="w-8 h-8 rounded-full bg-[#fb5607] flex items-center justify-center shadow-md shadow-[#fb5607]/25 shrink-0">
+                            <Plus size={17} className="text-white" strokeWidth={2.5} />
+                        </div>
+                    </motion.button>
                 )}
 
+                {/* ── Feed ── */}
                 {isLoading && posts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 opacity-40">
-                        <div className="w-12 h-12 rounded-full border-4 border-[#fb5607]/20 border-t-[#fb5607] animate-spin mb-4" />
-                        <p className="text-sm font-bold uppercase tracking-widest">{t.loading || 'Chargement...'}</p>
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <div className="w-9 h-9 rounded-full border-2 border-[#fb5607]/20 border-t-[#fb5607] animate-spin mb-3" />
+                        <p className={`text-[11px] font-bold uppercase tracking-widest ${isDark ? 'text-white/20' : 'text-stone-300'}`}>
+                            Chargement...
+                        </p>
                     </div>
                 ) : posts.length > 0 ? (
-                    <>
-                        {posts.map((post: CommunityPost) => (
-                            <PostCard
-                                key={post.id}
-                                post={post}
-                                currentUser={currentUser}
-                                onLike={onLike}
-                                onCommentClick={onCommentClick}
-                                onShare={onShare}
-                                onDeletePost={onDeletePost}
-                                onSavePost={onSavePost}
-                                onFollowAuthor={onFollowAuthor}
-                                isDark={isDark}
-                                t={t}
-                            />
-                        ))}
-                    </>
+                    posts.map((post: CommunityPost) => (
+                        <PostCard
+                            key={post.id}
+                            post={post}
+                            currentUser={currentUser}
+                            onLike={onLike}
+                            onCommentClick={onCommentClick}
+                            onShare={onShare}
+                            onDeletePost={onDeletePost}
+                            onSavePost={onSavePost}
+                            onFollowAuthor={onFollowAuthor}
+                            isDark={isDark}
+                            t={t}
+                        />
+                    ))
                 ) : (
-                    <div className="text-center py-16 opacity-40">
-                        <div className="w-20 h-20 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Bookmark size={32} className="text-stone-300" />
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <div className={`w-14 h-14 rounded-3xl flex items-center justify-center mb-4 ${isDark ? 'bg-white/5' : 'bg-stone-100'}`}>
+                            <Bookmark size={24} className={isDark ? 'text-white/20' : 'text-stone-300'} />
                         </div>
-                        <p className="text-sm font-medium">
-                            {showSavedOnly ? "Aucun post enregistré pour le moment." : "L'aventure commence ici, soyez le premier à partager !"}
+                        <p className={`text-[14px] font-bold mb-1 ${isDark ? 'text-white/40' : 'text-stone-500'}`}>
+                            {showSavedOnly ? 'Aucun post enregistré' : 'Soyez le premier à partager !'}
+                        </p>
+                        <p className={`text-[12px] ${isDark ? 'text-white/20' : 'text-stone-400'}`}>
+                            {showSavedOnly ? 'Enregistrez des posts depuis le fil.' : 'La communauté vous attend.'}
                         </p>
                     </div>
                 )}
             </div>
-        </div>
+        </>
     );
 };
