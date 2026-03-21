@@ -967,11 +967,7 @@ export const dbService = {
 
     // --- Community Management ---
     async getCommunityPosts(currentUserId?: string): Promise<CommunityPost[]> {
-        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
-        if (!supabase) {
-            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
-            return cached ? JSON.parse(cached) : [];
-        }
+        if (!supabase) return [];
 
         try {
             const { data: posts, error } = await supabase
@@ -982,14 +978,7 @@ export const dbService = {
                 `)
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                if (error.code === '42P01') {
-                    // Fallback to local
-                    const cached = localStorage.getItem(LOCAL_POSTS_KEY);
-                    return cached ? JSON.parse(cached) : [];
-                }
-                throw error;
-            }
+            if (error) throw error;
 
             let userLikes: string[] = [];
             if (currentUserId) {
@@ -1015,172 +1004,118 @@ export const dbService = {
                 is_liked: userLikes.includes(p.id)
             }));
         } catch (err) {
-            console.error('Error fetching community posts, fallback to local:', err);
-            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
-            return cached ? JSON.parse(cached) : [];
+            console.error('Error fetching community posts:', err);
+            return [];
         }
     },
 
     async createPost(post: Partial<CommunityPost>): Promise<CommunityPost | null> {
-        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
+        if (!supabase) return null;
 
-        let newPost: any = {
-            id: 'local_' + Date.now(),
-            user_id: post.user_id,
-            author_name: post.author_name || 'Moi',
-            author_avatar: post.author_avatar,
-            title: post.title,
-            content: post.content,
-            image_url: post.image_url,
-            created_at: new Date().toISOString(),
-            likes_count: 0,
-            comments_count: 0,
-            views_count: 0,
-            is_liked: false
-        };
+        // Try cloud sync first to ensure foreign key 'user_id' exists
+        try {
+            const userObj: any = {
+                id: post.user_id,
+                name: post.author_name,
+                avatar: post.author_avatar,
+                joinedDate: new Date().toISOString()
+            };
+            await this.syncUserToCloud(userObj).catch(e => console.error('Pre-post sync error:', e));
 
-        if (supabase) {
             const { data, error } = await supabase
                 .from('community_posts')
                 .insert([{
                     user_id: post.user_id,
-                    title: post.title,
-                    content: post.content,
+                    title: post.title || '',
+                    content: post.content || '',
                     image_url: post.image_url,
-                    created_at: newPost.created_at
+                    created_at: new Date().toISOString()
                 }])
                 .select()
                 .single();
 
-            if (!error && data) {
-                return {
-                    ...data,
-                    author_name: post.author_name,
-                    author_avatar: post.author_avatar,
-                    likes_count: 0,
-                    comments_count: 0,
-                    views_count: 0,
-                    is_liked: false
-                } as CommunityPost;
+            if (error) {
+                console.error('CRITICAL: Supabase post creation failed:', error.message, error.details);
+                return null;
             }
-            console.error('Supabase create failed:', error?.message, error?.hint, error?.details);
-            // We return null to indicate a real failure, NOT a local-only success
+
+            return {
+                ...data,
+                author_name: post.author_name,
+                author_avatar: post.author_avatar,
+                likes_count: 0,
+                comments_count: 0,
+                views_count: 0,
+                is_liked: false
+            } as CommunityPost;
+        } catch (err) {
+            console.error('Unexpected error in createPost:', err);
             return null;
         }
-
-        // Only if supabase is not available at all do we fallback to local storage
-        const cached = localStorage.getItem(LOCAL_POSTS_KEY);
-        const posts = cached ? JSON.parse(cached) : [];
-        posts.unshift(newPost);
-        localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
-        return newPost as CommunityPost;
     },
 
     async updateCommunityPost(postId: string, userId: string, updates: Partial<CommunityPost>): Promise<boolean> {
-        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
+        if (!supabase || postId.startsWith('local_')) return false;
 
-        if (supabase && !postId.startsWith('local_')) {
-            const { error } = await supabase
-                .from('community_posts')
-                .update({
-                    title: updates.title,
-                    content: updates.content,
-                    image_url: updates.image_url,
-                    created_at: updates.created_at // in case user wants to bump it, but usually not
-                })
-                .eq('id', postId)
-                .eq('user_id', userId);
+        const { error } = await supabase
+            .from('community_posts')
+            .update({
+                title: updates.title,
+                content: updates.content,
+                image_url: updates.image_url
+            })
+            .eq('id', postId)
+            .eq('user_id', userId);
 
-            if (!error) return true;
+        if (error) {
+            console.error('Update post failed:', error.message);
+            return false;
         }
-
-        // Local or Fallback update
-        try {
-            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
-            if (cached) {
-                let posts = JSON.parse(cached);
-                const index = posts.findIndex((p: any) => p.id === postId);
-                if (index > -1) {
-                    posts[index] = { ...posts[index], ...updates };
-                    localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
-                    return true;
-                }
-            }
-        } catch (e) { }
-
-        return false;
+        return true;
     },
 
     async deleteCommunityPost(postId: string, userId: string): Promise<boolean> {
-        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
+        if (!supabase || postId.startsWith('local_')) return false;
 
-        if (supabase) {
-            const { error } = await supabase
-                .from('community_posts')
-                .delete()
-                .eq('id', postId)
-                .eq('user_id', userId);
+        const { error } = await supabase
+            .from('community_posts')
+            .delete()
+            .eq('id', postId)
+            .eq('user_id', userId);
 
-            if (!error) return true;
+        if (error) {
+            console.error('Delete post failed:', error.message);
+            return false;
         }
-
-        try {
-            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
-            if (cached) {
-                let posts = JSON.parse(cached);
-                posts = posts.filter((p: any) => p.id !== postId);
-                localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
-                return true;
-            }
-        } catch (e) { }
-
-        return false;
+        return true;
     },
 
     async toggleLike(postId: string, userId: string): Promise<{ liked: boolean; count: number }> {
-        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
-        if (supabase) {
-            try {
-                // Check if already liked
-                const { data: existing, error: errSelect } = await supabase
-                    .from('post_likes')
-                    .select('*')
-                    .eq('post_id', postId)
-                    .eq('user_id', userId)
-                    .maybeSingle();
-
-                if (errSelect && errSelect.code !== 'PGRST116') {
-                    throw errSelect;
-                }
-
-                if (existing) {
-                    await supabase.from('post_likes').delete().eq('id', existing.id);
-                    return { liked: false, count: -1 };
-                } else {
-                    await supabase.from('post_likes').insert([{ post_id: postId, user_id: userId }]);
-                    return { liked: true, count: 1 };
-                }
-            } catch (err) {
-                console.warn('Supabase toggleLike failed, falling back to local storage:', err);
-            }
-        }
-
-        // Fallback Logic
+        if (!supabase) return { liked: false, count: 0 };
         try {
-            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
-            if (cached) {
-                const posts = JSON.parse(cached);
-                const p = posts.find((x: any) => x.id === postId);
-                if (p) {
-                    p.is_liked = !p.is_liked;
-                    p.likes_count = (p.likes_count || 0) + (p.is_liked ? 1 : -1);
-                    localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
-                    return { liked: p.is_liked, count: p.is_liked ? 1 : -1 };
-                }
-            }
-        } catch (e) { }
+            // Check if already liked
+            const { data: existing, error: errSelect } = await supabase
+                .from('post_likes')
+                .select('*')
+                .eq('post_id', postId)
+                .eq('user_id', userId)
+                .maybeSingle();
 
-        return { liked: true, count: 1 };
+            if (errSelect && errSelect.code !== 'PGRST116') {
+                throw errSelect;
+            }
+
+            if (existing) {
+                await supabase.from('post_likes').delete().eq('id', existing.id);
+                return { liked: false, count: -1 };
+            } else {
+                await supabase.from('post_likes').insert([{ post_id: postId, user_id: userId }]);
+                return { liked: true, count: 1 };
+            }
+        } catch (err) {
+            console.warn('Supabase toggleLike failed:', err);
+            return { liked: false, count: 0 };
+        }
     },
 
     async incrementViewCount(postId: string, userId?: string): Promise<boolean> {
