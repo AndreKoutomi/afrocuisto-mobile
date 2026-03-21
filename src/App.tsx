@@ -82,7 +82,8 @@ import {
   Edit3,
   Maximize2,
   ClipboardList,
-  Calendar
+  Calendar,
+  ShieldAlert
 } from 'lucide-react';
 import { recipes } from './data';
 import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product, CommunityPost, PostComment, PostCategory } from './types';
@@ -273,77 +274,75 @@ const formatTimeAgo = (dateStr: string) => {
 // Material-style SVG icons (filled active, outlined inactive)
 // Icônes personnalisées pour la barre de navigation
 const NavIcon = ({ id, active, isDark }: { id: string; active: boolean; isDark?: boolean }) => {
-  // Couleur active : orange en mode clair, blanc en mode sombre AMOLED
-  const color = active ? (isDark ? '#F94D00' : '#F94D00') : 'rgba(255,255,255,0.65)';
+  // Couleur unique orange demandée pour le menu actif et non actif
+  const color = '#F94D00';
+  const inactiveOpacity = active ? 1 : 0.6; // Légère transparence pour les inactifs pour mieux distinguer
+  const inactiveColor = isDark ? `rgba(249, 77, 0, 0.7)` : `rgba(249, 77, 0, 0.6)`;
+  const finalInactiveColor = active ? color : inactiveColor;
+
   const icons: Record<string, React.ReactElement> = {
     home: active ? (
-      // Icône Accueil (Home) pleine
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /></svg>
     ) : (
-      // Icône Accueil (Home) vide
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinejoin="round"><path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9" /></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={finalInactiveColor} strokeWidth="2.2" strokeLinejoin="round"><path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9" /></svg>
     ),
     search: active ? (
-      // Icône Explorer pleine
       <Soup size={22} fill={color} strokeWidth={1} color={color} />
     ) : (
-      // Icône Explorer vide
-      <Soup size={22} fill="none" strokeWidth={1.7} color={color} />
+      <Soup size={22} fill="none" strokeWidth={2.2} color={finalInactiveColor} />
     ),
     favs: active ? (
-      // Icône Favoris (Hearts) pleine
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54z" /></svg>
     ) : (
-      // Icône Favoris (Hearts) vide
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" /></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={finalInactiveColor} strokeWidth="2.2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" /></svg>
     ),
     cart: active ? (
-      // Icône Panier (Cart) pleine
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm0 10a2 2 0 110-4 2 2 0 010 4z" /></svg>
     ) : (
-      // Icône Panier (Cart) vide
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" /></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={finalInactiveColor} strokeWidth="2.2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" /></svg>
     ),
     profile: active ? (
-      // Icône Profil pleine
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" /></svg>
     ) : (
-      // Icône Profil vide
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={finalInactiveColor} strokeWidth="2.2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
     ),
     community: active ? (
       <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" /></svg>
     ) : (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={finalInactiveColor} strokeWidth="2.2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
     ),
   };
   return icons[id] || null;
 };
 
-const NavButton = ({ iconId, isActive, onClick, isDark }: { iconId: string; isActive: boolean; onClick: () => void; isDark?: boolean }) => {
+const NavButton = ({ iconId, label, isActive, onClick, isDark }: { iconId: string; label: string; isActive: boolean; onClick: () => void; isDark?: boolean }) => {
   return (
     <motion.button
       onClick={onClick}
-      whileTap={{ scale: 0.84 }}
-      transition={{ type: 'spring', stiffness: 600, damping: 28 }}
-      className="relative flex items-center justify-center"
-      style={{ width: 60, height: 60, flexShrink: 0 }}
+      whileTap={{ scale: 0.92 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+      className={`relative flex items-center justify-center transition-all duration-300 ${isActive ? 'px-4 py-2.5 rounded-[24px]' : 'p-2 rounded-full'}`}
+      style={{
+        backgroundColor: isActive ? (isDark ? 'rgba(249,77,0,0.15)' : 'rgba(249,77,0,0.1)') : 'transparent'
+      }}
     >
-      {/* Sliding bubble — white in light mode, AMOLED black in dark mode */}
-      {isActive && (
-        <motion.div
-          layoutId="nav-white-bubble"
-          transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-          className="absolute inset-0 rounded-full nav-bubble"
-        />
-      )}
-      <motion.div
-        animate={{ scale: isActive ? 1.12 : 1, y: isActive ? -1 : 0 }}
-        transition={{ type: 'spring', stiffness: 480, damping: 26 }}
-        className="relative z-10"
-      >
+      <div className="flex items-center gap-2">
         <NavIcon id={iconId} active={isActive} isDark={isDark} />
-      </motion.div>
+        <AnimatePresence>
+          {isActive && (
+            <motion.span
+              key="label"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 'auto', opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className={`block text-[12px] font-black overflow-hidden whitespace-nowrap text-[#F94D00]`}
+            >
+              {label}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.button>
   );
 };
@@ -1713,73 +1712,106 @@ const StoreProductCard: React.FC<{
   isDark: boolean;
   allMerchants: any[];
   setSelectedProduct: (p: Product | null) => void;
+  idx?: number;
 }> = ({
   product,
   list,
   updateShoppingList,
   isDark,
   allMerchants,
-  setSelectedProduct
+  setSelectedProduct,
+  idx = 0
 }) => {
     const [isAdded, setIsAdded] = useState(false);
-    const shopItem = list.find(i => i.id.startsWith(`store_${product.id}`));
-    const isInList = !!shopItem;
-    const isInCart = shopItem?.isInCart;
     const mName = product.merchant_id ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand) : product.brand;
 
     return (
-      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
-        className={`rounded-[32px] overflow-hidden p-3 flex flex-col ${isDark ? 'bg-white/5' : 'bg-white shadow-sm border border-stone-50'}`}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: idx * 0.04 }}
+        onClick={() => setSelectedProduct(product)}
+        className={`flex items-center gap-4 rounded-[22px] p-3 cursor-pointer active:scale-[0.98] transition-all ${isDark ? 'bg-white/6 border border-white/8' : 'bg-white shadow-sm'}`}
+        style={isDark ? {} : { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
       >
-        <div
-          onClick={() => setSelectedProduct(product)}
-          className={`relative aspect-square rounded-[26px] flex items-center justify-center text-[54px] mb-4 cursor-pointer active:scale-95 transition-all ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}
-        >
-          {isInList && (
-            <div className={`absolute top-2 left-2 right-2 py-1.5 rounded-full border flex items-center justify-center gap-1.5 z-10 backdrop-blur-sm ${isInCart ? 'bg-[#38b000]/10 border-[#38b000]/20 text-[#38b000]' : 'bg-orange-500/10 border-orange-500/20 text-orange-500'}`}>
-              <Check size={10} strokeWidth={4} />
-              <span className="text-[9px] font-black uppercase tracking-wide">
-                {isInCart ? 'Au panier' : 'Dans la liste'}
-              </span>
-            </div>
-          )}
-          <div className="hover:scale-110 transition-transform duration-500 w-full h-full flex items-center justify-center overflow-hidden rounded-[22px]">
-            {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-[54px]">{product.emoji || '📦'}</span>
-            )}
-          </div>
+        {/* Image */}
+        <div className={`w-[88px] h-[88px] rounded-[16px] flex-shrink-0 overflow-hidden ${isDark ? 'bg-white/5' : 'bg-[#f4f7f5]'}`}>
+          {product.image_url
+            ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+            : <span className="text-4xl flex items-center justify-center w-full h-full">{product.emoji || '📦'}</span>
+          }
         </div>
 
-        <div className="px-2 pb-1.5">
-          <h4
-            onClick={() => setSelectedProduct(product)}
-            className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}
-          >
-            {product.name}
-          </h4>
-          <p className="text-[11px] font-bold text-stone-400 mt-1 truncate">
-            {mName}
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h4 className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}>
+              {product.name}
+            </h4>
+          </div>
+
+          <p className="text-[12px] text-stone-400 font-medium leading-snug line-clamp-2 mb-2">
+            {(product as any).description || mName}
           </p>
 
-          <div className="flex items-center justify-between mt-4">
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-[13px] font-bold text-stone-400">XOF</span>
-              <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{product.price.toLocaleString()}</span>
-            </div>
+          <div className="flex items-center justify-between">
+            {/* Price */}
+            <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-[#1a1a2e]'}`}>
+              {product.price.toLocaleString()} <span className="text-[11px] font-bold text-stone-400">XOF</span>
+            </span>
 
+            {/* Cart button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const newItem = { id: `store_${product.id}_${Date.now()}`, item: product.name, amount: '1', quantity: '1', unit: product.unit, priceXOF: String(product.price), isPurchased: false, recipeName: mName };
+                if (isAdded) return; // Prevent double click during animation
+
+                // Add to list
+                const newItem = {
+                  id: `store_${product.id}_${Date.now()}`,
+                  item: product.name,
+                  amount: '1',
+                  quantity: '1',
+                  unit: product.unit,
+                  priceXOF: String(product.price),
+                  isPurchased: false,
+                  recipeName: mName,
+                  isInCart: true
+                };
                 updateShoppingList([...list, newItem]);
+
+                // Trigger animation
                 setIsAdded(true);
-                setTimeout(() => setIsAdded(false), 2000);
+                setTimeout(() => setIsAdded(false), 1500); // revert back after 1.5s
               }}
-              className={`w-[42px] h-[42px] rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-lg ${isAdded ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-[#38b000] shadow-[#38b000]/25'}`}
+              className={`w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 flex-shrink-0 ${isAdded
+                ? 'bg-emerald-500 scale-110'
+                : 'bg-[#2563eb]'
+                }`}
             >
-              {isAdded ? <Check size={20} strokeWidth={3} className="text-white" /> : <Plus size={20} strokeWidth={3} className="text-white" />}
+              <AnimatePresence mode="wait">
+                {isAdded ? (
+                  <motion.div
+                    key="check"
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    exit={{ scale: 0, rotate: 180 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  >
+                    <Check size={18} strokeWidth={3} className="text-white" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="bag"
+                    initial={{ scale: 0, rotate: 180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    exit={{ scale: 0, rotate: -180 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  >
+                    <ShoppingBag size={17} strokeWidth={2.5} className="text-white" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </button>
           </div>
         </div>
@@ -5152,9 +5184,7 @@ export default function App() {
                               <h4 className={`text-[16px] font-black truncate ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>{item.item}</h4>
                               <button
                                 onClick={() => {
-                                  const newList = (currentUser?.shoppingList || []).map(i =>
-                                    i.id === item.id ? { ...i, isInCart: false } : i
-                                  );
+                                  const newList = (currentUser?.shoppingList || []).filter(i => i.id !== item.id);
                                   updateShoppingList(newList);
                                 }}
                                 className="text-stone-300 hover:text-rose-500 transition-colors"
@@ -5724,87 +5754,18 @@ export default function App() {
               {/* Product List — design horizontal card */}
               <div className="px-4 flex flex-col gap-3">
                 {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product, idx) => {
-                    const mName = product.merchant_id
-                      ? (allMerchants.find((m: any) => m.id === product.merchant_id)?.name || product.brand)
-                      : product.brand;
-                    const shopItem = list.find((i: any) => i.id.startsWith(`store_${product.id}`));
-                    const isInList = !!shopItem;
-
-                    return (
-                      <motion.div
-                        key={product.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.04 }}
-                        onClick={() => setSelectedProduct(product)}
-                        className={`flex items-center gap-4 rounded-[22px] p-3 cursor-pointer active:scale-[0.98] transition-all ${isDark ? 'bg-white/6 border border-white/8' : 'bg-white shadow-sm'}`}
-                        style={isDark ? {} : { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
-                      >
-                        {/* Image */}
-                        <div className={`w-[88px] h-[88px] rounded-[16px] flex-shrink-0 overflow-hidden ${isDark ? 'bg-white/5' : 'bg-[#f4f7f5]'}`}>
-                          {product.image_url
-                            ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                            : <span className="text-4xl flex items-center justify-center w-full h-full">{product.emoji || '📦'}</span>
-                          }
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4 className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                              {product.name}
-                            </h4>
-                          </div>
-
-                          <p className="text-[12px] text-stone-400 font-medium leading-snug line-clamp-2 mb-2">
-                            {(product as any).description || mName}
-                          </p>
-
-                          <div className="flex items-center justify-between">
-                            {/* Price */}
-                            <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-[#1a1a2e]'}`}>
-                              {product.price.toLocaleString()} <span className="text-[11px] font-bold text-stone-400">XOF</span>
-                            </span>
-
-                            {/* Cart button */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (isInList) {
-                                  // Remove from list
-                                  const newList = list.filter((i: any) => !i.id.startsWith(`store_${product.id}`));
-                                  updateShoppingList(newList);
-                                } else {
-                                  // Add to list
-                                  const newItem = {
-                                    id: `store_${product.id}_${Date.now()}`,
-                                    item: product.name,
-                                    amount: '1',
-                                    quantity: '1',
-                                    unit: product.unit,
-                                    priceXOF: String(product.price),
-                                    isPurchased: false,
-                                    recipeName: mName
-                                  };
-                                  updateShoppingList([...list, newItem]);
-                                }
-                              }}
-                              className={`w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all active:scale-90 flex-shrink-0 ${isInList
-                                ? 'bg-emerald-100'
-                                : 'bg-[#2563eb]'
-                                }`}
-                            >
-                              {isInList
-                                ? <Check size={18} strokeWidth={3} className="text-emerald-500" />
-                                : <ShoppingBag size={17} strokeWidth={2.5} className="text-white" />
-                              }
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })
+                  filteredProducts.map((product, idx) => (
+                    <StoreProductCard
+                      key={product.id}
+                      product={product}
+                      list={list}
+                      updateShoppingList={updateShoppingList}
+                      isDark={isDark}
+                      allMerchants={allMerchants}
+                      setSelectedProduct={setSelectedProduct}
+                      idx={idx}
+                    />
+                  ))
                 ) : (
                   <div className="py-20 text-center">
                     <div className={`w-20 h-20 mx-auto rounded-[32px] flex items-center justify-center mb-6 ${isDark ? 'bg-white/5' : 'bg-stone-50'}`}>
@@ -6602,34 +6563,14 @@ export default function App() {
       <AnimatePresence>
         {!selectedRecipe && !profileSubView && !selectedProduct && (
           <motion.nav
-            initial={{ y: 100, opacity: 0, scale: 0.92 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 100, opacity: 0, scale: 0.92 }}
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
             transition={{ type: 'spring', damping: 24, stiffness: 360, mass: 0.85 }}
-            className="absolute left-4 right-4 z-[800] nav-bottom-adaptive"
+            className={`absolute bottom-0 w-full z-[800] rounded-t-[32px] ${isDark ? 'bg-[#111827] border-t border-white/5' : 'bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.04)]'}`}
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px))' }}
           >
-
-            {/* Main pill */}
-            <div
-              className="relative flex items-center justify-between px-2 rounded-[40px] overflow-hidden"
-              style={{
-                height: 76,
-                background: 'linear-gradient(160deg, #ff6120 0%, #F94D00 55%, #d93d00 100%)',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12)',
-              }}
-            >
-              {/* Inner highlight at top */}
-              <div
-                className="absolute top-0 inset-x-6 h-px"
-                style={{
-                  background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.45), transparent)',
-                }}
-              />
-              {/* Subtle inner top arc light */}
-              <div
-                className="absolute -top-8 left-1/2 -translate-x-1/2 w-3/4 h-12 rounded-full pointer-events-none"
-                style={{ background: 'rgba(255,255,255,0.06)', filter: 'blur(12px)' }}
-              />
+            <div className="flex items-center justify-between px-6 mx-auto relative max-w-[500px]" style={{ height: 76 }}>
 
               {navItems.map((item) => {
                 const isActive = activeTab === item.id;
@@ -6637,6 +6578,7 @@ export default function App() {
                   <React.Fragment key={item.id}>
                     <NavButton
                       iconId={item.iconId}
+                      label={item.label}
                       isActive={isActive}
                       onClick={() => navigateTo(item.id)}
                       isDark={isDark}
