@@ -3832,6 +3832,17 @@ export default function App() {
       }
     };
 
+    const handleUpdatePost = async (postId: string, postData: { title?: string; content?: string; image_url?: string }) => {
+      if (!currentUser) return;
+      const success = await dbService.updateCommunityPost(postId, currentUser.id, postData);
+      if (success) {
+        setCommunityPosts(prev => prev.map(p => p.id === postId ? { ...p, ...postData } : p));
+        showAlert("Publication modifiée avec succès.", "success");
+      } else {
+        showAlert("Erreur lors de la modification.", "error");
+      }
+    };
+
     const handleShare = async (post: CommunityPost) => {
       const shareUrl = `${window.location.origin}/?post=${post.id}`;
       // Partage natif si dispo (mobile via capacitor ou navigateurs modernes)
@@ -3948,6 +3959,7 @@ export default function App() {
               onSavePost={handleSavePost}
               onFollowAuthor={handleFollowAuthor}
               onCreatePost={handleCreatePost}
+              onUpdatePost={handleUpdatePost}
               jumpToPostId={jumpToPostId}
               showSavedOnly={showSavedPosts}
             />

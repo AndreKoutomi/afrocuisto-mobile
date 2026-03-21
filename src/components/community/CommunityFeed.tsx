@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
     Heart, MessageCircle, Share2, Plus, X, Image as ImageIcon,
     ArrowLeft, Eye, MoreHorizontal, Bookmark, Flag, Trash2,
-    UserPlus, UserMinus, Camera, Loader2
+    UserPlus, UserMinus, Camera, Loader2, Edit2
 } from 'lucide-react';
 import { CommunityPost, User } from '../../types';
 import { dbService } from '../../dbService';
@@ -29,13 +29,38 @@ const formatTimeAgo = (dateStr: string) => {
     return `${Math.floor(diffH / 24)}j`;
 };
 
-/** Lit un File et le convertit en base64 (fallback si pas de Storage) */
-const fileToBase64 = (file: File): Promise<string> =>
+/** Compresse une image et la convertit en base64 pour éviter de faire planter l'app avec des fichiers trop lourds */
+const compressImage = (file: File, maxWidth = 1024, quality = 0.75): Promise<string> =>
     new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
         reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Calcul du ratio pour redimensionner
+                if (width > maxWidth) {
+                    height = (maxWidth / width) * height;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return reject(new Error('Canvas context failed'));
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Export en JPEG compressé
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = reject;
+        };
+        reader.onerror = reject;
     });
 
 // ─── Formulaire Plein Écran — optimisé mobile ───────────────────────────────
@@ -45,11 +70,12 @@ const FullScreenCreatePostForm: React.FC<{
     onSubmit: (data: { title?: string; content?: string; image_url?: string }) => void;
     onCancel: () => void;
     isDark: boolean;
-}> = ({ currentUser, onSubmit, onCancel, isDark }) => {
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
-    const [imagePreview, setImagePreview] = useState<string | null>(null);   // local blob preview
-    const [imageBase64, setImageBase64] = useState<string | null>(null);     // persisted data
+    initialData?: CommunityPost | null;
+}> = ({ currentUser, onSubmit, onCancel, isDark, initialData }) => {
+    const [title, setTitle] = useState(initialData?.title || '');
+    const [content, setContent] = useState(initialData?.content || '');
+    const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image_url || null);   // local blob preview
+    const [imageBase64, setImageBase64] = useState<string | null>(initialData?.image_url || null);     // persisted data
     const [isUploading, setIsUploading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,11 +89,11 @@ const FullScreenCreatePostForm: React.FC<{
             const previewUrl = URL.createObjectURL(file);
             setImagePreview(previewUrl);
 
-            // Conversion en base64 pour persistance (si Storage non dispo)
-            const b64 = await fileToBase64(file);
+            // Conversion et compression pour persistance
+            const b64 = await compressImage(file);
             setImageBase64(b64);
         } catch (err) {
-            console.error('Image read error:', err);
+            console.error('Image processing error:', err);
         } finally {
             setIsUploading(false);
         }
@@ -126,7 +152,7 @@ const FullScreenCreatePostForm: React.FC<{
                 </button>
 
                 <span className={`text-[15px] font-bold ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                    Nouvelle publication
+                    {initialData ? 'Modifier la publication' : 'Nouvelle publication'}
                 </span>
 
                 <button
@@ -138,7 +164,7 @@ const FullScreenCreatePostForm: React.FC<{
                         }`}
                 >
                     {isSubmitting && <Loader2 size={13} className="animate-spin" />}
-                    Publier
+                    {initialData ? 'Modifier' : 'Publier'}
                 </button>
             </div>
 
@@ -256,7 +282,7 @@ const MenuItem = ({ icon, label, onClick, isDark, danger }: any) => (
 
 // ─── Carte de post ───────────────────────────────────────────────────────────
 
-const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDeletePost, onSavePost, onFollowAuthor, isDark }: any) => {
+const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDeletePost, onSavePost, onFollowAuthor, onEdit, isDark }: any) => {
     const hasViewedRef = useRef(false);
     const [showOptions, setShowOptions] = useState(false);
     const isSaved = currentUser?.savedPosts?.includes(post.id);
@@ -318,6 +344,9 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
                                     className={`absolute right-0 top-9 w-44 rounded-2xl shadow-xl border z-50 overflow-hidden py-1 ${isDark ? 'bg-[#1c1c1c] border-white/8' : 'bg-white border-stone-100'}`}
                                 >
                                     <MenuItem icon={<Share2 size={14} />} label="Partager" onClick={() => { setShowOptions(false); onShare?.(post); }} isDark={isDark} />
+                                    {isOwner && (
+                                        <MenuItem icon={<Edit2 size={14} />} label="Modifier" onClick={() => { setShowOptions(false); onEdit?.(post); }} isDark={isDark} />
+                                    )}
                                     {currentUser && (
                                         <MenuItem
                                             icon={<Bookmark size={14} fill={isSaved ? 'currentColor' : 'none'} />}
@@ -422,6 +451,7 @@ export const CommunityFeed = ({
     onSavePost,
     onFollowAuthor,
     onCreatePost,
+    onUpdatePost,
     jumpToPostId,
     showSavedOnly
 }: {
@@ -437,10 +467,12 @@ export const CommunityFeed = ({
     onSavePost?: (post: CommunityPost) => void;
     onFollowAuthor?: (post: CommunityPost) => void;
     onCreatePost: (post: { title?: string; content?: string; image_url?: string }) => void;
+    onUpdatePost: (postId: string, post: { title?: string; content?: string; image_url?: string }) => void;
     jumpToPostId?: string | null;
     showSavedOnly?: boolean;
 }) => {
     const [isCreatingPost, setIsCreatingPost] = useState(false);
+    const [postToEdit, setPostToEdit] = useState<CommunityPost | null>(null);
 
     React.useEffect(() => {
         if (jumpToPostId && posts.length > 0) {
@@ -456,20 +488,26 @@ export const CommunityFeed = ({
     }, [jumpToPostId, posts]);
 
     const handleSubmit = (postData: any) => {
-        onCreatePost(postData);
-        setIsCreatingPost(false);
+        if (postToEdit) {
+            onUpdatePost(postToEdit.id, postData);
+            setPostToEdit(null);
+        } else {
+            onCreatePost(postData);
+            setIsCreatingPost(false);
+        }
     };
 
     return (
         <>
             <AnimatePresence>
-                {isCreatingPost && currentUser && (
+                {(isCreatingPost || postToEdit) && currentUser && (
                     <FullScreenCreatePostForm
-                        key="create-form"
+                        key={postToEdit ? `edit-${postToEdit.id}` : 'create-form'}
                         currentUser={currentUser}
                         onSubmit={handleSubmit}
-                        onCancel={() => setIsCreatingPost(false)}
+                        onCancel={() => { setIsCreatingPost(false); setPostToEdit(null); }}
                         isDark={isDark}
+                        initialData={postToEdit}
                     />
                 )}
             </AnimatePresence>
@@ -522,6 +560,7 @@ export const CommunityFeed = ({
                             onDeletePost={onDeletePost}
                             onSavePost={onSavePost}
                             onFollowAuthor={onFollowAuthor}
+                            onEdit={setPostToEdit}
                             isDark={isDark}
                             t={t}
                         />

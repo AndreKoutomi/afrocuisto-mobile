@@ -916,33 +916,49 @@ export const dbService = {
         try {
             if (!supabase) return null;
 
+            // If it's already a public URL, no need to upload
+            if (base64DataUrl.startsWith('http')) {
+                return base64DataUrl;
+            }
+
             // Convert base64 to Blob
+            if (!base64DataUrl.includes(',')) {
+                console.warn('Invalid image data provided to uploadPostImage');
+                return null;
+            }
+
             const [meta, data] = base64DataUrl.split(',');
             const mimeMatch = meta.match(/:(.*?);/);
             const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
             const ext = mime.split('/')[1] || 'jpg';
-            const byteString = atob(data);
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
-            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-            const blob = new Blob([ab], { type: mime });
 
-            const fileName = `${userId}/${Date.now()}.${ext}`;
+            try {
+                const byteString = atob(data);
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                const blob = new Blob([ab], { type: mime });
 
-            const { data: uploadData, error } = await supabase.storage
-                .from('community-images')
-                .upload(fileName, blob, { contentType: mime, upsert: false });
+                const fileName = `${userId}/${Date.now()}.${ext}`;
 
-            if (error) {
-                console.warn('Storage upload failed, using base64 fallback:', error.message);
+                const { data: uploadData, error } = await supabase.storage
+                    .from('community-images')
+                    .upload(fileName, blob, { contentType: mime, upsert: false });
+
+                if (error) {
+                    console.warn('Storage upload failed, using base64 fallback:', error.message);
+                    return null;
+                }
+
+                const { data: urlData } = supabase.storage
+                    .from('community-images')
+                    .getPublicUrl(uploadData.path);
+
+                return urlData.publicUrl;
+            } catch (e) {
+                console.error('Binary conversion failed:', e);
                 return null;
             }
-
-            const { data: urlData } = supabase.storage
-                .from('community-images')
-                .getPublicUrl(uploadData.path);
-
-            return urlData.publicUrl;
         } catch (err) {
             console.error('uploadPostImage error:', err);
             return null;
@@ -1047,15 +1063,52 @@ export const dbService = {
                     is_liked: false
                 } as CommunityPost;
             }
-            console.warn('Supabase create failed, falling back to local storage:', error?.message);
+            console.error('Supabase create failed:', error?.message, error?.hint, error?.details);
+            // We return null to indicate a real failure, NOT a local-only success
+            return null;
         }
 
-        // Fallback or Save locally
+        // Only if supabase is not available at all do we fallback to local storage
         const cached = localStorage.getItem(LOCAL_POSTS_KEY);
         const posts = cached ? JSON.parse(cached) : [];
         posts.unshift(newPost);
         localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
         return newPost as CommunityPost;
+    },
+
+    async updateCommunityPost(postId: string, userId: string, updates: Partial<CommunityPost>): Promise<boolean> {
+        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
+
+        if (supabase && !postId.startsWith('local_')) {
+            const { error } = await supabase
+                .from('community_posts')
+                .update({
+                    title: updates.title,
+                    content: updates.content,
+                    image_url: updates.image_url,
+                    created_at: updates.created_at // in case user wants to bump it, but usually not
+                })
+                .eq('id', postId)
+                .eq('user_id', userId);
+
+            if (!error) return true;
+        }
+
+        // Local or Fallback update
+        try {
+            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
+            if (cached) {
+                let posts = JSON.parse(cached);
+                const index = posts.findIndex((p: any) => p.id === postId);
+                if (index > -1) {
+                    posts[index] = { ...posts[index], ...updates };
+                    localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
+                    return true;
+                }
+            }
+        } catch (e) { }
+
+        return false;
     },
 
     async deleteCommunityPost(postId: string, userId: string): Promise<boolean> {
