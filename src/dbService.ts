@@ -11,7 +11,7 @@
  * ============================================================================
  */
 
-import { User, Recipe, Product } from './types';
+import { User, Recipe, Product, CommunityPost, PostComment } from './types';
 import type { DishSuggestionPayload } from './components/DishSuggestionForm';
 import { createClient } from '@supabase/supabase-js';
 
@@ -616,6 +616,8 @@ export const dbService = {
                     joined_date: user.joinedDate,
                     favorites: user.favorites || [],
                     shopping_list: user.shoppingList || [],
+                    saved_posts: user.savedPosts || [],
+                    following: user.following || [],
                     avatar: user.avatar
                 }], { onConflict: 'id' });
             if (error) {
@@ -671,6 +673,8 @@ export const dbService = {
                     joinedDate: data.joined_date,
                     favorites: data.favorites || [],
                     shoppingList: data.shopping_list || [],
+                    savedPosts: data.saved_posts || [],
+                    following: data.following || [],
                     avatar: data.avatar,
                     settings: {
                         darkMode: data.dark_mode ?? false,
@@ -905,5 +909,240 @@ export const dbService = {
             return false;
         }
         return true;
+    },
+
+    // --- Community Management ---
+    async getCommunityPosts(currentUserId?: string): Promise<CommunityPost[]> {
+        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
+        if (!supabase) {
+            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
+            return cached ? JSON.parse(cached) : [];
+        }
+
+        try {
+            const { data: posts, error } = await supabase
+                .from('community_posts')
+                .select(`
+                    *,
+                    author:user_profiles ( name, avatar )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                if (error.code === '42P01') {
+                    // Fallback to local
+                    const cached = localStorage.getItem(LOCAL_POSTS_KEY);
+                    return cached ? JSON.parse(cached) : [];
+                }
+                throw error;
+            }
+
+            let userLikes: string[] = [];
+            if (currentUserId) {
+                const { data: likes } = await supabase
+                    .from('post_likes')
+                    .select('post_id')
+                    .eq('user_id', currentUserId);
+                if (likes) userLikes = likes.map(l => l.post_id);
+            }
+
+            return (posts || []).map(p => ({
+                id: p.id,
+                user_id: p.user_id,
+                author_name: p.author?.name || 'Utilisateur',
+                author_avatar: p.author?.avatar,
+                title: p.title,
+                content: p.content,
+                image_url: p.image_url,
+                created_at: p.created_at,
+                likes_count: p.likes_count || 0,
+                comments_count: p.comments_count || 0,
+                views_count: p.views_count || 0,
+                is_liked: userLikes.includes(p.id)
+            }));
+        } catch (err) {
+            console.error('Error fetching community posts, fallback to local:', err);
+            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
+            return cached ? JSON.parse(cached) : [];
+        }
+    },
+
+    async createPost(post: Partial<CommunityPost>): Promise<CommunityPost | null> {
+        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
+
+        let newPost: any = {
+            id: 'local_' + Date.now(),
+            user_id: post.user_id,
+            author_name: post.author_name || 'Moi',
+            author_avatar: post.author_avatar,
+            title: post.title,
+            content: post.content,
+            image_url: post.image_url,
+            created_at: new Date().toISOString(),
+            likes_count: 0,
+            comments_count: 0,
+            views_count: 0,
+            is_liked: false
+        };
+
+        if (supabase) {
+            const { data, error } = await supabase
+                .from('community_posts')
+                .insert([{
+                    user_id: post.user_id,
+                    title: post.title,
+                    content: post.content,
+                    image_url: post.image_url,
+                    created_at: newPost.created_at
+                }])
+                .select()
+                .single();
+
+            if (!error && data) {
+                return {
+                    ...data,
+                    author_name: post.author_name,
+                    author_avatar: post.author_avatar,
+                    likes_count: 0,
+                    comments_count: 0,
+                    views_count: 0,
+                    is_liked: false
+                } as CommunityPost;
+            }
+            console.warn('Supabase create failed, falling back to local storage:', error?.message);
+        }
+
+        // Fallback or Save locally
+        const cached = localStorage.getItem(LOCAL_POSTS_KEY);
+        const posts = cached ? JSON.parse(cached) : [];
+        posts.unshift(newPost);
+        localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
+        return newPost as CommunityPost;
+    },
+
+    async deleteCommunityPost(postId: string, userId: string): Promise<boolean> {
+        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
+
+        if (supabase) {
+            const { error } = await supabase
+                .from('community_posts')
+                .delete()
+                .eq('id', postId)
+                .eq('user_id', userId);
+
+            if (!error) return true;
+        }
+
+        try {
+            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
+            if (cached) {
+                let posts = JSON.parse(cached);
+                posts = posts.filter((p: any) => p.id !== postId);
+                localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
+                return true;
+            }
+        } catch (e) { }
+
+        return false;
+    },
+
+    async toggleLike(postId: string, userId: string): Promise<{ liked: boolean; count: number }> {
+        const LOCAL_POSTS_KEY = 'afrocuisto_local_posts';
+        if (supabase) {
+            try {
+                // Check if already liked
+                const { data: existing, error: errSelect } = await supabase
+                    .from('post_likes')
+                    .select('*')
+                    .eq('post_id', postId)
+                    .eq('user_id', userId)
+                    .maybeSingle();
+
+                if (errSelect && errSelect.code !== 'PGRST116') {
+                    throw errSelect;
+                }
+
+                if (existing) {
+                    await supabase.from('post_likes').delete().eq('id', existing.id);
+                    return { liked: false, count: -1 };
+                } else {
+                    await supabase.from('post_likes').insert([{ post_id: postId, user_id: userId }]);
+                    return { liked: true, count: 1 };
+                }
+            } catch (err) {
+                console.warn('Supabase toggleLike failed, falling back to local storage:', err);
+            }
+        }
+
+        // Fallback Logic
+        try {
+            const cached = localStorage.getItem(LOCAL_POSTS_KEY);
+            if (cached) {
+                const posts = JSON.parse(cached);
+                const p = posts.find((x: any) => x.id === postId);
+                if (p) {
+                    p.is_liked = !p.is_liked;
+                    p.likes_count = (p.likes_count || 0) + (p.is_liked ? 1 : -1);
+                    localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
+                    return { liked: p.is_liked, count: p.is_liked ? 1 : -1 };
+                }
+            }
+        } catch (e) { }
+
+        return { liked: true, count: 1 };
+    },
+
+    async incrementViewCount(postId: string, userId?: string): Promise<boolean> {
+        if (!supabase) return false;
+        try {
+            // Let's call supabase directly. We'll fire and forget.
+            const { error } = await supabase.from('post_views').insert([{
+                post_id: postId,
+                user_id: userId || 'anonymous'
+            }]);
+            return !error;
+        } catch (e) {
+            return false;
+        }
+    },
+
+    async getComments(postId: string): Promise<PostComment[]> {
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('post_comments')
+            .select(`
+                *,
+                author:user_profiles ( name, avatar )
+            `)
+            .eq('post_id', postId)
+            .order('created_at', { ascending: true });
+
+        if (error) return [];
+        return (data || []).map(c => ({
+            id: c.id,
+            post_id: c.post_id,
+            user_id: c.user_id,
+            author_name: c.author?.name || 'Utilisateur',
+            author_avatar: c.author?.avatar,
+            content: c.content,
+            created_at: c.created_at
+        }));
+    },
+
+    async addComment(postId: string, userId: string, content: string): Promise<PostComment | null> {
+        if (!supabase) return null;
+        const { data, error } = await supabase
+            .from('post_comments')
+            .insert([{
+                post_id: postId,
+                user_id: userId,
+                content,
+                created_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+
+        if (error) return null;
+        return data;
     }
 };

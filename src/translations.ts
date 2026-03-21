@@ -166,6 +166,19 @@ export const translations = {
         paymentStatus: "Paiement",
         items: "Articles",
         trackOrder: "Suivre la commande",
+
+        // --- Communauté ---
+        community: "Communauté",
+        communityTitle: "Le coin des passionnés",
+        communityDesc: "Partagez vos réussites et inspirez-vous des créations de la communauté.",
+        sharePlat: "Partager un plat",
+        postSuccess: "Publication partagée avec succès !",
+        postError: "Erreur lors du partage. Réessayez !",
+        comments: "Commentaires",
+        writeComment: "Écrire un commentaire...",
+        like: "J'aime",
+        noComments: "Pas encore de commentaires.",
+        loading: "Chargement...",
     },
 
     // ----------------------------
@@ -304,6 +317,19 @@ export const translations = {
         paymentStatus: "Payment",
         items: "Items",
         trackOrder: "Track order",
+
+        // --- Community ---
+        community: "Community",
+        communityTitle: "Passionately Foodie",
+        communityDesc: "Share your culinary triumphs and get inspired by the community.",
+        sharePlat: "Share a dish",
+        postSuccess: "Post shared successfully!",
+        postError: "Error sharing post. Try again!",
+        comments: "Comments",
+        writeComment: "Write a comment...",
+        like: "Like",
+        noComments: "No comments yet.",
+        loading: "Loading...",
     },
 
     // ----------------------------
@@ -442,6 +468,19 @@ export const translations = {
         paymentStatus: "Pago",
         items: "Artículos",
         trackOrder: "Seguir pedido",
+
+        // --- Comunidad ---
+        community: "Comunidad",
+        communityTitle: "El rincón de los apasionados",
+        communityDesc: "Comparte tus éxitos e inspírate con las creaciones de la comunidad.",
+        sharePlat: "Compartir un plato",
+        postSuccess: "¡Publicación compartida con éxito!",
+        postError: "Error al compartir. ¡Inténtalo de nuevo!",
+        comments: "Comentarios",
+        writeComment: "Escribe un comentario...",
+        like: "Me gusta",
+        noComments: "Aún no hay comentarios.",
+        loading: "Cargando...",
     }
 };
 

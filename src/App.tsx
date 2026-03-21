@@ -16,13 +16,14 @@ import DishSuggestionForm from './components/DishSuggestionForm';
 import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { motion, AnimatePresence } from 'motion/react';
 import { PullToRefresh } from './components/PullToRefresh';
+import { CommunityFeed } from './components/community/CommunityFeed';
 import {
   ChefHat,
   Clock,
   MapPin,
   ChevronLeft,
   Flame,
-  UtensilsCrossed,
+  Soup,
   Info,
   BookOpen,
   Home,
@@ -83,7 +84,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { recipes } from './data';
-import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product } from './types';
+import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product, CommunityPost, PostComment } from './types';
 import { getAIRecipeRecommendation } from './aiService';
 import { dbService } from './dbService';
 import { translations, LanguageCode } from './translations';
@@ -171,7 +172,97 @@ const PreparationStep = ({ step, index, recipeId }: { step: string; index: numbe
 
 
 
-const AUTOPLAY_DURATION = 4500;
+const CommentModal = ({ isOpen, onClose, post, comments, onAddComment, isLoading, t, isDark }: any) => {
+  const [commentText, setCommentText] = useState('');
+
+  const handleSend = () => {
+    if (!commentText.trim()) return;
+    onAddComment(commentText);
+    setCommentText('');
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-end justify-center">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className={`w-full max-w-md h-[80vh] rounded-t-[40px] flex flex-col overflow-hidden relative ${isDark ? 'bg-[#121212]' : 'bg-white'}`}
+          >
+            <header className="px-8 pt-8 pb-4 flex items-center justify-between">
+              <div>
+                <h3 className={`text-xl font-black ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.comments}</h3>
+                <p className="text-xs text-stone-400 font-medium">{post?.author_name}</p>
+              </div>
+              <button onClick={onClose} className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? 'bg-white/10 text-white' : 'bg-stone-100 text-stone-600'}`}>
+                <XCircle size={20} />
+              </button>
+            </header>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar px-8 py-4 space-y-6">
+              {isLoading ? (
+                <div className="flex justify-center py-20"><Loader className="animate-spin text-orange-500" size={32} /></div>
+              ) : comments.length > 0 ? (
+                comments.map((c: any) => (
+                  <div key={c.id} className="flex gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center font-black text-orange-600 text-[10px] shrink-0">
+                      {getInitials(c.author_name)}
+                    </div>
+                    <div className={`flex-1 p-3 rounded-2xl ${isDark ? 'bg-white/5' : 'bg-stone-100'}`}>
+                      <h5 className={`text-[12px] font-bold mb-0.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>{c.author_name}</h5>
+                      <p className={`text-[13px] leading-relaxed ${isDark ? 'text-white/70' : 'text-stone-600'}`}>{c.content}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-stone-400 opacity-50">
+                  <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center mb-4"><Bell size={32} /></div>
+                  <p className="text-sm font-medium">{t.noComments}</p>
+                </div>
+              )}
+            </div>
+
+            <div className={`p-6 border-t ${isDark ? 'bg-white/5 border-white/5' : 'bg-stone-50 border-stone-100'}`}>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  placeholder={t.writeComment}
+                  className={`w-full py-4 pl-5 pr-14 rounded-[20px] text-sm font-medium outline-none transition-all border ${isDark ? 'bg-black/40 text-white border-white/10 focus:border-[#fb5607]' : 'bg-white text-stone-800 border-stone-200 focus:border-[#fb5607]'}`}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!commentText.trim()}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-2xl bg-[#fb5607] text-white flex items-center justify-center shadow-lg shadow-orange-500/20 active:scale-90 transition-transform"
+                >
+                  <Navigation size={18} className="rotate-45" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+const formatTimeAgo = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diffInSeconds < 60) return "À l'instant";
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `Il y a ${diffInMinutes}m`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `Il y a ${diffInHours}h`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `Il y a ${diffInDays}j`;
+};
 
 
 
@@ -192,11 +283,11 @@ const NavIcon = ({ id, active, isDark }: { id: string; active: boolean; isDark?:
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinejoin="round"><path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9" /></svg>
     ),
     search: active ? (
-      // Icône Recherche (Search) pleine
-      <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14" /></svg>
+      // Icône Explorer pleine
+      <Soup size={22} fill={color} strokeWidth={1} color={color} />
     ) : (
-      // Icône Recherche (Search) vide
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="22" y2="22" /></svg>
+      // Icône Explorer vide
+      <Soup size={22} fill="none" strokeWidth={1.7} color={color} />
     ),
     favs: active ? (
       // Icône Favoris (Hearts) pleine
@@ -218,6 +309,11 @@ const NavIcon = ({ id, active, isDark }: { id: string; active: boolean; isDark?:
     ) : (
       // Icône Profil vide
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+    ),
+    community: active ? (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" /></svg>
+    ) : (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
     ),
   };
   return icons[id] || null;
@@ -1705,6 +1801,21 @@ export default function App() {
   const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]; // Références pour les cases OTP
   const [phoneCountry, setPhoneCountry] = useState('+229'); // Indicatif pays pour l'inscription
 
+  const [jumpToPostId, setJumpToPostId] = useState<string | null>(null);
+  const [showSavedPosts, setShowSavedPosts] = useState(false);
+
+  useEffect(() => {
+    // Lecture des Deeplinks au démarrage Web
+    if (typeof window !== 'undefined' && window.location.search) {
+      const qs = new URLSearchParams(window.location.search);
+      const postFromUrl = qs.get('post');
+      if (postFromUrl) {
+        setJumpToPostId(postFromUrl);
+        setActiveTab('community');
+      }
+    }
+  }, []);
+
   // --- Adaptive Android System Navigation Bar ---
   // Automatically detects the height of the Android system navigation bar
   // and injects it as a CSS variable using env() with a robust max() fallback.
@@ -1859,6 +1970,8 @@ export default function App() {
             phone: remoteProfile?.phone || targetUser.phone || sessionUser.phone || existingLocal?.phone || '',
             favorites: remoteProfile?.favorites || existingLocal?.favorites || [],
             shoppingList: remoteProfile?.shoppingList || existingLocal?.shoppingList || [],
+            savedPosts: remoteProfile?.savedPosts || existingLocal?.savedPosts || currentUser?.savedPosts || [],
+            following: remoteProfile?.following || existingLocal?.following || currentUser?.following || [],
             joinedDate: existingLocal?.joinedDate || new Date(targetUser.created_at || Date.now()).toLocaleDateString(),
             settings: mergedSettings,
             avatar: remoteProfile?.avatar || existingLocal?.avatar || currentUser?.avatar
@@ -2223,11 +2336,66 @@ export default function App() {
   const [selectedNotifDetail, setSelectedNotifDetail] = useState<PushNotif | null>(null);
   const { notifications, unreadCount, currentBanner, dismissBanner, markAllRead } = usePushNotifications();
 
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [isCommunityLoading, setIsCommunityLoading] = useState(false);
+  const [selectedPostForComments, setSelectedPostForComments] = useState<CommunityPost | null>(null);
+  const [postComments, setPostComments] = useState<PostComment[]>([]);
+  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
+
   const [homeCarouselIndex, setHomeCarouselIndex] = useState(0);
   const homeTouchRef = useRef({ startX: 0, startY: 0 });
 
   const juicesRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLElement>(null);
+
+  const syncCommunity = async () => {
+    setIsCommunityLoading(true);
+    try {
+      const posts = await dbService.getCommunityPosts(currentUser?.id);
+      setCommunityPosts(posts);
+    } catch (err) {
+      console.error('Community sync failed:', err);
+    } finally {
+      setIsCommunityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'community') {
+      syncCommunity();
+
+      // Realtime subscription for community
+      const channel = dbService.supabase
+        ?.channel('community-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'community_posts' }, () => syncCommunity())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, () => syncCommunity())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_comments' }, () => syncCommunity())
+        .subscribe();
+
+      return () => {
+        if (channel) dbService.supabase?.removeChannel(channel);
+      };
+    }
+  }, [activeTab, currentUser?.id]);
+
+  useEffect(() => {
+    const fetchComments = async () => {
+      if (!selectedPostForComments) {
+        setPostComments([]);
+        return;
+      }
+      setIsCommentsLoading(true);
+      try {
+        const comments = await dbService.getComments(selectedPostForComments.id);
+        setPostComments(comments);
+      } catch (err) {
+        console.error('Error fetching comments:', err);
+      } finally {
+        setIsCommentsLoading(false);
+      }
+    };
+    fetchComments();
+  }, [selectedPostForComments]);
 
   useEffect(() => {
     if (activeTab !== 'home' || !juicesRef.current) return;
@@ -2287,6 +2455,7 @@ export default function App() {
     if (showAddShoppingModal) { setShowAddShoppingModal(false); return; }
 
     // Middle overlays
+    if (selectedPostForComments) { setSelectedPostForComments(null); return; }
     if (selectedProduct) { setSelectedProduct(null); return; }
     if (selectedRecipe) { setSelectedRecipe(null); return; }
     if (isSearchExpanded) { setIsSearchExpanded(false); return; }
@@ -2333,8 +2502,36 @@ export default function App() {
     const listener = CapacitorApp.addListener('backButton', () => {
       goBackRef.current();
     });
-    return () => { listener.then(l => l.remove()); };
-  }, []);
+
+    // Deeplink Handling sur Mobile via Capacitor
+    const urlListener = CapacitorApp.addListener('appUrlOpen', data => {
+      try {
+        const urlObj = new URL(data.url);
+
+        // Clic sur Post partagé
+        const postId = urlObj.searchParams.get('post');
+        if (postId) {
+          setActiveTab('community');
+          setJumpToPostId(postId);
+          return;
+        }
+
+        // Clic sur Recette partagée
+        const recipeId = urlObj.searchParams.get('recipe');
+        if (recipeId) {
+          const recipe = allRecipes.find(r => r.id === recipeId);
+          if (recipe) setSelectedRecipe(recipe);
+        }
+      } catch (e) {
+        console.error("Deeplink Error", e);
+      }
+    });
+
+    return () => {
+      listener.then(l => l.remove());
+      urlListener.then(l => l.remove());
+    };
+  }, [allRecipes]);
 
   // Dark mode: read from localStorage if user is not logged in, otherwise from user settings
   const savedDarkMode = typeof window !== 'undefined' ? localStorage.getItem('afrocuisto_dark_mode') === 'true' : false;
@@ -2687,7 +2884,7 @@ export default function App() {
   const navItems = [
     { id: 'home', iconId: 'home', label: t.home },
     { id: 'search', iconId: 'search', label: t.explorer },
-    { id: 'favs', iconId: 'favs', label: t.favorites },
+    { id: 'community', iconId: 'community', label: t.community },
     { id: 'cart', iconId: 'cart', label: t.shoppingList },
     { id: 'profile', iconId: 'profile', label: t.profile },
   ];
@@ -3208,6 +3405,9 @@ export default function App() {
               <RefreshCw size={22} />
             </motion.div>
           )}
+          <button onClick={() => navigateTo('favs')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <Heart size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
+          </button>
           <button onClick={() => setIsSearchExpanded(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
             <Search size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
           </button>
@@ -3518,26 +3718,224 @@ export default function App() {
     </div >
   );
 
+  const renderCommunity = () => {
+    const handleLike = async (post: CommunityPost) => {
+      if (!currentUser) { navigateTo('profile'); return; }
+      const res = await dbService.toggleLike(post.id, currentUser.id);
+      setCommunityPosts(prev => prev.map(p => {
+        if (p.id === post.id) {
+          return {
+            ...p,
+            is_liked: res.liked,
+            likes_count: p.likes_count + res.count
+          };
+        }
+        return p;
+      }));
+    };
+
+    const handleAddComment = async (content: string) => {
+      if (!currentUser || !selectedPostForComments) return;
+      const res = await dbService.addComment(selectedPostForComments.id, currentUser.id, content);
+      if (res) {
+        setPostComments(prev => [...prev, { ...res, author_name: currentUser.name, author_avatar: currentUser.avatar }]);
+        setCommunityPosts(prev => prev.map(p => {
+          if (p.id === selectedPostForComments.id) {
+            return { ...p, comments_count: p.comments_count + 1 };
+          }
+          return p;
+        }));
+      }
+    };
+
+    const handleCreatePost = async (postData: { title?: string; content?: string; image_url?: string }) => {
+      if (!currentUser) { navigateTo('profile'); return; }
+
+      const res = await dbService.createPost({
+        user_id: currentUser.id,
+        author_name: currentUser.name,
+        author_avatar: currentUser.avatar,
+        title: postData.title,
+        content: postData.content,
+        image_url: postData.image_url
+      });
+
+      if (res) {
+        setCommunityPosts(prev => [res, ...prev]);
+        showAlert("Publication partagée avec succès !", "success");
+      } else {
+        showAlert("Erreur lors de la publication.", "error");
+      }
+    };
+
+    const handleShare = async (post: CommunityPost) => {
+      const shareUrl = `${window.location.origin}/?post=${post.id}`;
+      // Partage natif si dispo (mobile via capacitor ou navigateurs modernes)
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `Afrocuisto - Post de ${post.author_name}`,
+            text: `Regardez cette belle création sur Afrocuisto !`,
+            url: shareUrl
+          });
+          return;
+        } catch (e) { console.log('Partage annulé ou non supporté', e); }
+      }
+
+      // Fallback : Copy link!
+      navigator.clipboard.writeText(shareUrl);
+      showAlert("Lien copié dans le presse-papier !", "success");
+    };
+
+    const handleDeletePost = async (post: CommunityPost) => {
+      if (!currentUser || currentUser.id !== post.user_id) return;
+
+      if (!window.confirm("Voulez-vous vraiment supprimer définitivement cette publication ?")) return;
+
+      const success = await dbService.deleteCommunityPost(post.id, currentUser.id);
+      if (success) {
+        setCommunityPosts(prev => prev.filter(p => p.id !== post.id));
+        showAlert("Publication supprimée avec succès.", "success");
+      } else {
+        showAlert("Erreur lors de la suppression.", "error");
+      }
+    };
+
+    const handleSavePost = async (post: CommunityPost) => {
+      if (!currentUser) { navigateTo('profile'); return; }
+      const savedPosts = currentUser.savedPosts || [];
+      const isSaved = savedPosts.includes(post.id);
+      const newSavedPosts = isSaved
+        ? savedPosts.filter(id => id !== post.id)
+        : [...savedPosts, post.id];
+
+      const updatedUser = { ...currentUser, savedPosts: newSavedPosts };
+      setCurrentUser(updatedUser);
+      dbService.setCurrentUser(updatedUser);
+      dbService.syncUserToCloud(updatedUser);
+      showAlert(isSaved ? "Retiré des favoris" : "Ajouté aux favoris", "success");
+    };
+
+    const handleFollowAuthor = async (post: CommunityPost) => {
+      if (!currentUser) { navigateTo('profile'); return; }
+      const following = currentUser.following || [];
+      const isFollowing = following.includes(post.user_id);
+      const newFollowing = isFollowing
+        ? following.filter(id => id !== post.user_id)
+        : [...following, post.user_id];
+
+      const updatedUser = { ...currentUser, following: newFollowing };
+      setCurrentUser(updatedUser);
+      dbService.setCurrentUser(updatedUser);
+      dbService.syncUserToCloud(updatedUser);
+      showAlert(isFollowing ? `Vous ne suivez plus ${post.author_name}` : `Vous suivez maintenant ${post.author_name}`, "success");
+    };
+
+    const displayedCommunityPosts = showSavedPosts
+      ? communityPosts.filter(p => currentUser?.savedPosts?.includes(p.id))
+      : communityPosts;
+
+    return (
+      <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
+        <header
+          className="px-6 pb-6 flex flex-col gap-1"
+          style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px' }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {showSavedPosts && (
+                <button
+                  onClick={() => setShowSavedPosts(false)}
+                  className={`w-[42px] h-[42px] -ml-2 rounded-full flex items-center justify-center text-[#fb5607] shadow-sm transition-transform active:scale-95 shrink-0 border ${isDark ? 'bg-white/10 border-white/10 hover:bg-white/20' : 'bg-white border-stone-100 hover:bg-stone-50'}`}
+                >
+                  <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
+                </button>
+              )}
+              <h1 className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>
+                {showSavedPosts ? "Enregistrés" : t.community}
+              </h1>
+            </div>
+            {currentUser && !showSavedPosts && (
+              <button
+                onClick={() => setShowSavedPosts(true)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all active:scale-95 ${isDark ? 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-600 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-stone-50'}`}
+              >
+                <Bookmark size={18} fill="none" />
+              </button>
+            )}
+          </div>
+          <p className={`text-xs font-medium opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
+            {showSavedPosts ? "Vos publications sauvegardées" : t.communityDesc}
+          </p>
+        </header>
+
+        <div className="px-6">
+          <CommunityFeed
+            posts={displayedCommunityPosts}
+            currentUser={currentUser}
+            isLoading={isCommunityLoading}
+            t={t}
+            isDark={isDark}
+            onLike={handleLike}
+            onCommentClick={(post) => setSelectedPostForComments(post)}
+            onShare={handleShare}
+            onDeletePost={handleDeletePost}
+            onSavePost={handleSavePost}
+            onFollowAuthor={handleFollowAuthor}
+            onCreatePost={handleCreatePost}
+            jumpToPostId={jumpToPostId}
+            showSavedOnly={showSavedPosts}
+          />
+        </div>
+
+        <CommentModal
+          isOpen={!!selectedPostForComments}
+          onClose={() => setSelectedPostForComments(null)}
+          post={selectedPostForComments}
+          comments={postComments}
+          onAddComment={handleAddComment}
+          isLoading={isCommentsLoading}
+          t={t}
+          isDark={isDark}
+        />
+      </div>
+    );
+  };
+
   const renderFavorites = () => {
     const favoriteRecipes = dbService.getFavorites(currentUser!, allRecipes);
 
     return (
       <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
         <header
-          className="px-6 pb-8 flex items-center justify-between"
+          className="px-6 pb-6 flex flex-col gap-4"
           style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px' }}
         >
-          <h1 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.favorites}</h1>
-          {isOffline && (
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
-              <WifiOff size={20} />
-            </motion.div>
-          )}
-          {isSyncing && !isOffline && (
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }} className="text-[#fb5607]">
-              <RefreshCw size={18} />
-            </motion.div>
-          )}
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-4">
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={goBack}
+                className={`p-2.5 rounded-full transition-all border ${isDark ? 'bg-white/10 text-white border-white/10' : 'bg-white text-stone-800 border-stone-200 shadow-sm'}`}
+              >
+                <ChevronLeft size={20} />
+              </motion.button>
+              <h1 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.favorites}</h1>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {isOffline && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
+                  <WifiOff size={20} />
+                </motion.div>
+              )}
+              {isSyncing && !isOffline && (
+                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }} className="text-[#fb5607]">
+                  <RefreshCw size={18} />
+                </motion.div>
+              )}
+            </div>
+          </div>
         </header>
         <div className="px-6 space-y-4">
           {favoriteRecipes.length > 0 ? (
@@ -5719,6 +6117,7 @@ export default function App() {
         <AnimatePresence mode="wait">
           {activeTab === 'home' && <motion.div key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderHome()}</motion.div>}
           {activeTab === 'search' && <motion.div key="search" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderExplorer()}</motion.div>}
+          {activeTab === 'community' && <motion.div key="community" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderCommunity()}</motion.div>}
           {activeTab === 'favs' && <motion.div key="favs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderFavorites()}</motion.div>}
           {activeTab === 'cart' && <motion.div key="cart" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderShoppingList()}</motion.div>}
           {activeTab === 'profile' && <motion.div key="profile" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderProfile()}</motion.div>}

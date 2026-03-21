@@ -85,6 +85,8 @@ export interface User {
   address?: string;       // Adresse de livraison
   favorites: string[];    // Tableau contenant les IDs des recettes favorites
   shoppingList: ShoppingItem[]; // Sa liste de courses
+  savedPosts?: string[];  // Posts de la communauté sauvegardés/enregistrés
+  following?: string[];   // Utilisateurs de la communauté suivis
   joinedDate: string;     // Date d'inscription
   settings?: UserSettings; // Ses préférences (sombre/clair, langue...)
 }
@@ -110,4 +112,37 @@ export interface Product {
   description?: string;
   rating?: number;
   reviews_count?: number;
+}
+
+// --- Community Types ---
+export interface CommunityPost {
+  id: string;
+  user_id: string;
+  author_name: string;
+  author_avatar?: string;
+  title?: string;
+  content?: string;
+  image_url?: string;
+  created_at: string;
+  likes_count: number;
+  comments_count: number;
+  views_count: number;
+  is_liked?: boolean; // UI only: if current user liked it
+}
+
+export interface PostLike {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  author_name: string;
+  author_avatar?: string;
+  content: string;
+  created_at: string;
 }
