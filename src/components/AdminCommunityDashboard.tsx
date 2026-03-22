@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { OptimizedImage } from './OptimizedImage';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Users, MessageSquare, FileText, Heart, Eye,
@@ -125,7 +126,7 @@ export const AdminCommunityDashboard: React.FC<{
                             className={`p-3 rounded-2xl border flex items-center gap-3 transition-all active:scale-[0.98] cursor-pointer ${isDark ? 'bg-white/5 border-white/8' : 'bg-white border-stone-100 shadow-sm'}`}
                         >
                             {post.image_url ? (
-                                <img src={post.image_url} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                                <OptimizedImage src={post.image_url} className="w-12 h-12 rounded-xl object-cover shrink-0" />
                             ) : (
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isDark ? 'bg-white/10' : 'bg-stone-100'}`}>
                                     <FileText size={20} className="text-stone-400" />
@@ -167,14 +168,14 @@ export const AdminCommunityDashboard: React.FC<{
                         <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-stone-100 overflow-hidden">
-                                    {selectedItem.author_avatar ? <img src={selectedItem.author_avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-stone-400">{(selectedItem.author_name || 'U').charAt(0)}</div>}
+                                    {selectedItem.author_avatar ? <OptimizedImage src={selectedItem.author_avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-stone-400">{(selectedItem.author_name || 'U').charAt(0)}</div>}
                                 </div>
                                 <div>
                                     <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-stone-800'}`}>{selectedItem.author_name}</p>
                                     <p className="text-[10px] text-stone-400 uppercase font-bold">{new Date(selectedItem.created_at).toLocaleDateString()}</p>
                                 </div>
                             </div>
-                            {selectedItem.image_url && <img src={selectedItem.image_url} className="w-full aspect-video rounded-2xl object-cover" />}
+                            {selectedItem.image_url && <OptimizedImage src={selectedItem.image_url} className="w-full aspect-video rounded-2xl object-cover" />}
                             <p className={`text-sm leading-relaxed ${isDark ? 'text-white/70' : 'text-stone-600'}`}>{selectedItem.content}</p>
                         </div>
                         <div className="pt-6 border-t border-stone-100 mt-auto flex gap-3">
@@ -197,7 +198,7 @@ export const AdminCommunityDashboard: React.FC<{
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="w-5 h-5 rounded-full bg-stone-100 overflow-hidden text-[8px] flex items-center justify-center font-bold">
-                                        {comment.author_avatar ? <img src={comment.author_avatar} /> : (comment.author_name || 'U').charAt(0)}
+                                        {comment.author_avatar ? <OptimizedImage src={comment.author_avatar} /> : (comment.author_name || 'U').charAt(0)}
                                     </div>
                                     <span className={`text-[10px] font-black uppercase ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{comment.author_name}</span>
                                 </div>
@@ -224,7 +225,7 @@ export const AdminCommunityDashboard: React.FC<{
                     {users.filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase())).map(user => (
                         <div key={user.id} className={`p-3 rounded-2xl border flex items-center gap-3 ${isDark ? 'bg-white/5 border-white/8' : 'bg-white border-stone-100 shadow-sm'}`}>
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs ${isDark ? 'bg-white/10 text-white' : 'bg-stone-100 text-stone-700'}`}>
-                                {user.avatar ? <img src={user.avatar} className="w-full h-full rounded-full object-cover" /> : user.name.charAt(0)}
+                                {user.avatar ? <OptimizedImage src={user.avatar} className="w-full h-full rounded-full object-cover" /> : user.name.charAt(0)}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">

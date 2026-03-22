@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { OptimizedImage } from './../OptimizedImage';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Heart, MessageCircle, Share2, Plus, X, Image as ImageIcon,
@@ -179,7 +180,7 @@ const FullScreenCreatePostForm: React.FC<{
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607]/80 to-[#ff9a6c]/60 p-[2px] shrink-0">
                         <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-black overflow-hidden ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
                             {currentUser?.avatar
-                                ? <img src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
+                                ? <OptimizedImage src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
                                 : getInitials(currentUser?.name)
                             }
                         </div>
@@ -234,7 +235,7 @@ const FullScreenCreatePostForm: React.FC<{
                     <div className="px-4 pb-4">
                         <div className={`relative rounded-2xl overflow-hidden ${isDark ? 'bg-white/8' : 'bg-stone-100'}`} style={{ aspectRatio: '4/3' }}>
                             {imagePreview && !isUploading && (
-                                <img src={imagePreview} className="w-full h-full object-cover" alt="Aperçu" />
+                                <OptimizedImage src={imagePreview} className="w-full h-full object-cover" alt="Aperçu" />
                             )}
                             {isUploading && (
                                 <div className="w-full h-full flex items-center justify-center">
@@ -397,7 +398,7 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607] to-[#ff9a6c] p-[1.5px]">
                             <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
                                 {post.author_avatar
-                                    ? <img src={post.author_avatar} className="w-full h-full object-cover" alt="" />
+                                    ? <OptimizedImage src={post.author_avatar} className="w-full h-full object-cover" alt="" />
                                     : getInitials(post.author_name)
                                 }
                             </div>
@@ -677,7 +678,7 @@ export const CommunityFeed = ({
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607] to-[#ff9a6c] p-[1.5px] shrink-0">
                             <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-black overflow-hidden ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
                                 {currentUser.avatar
-                                    ? <img src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
+                                    ? <OptimizedImage src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
                                     : getInitials(currentUser.name)
                                 }
                             </div>

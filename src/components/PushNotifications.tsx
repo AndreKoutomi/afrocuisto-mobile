@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { dbService } from '../dbService';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'motion/react';
 
 // Type d'une notification
 export interface PushNotif {
@@ -26,10 +26,20 @@ export interface PushNotif {
 }
 
 const SEEN_KEY = 'afrocuisto_seen_notifications';
+const DISMISSED_KEY = 'afrocuisto_dismissed_notifications';
 
 function getSeenIds(): Set<string> {
     try {
         const raw = localStorage.getItem(SEEN_KEY);
+        return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch {
+        return new Set();
+    }
+}
+
+function getDismissedIds(): Set<string> {
+    try {
+        const raw = localStorage.getItem(DISMISSED_KEY);
         return raw ? new Set(JSON.parse(raw)) : new Set();
     } catch {
         return new Set();
@@ -42,6 +52,13 @@ function markAsSeen(id: string) {
     // Keep only the last 100 IDs to avoid bloat
     const arr = Array.from(seen).slice(-100);
     localStorage.setItem(SEEN_KEY, JSON.stringify(arr));
+}
+
+function markAsDismissed(id: string) {
+    const dismissed = getDismissedIds();
+    dismissed.add(id);
+    const arr = Array.from(dismissed).slice(-200);
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify(arr));
 }
 
 // ─────────────────────────────────────────
@@ -77,9 +94,12 @@ export function usePushNotifications() {
             if (!data) return;
 
             const seen = getSeenIds();
-            const unseen = data.filter((n: PushNotif) => !seen.has(n.id));
+            const dismissed = getDismissedIds();
+            // Filter out locally dismissed notifications
+            const active = data.filter((n: PushNotif) => !dismissed.has(n.id));
+            const unseen = active.filter((n: PushNotif) => !seen.has(n.id));
 
-            setNotifications(data);
+            setNotifications(active);
             setUnreadCount(unseen.length);
         } catch (e) {
             // Silent fail — notifications are non-critical
@@ -94,6 +114,19 @@ export function usePushNotifications() {
     const markOneRead = useCallback((id: string) => {
         markAsSeen(id);
         setUnreadCount(prev => Math.max(0, prev - 1));
+    }, []);
+
+    // Dismiss a single notification locally (swipe to delete)
+    const dismissNotification = useCallback((id: string) => {
+        // Check BEFORE marking as seen — once markAsSeen() writes to localStorage,
+        // getSeenIds() would always return true and the badge would never decrement.
+        const wasUnseen = !getSeenIds().has(id);
+        markAsDismissed(id);
+        markAsSeen(id);
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        if (wasUnseen) {
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        }
     }, []);
 
     useEffect(() => {
@@ -111,6 +144,8 @@ export function usePushNotifications() {
             }, (payload: { new: PushNotif }) => {
                 const newNotif = payload.new;
                 if (!newNotif || !newNotif.is_active) return;
+                const dismissed = getDismissedIds();
+                if (dismissed.has(newNotif.id)) return;
                 setNotifications(prev => [newNotif, ...prev]);
                 setUnreadCount(prev => prev + 1);
                 showBanner(newNotif);
@@ -122,7 +157,7 @@ export function usePushNotifications() {
         };
     }, [fetchNotifications, showBanner]);
 
-    return { notifications, unreadCount, currentBanner, dismissBanner, markAllRead, markOneRead, fetchNotifications };
+    return { notifications, unreadCount, currentBanner, dismissBanner, markAllRead, markOneRead, fetchNotifications, dismissNotification };
 }
 
 
@@ -161,7 +196,7 @@ export function PushNotifBanner({ notif, onDismiss, onViewMore, isDark }: PushBa
                         display: 'flex',
                     }}
                 >
-                    {/* Background Grid & Gradient Effect from the image */}
+                    {/* Background Grid & Gradient Effect */}
                     <div style={{
                         position: 'absolute',
                         top: 0, left: 0, bottom: 0, width: '50%',
@@ -245,6 +280,161 @@ export function PushNotifBanner({ notif, onDismiss, onViewMore, isDark }: PushBa
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// COMPOSANT: Carte swipeable (suppression individuelle par glissement)
+// ─────────────────────────────────────────────────────────────────────────────
+const SWIPE_THRESHOLD = 80; // px au-delà desquels la suppression se déclenche
+
+interface SwipeableNotifCardProps {
+    notif: PushNotif;
+    isDark: boolean;
+    onDismiss: (id: string) => void;
+    onTap: (notif: PushNotif) => void;
+    formatRelativeTime: (d: string) => string;
+}
+
+function SwipeableNotifCard({ notif, isDark, onDismiss, onTap, formatRelativeTime }: SwipeableNotifCardProps) {
+    const x = useMotionValue(0);
+    const dragged = useRef(false);
+
+    // Opacité & scale de l'icône poubelle — apparaît progressivement au glissement
+    const trashOpacity = useTransform(x, [-SWIPE_THRESHOLD, -20, 0, 20, SWIPE_THRESHOLD], [1, 0.6, 0, 0.6, 1]);
+    const trashScale = useTransform(x, [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD], [1.2, 0.6, 1.2]);
+    // Fond rouge derrière la carte
+    const bgOpacity = useTransform(x, [-SWIPE_THRESHOLD * 1.5, -20, 0, 20, SWIPE_THRESHOLD * 1.5], [1, 0.3, 0, 0.3, 1]);
+
+    const handleDragEnd = () => {
+        const currentX = x.get();
+        if (Math.abs(currentX) >= SWIPE_THRESHOLD) {
+            // Envoyer hors écran dans la direction du geste, puis supprimer
+            const target = currentX > 0 ? 450 : -450;
+            animate(x, target, { duration: 0.22, ease: 'easeOut' }).then(() => {
+                onDismiss(notif.id);
+            });
+        } else {
+            // Remettre en place avec un effet spring
+            animate(x, 0, { type: 'spring', stiffness: 500, damping: 30 });
+        }
+        // Remettre dragged à false après un court délai (pour distinguer click vs drag)
+        setTimeout(() => { dragged.current = false; }, 50);
+    };
+
+    return (
+        <div style={{ position: 'relative', marginBottom: 8, borderRadius: 20, overflow: 'hidden' }}>
+            {/* Fond rouge avec icône poubelle (révélé lors du glissement) */}
+            <motion.div
+                style={{
+                    position: 'absolute', inset: 0, borderRadius: 20,
+                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: bgOpacity,
+                }}
+            >
+                <motion.div style={{
+                    opacity: trashOpacity,
+                    scale: trashScale,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4
+                }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                        <path d="M10 11v6" />
+                        <path d="M14 11v6" />
+                        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                    </svg>
+                    <span style={{ color: 'white', fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }}>Supprimer</span>
+                </motion.div>
+            </motion.div>
+
+            {/* Carte principale, draggable horizontalement */}
+            <motion.div
+                drag="x"
+                dragConstraints={{ left: -200, right: 200 }}
+                dragElastic={0.12}
+                style={{
+                    x,
+                    position: 'relative',
+                    display: 'flex', gap: 16, padding: '20px',
+                    borderRadius: 20,
+                    background: isDark ? '#18181b' : '#ffffff',
+                    boxShadow: isDark
+                        ? '0 4px 6px -1px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)'
+                        : '0 4px 10px -2px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.03)',
+                    overflow: 'hidden',
+                    cursor: 'grab',
+                    touchAction: 'pan-y',
+                    userSelect: 'none',
+                }}
+                onDragStart={() => { dragged.current = true; }}
+                onDragEnd={handleDragEnd}
+                onClick={() => { if (!dragged.current) onTap(notif); }}
+                whileTap={{ scale: 0.99 }}
+            >
+                {/* Background Grid & Gradient Effect */}
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, bottom: 0, width: '50%',
+                    background: `radial-gradient(circle at top left, ${notif.color}10, transparent 70%)`,
+                    pointerEvents: 'none', zIndex: 0
+                }} />
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, bottom: 0, width: '50%',
+                    backgroundImage: `
+                        linear-gradient(to right, ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'} 1px, transparent 1px),
+                        linear-gradient(to bottom, ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'} 1px, transparent 1px)
+                    `,
+                    backgroundSize: '16px 16px',
+                    WebkitMaskImage: 'linear-gradient(to right, black, transparent)',
+                    maskImage: 'linear-gradient(to right, black, transparent)',
+                    pointerEvents: 'none', zIndex: 0
+                }} />
+
+                <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: 14, width: '100%', alignItems: 'flex-start' }}>
+                    {/* Circle Icon */}
+                    <div style={{
+                        width: 46, height: 46, borderRadius: '50%',
+                        background: isDark ? '#27272a' : '#ffffff',
+                        boxShadow: isDark ? '0 4px 10px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)',
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 22, flexShrink: 0,
+                    }}>
+                        {notif.icon}
+                    </div>
+
+                    {/* Content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                            <h4 style={{ margin: 0, fontSize: 15, fontWeight: 500, color: isDark ? '#ffffff' : '#111827', lineHeight: 1.3 }}>
+                                <span style={{ color: isDark ? '#a1a1aa' : '#52525b' }}>AfroCuisto: </span>
+                                <span style={{ color: notif.color, fontWeight: 600 }}>{notif.title}</span>
+                            </h4>
+                            <span style={{ fontSize: 11, color: isDark ? '#71717a' : '#a1a1aa', flexShrink: 0, marginLeft: 8, whiteSpace: 'nowrap' }}>
+                                {formatRelativeTime(notif.sent_at)}
+                            </span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 13, color: isDark ? '#a1a1aa' : '#52525b', lineHeight: 1.4, opacity: 0.9 }}>
+                            {notif.body}
+                        </p>
+                        {/* Hint glissement */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, opacity: 0.3 }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isDark ? '#fff' : '#555'} strokeWidth="2.5" strokeLinecap="round">
+                                <path d="M19 12H5M5 12l7 7M5 12l7-7" />
+                            </svg>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: isDark ? '#fff' : '#888', letterSpacing: '0.04em' }}>
+                                Glisser pour supprimer
+                            </span>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isDark ? '#fff' : '#555'} strokeWidth="2.5" strokeLinecap="round">
+                                <path d="M5 12h14M14 5l7 7-7 7" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMPOSANT: Centre de Notifications (liste complète)
 // ─────────────────────────────────────────────────────────────────────────────
 interface NotifCenterProps {
@@ -252,10 +442,11 @@ interface NotifCenterProps {
     onMarkAllRead: () => void;
     onClose: () => void;
     onViewMore?: (notif: PushNotif) => void;
+    onDismissOne?: (id: string) => void;
     isDark?: boolean;
 }
 
-export function NotifCenter({ notifications, onMarkAllRead, onClose, onViewMore, isDark }: NotifCenterProps) {
+export function NotifCenter({ notifications, onMarkAllRead, onClose, onViewMore, onDismissOne, isDark }: NotifCenterProps) {
     const bg = isDark ? '#111' : '#fff';
     const textMain = isDark ? '#fff' : '#1a1a1a';
     const textSub = isDark ? 'rgba(255,255,255,0.5)' : '#6b7280';
@@ -294,6 +485,11 @@ export function NotifCenter({ notifications, onMarkAllRead, onClose, onViewMore,
                         </button>
                     </div>
                 </div>
+                {notifications.length > 0 && (
+                    <p style={{ margin: '6px 0 0', fontSize: 11, color: textSub, opacity: 0.7 }}>
+                        ← Glissez gauche ou droite pour supprimer →
+                    </p>
+                )}
             </div>
 
             {/* Liste */}
@@ -304,75 +500,29 @@ export function NotifCenter({ notifications, onMarkAllRead, onClose, onViewMore,
                         <p style={{ color: textSub, fontSize: 14, margin: 0 }}>Aucune notification pour le moment</p>
                     </div>
                 ) : (
-                    notifications.map(notif => (
-                        <div
-                            key={notif.id}
-                            onClick={() => { onViewMore?.(notif); onClose(); }}
-                            style={{
-                                display: 'flex', gap: 16, padding: '20px',
-                                borderRadius: 20, marginBottom: 8,
-                                background: isDark ? '#18181b' : '#ffffff',
-                                boxShadow: isDark
-                                    ? '0 4px 6px -1px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)'
-                                    : '0 4px 10px -2px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.03)',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            {/* Background Grid & Gradient Effect */}
-                            <div style={{
-                                position: 'absolute', top: 0, left: 0, bottom: 0, width: '50%',
-                                background: `radial-gradient(circle at top left, ${notif.color}10, transparent 70%)`,
-                                pointerEvents: 'none', zIndex: 0
-                            }} />
-                            <div style={{
-                                position: 'absolute', top: 0, left: 0, bottom: 0, width: '50%',
-                                backgroundImage: `
-                                    linear-gradient(to right, ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'} 1px, transparent 1px),
-                                    linear-gradient(to bottom, ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'} 1px, transparent 1px)
-                                `,
-                                backgroundSize: '16px 16px',
-                                WebkitMaskImage: 'linear-gradient(to right, black, transparent)',
-                                maskImage: 'linear-gradient(to right, black, transparent)',
-                                pointerEvents: 'none', zIndex: 0
-                            }} />
-
-                            <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: 14, width: '100%', alignItems: 'flex-start' }}>
-                                {/* Circle Icon */}
-                                <div style={{
-                                    width: 46, height: 46, borderRadius: '50%',
-                                    background: isDark ? '#27272a' : '#ffffff',
-                                    boxShadow: isDark ? '0 4px 10px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)',
-                                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}`,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: 22, flexShrink: 0,
-                                }}>
-                                    {notif.icon}
-                                </div>
-
-                                {/* Content */}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 500, color: isDark ? '#ffffff' : '#111827', lineHeight: 1.3 }}>
-                                            <span style={{ color: isDark ? '#a1a1aa' : '#52525b' }}>AfroCuisto: </span>
-                                            <span style={{ color: notif.color, fontWeight: 600 }}>{notif.title}</span>
-                                        </h4>
-                                        <span style={{ fontSize: 11, color: isDark ? '#71717a' : '#a1a1aa', flexShrink: 0, marginLeft: 8, whiteSpace: 'nowrap' }}>
-                                            {formatRelativeTime(notif.sent_at)}
-                                        </span>
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: 13, color: isDark ? '#a1a1aa' : '#52525b', lineHeight: 1.4, opacity: 0.9 }}>
-                                        {notif.body}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    ))
+                    <AnimatePresence initial={false}>
+                        {notifications.map(notif => (
+                            <motion.div
+                                key={notif.id}
+                                layout
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                style={{ overflow: 'hidden' }}
+                            >
+                                <SwipeableNotifCard
+                                    notif={notif}
+                                    isDark={isDark ?? false}
+                                    onDismiss={(id) => onDismissOne?.(id)}
+                                    onTap={(n) => { onViewMore?.(n); onClose(); }}
+                                    formatRelativeTime={formatRelativeTime}
+                                />
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
                 )}
             </div>
         </motion.div>
     );
 }
-
-

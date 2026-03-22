@@ -12,10 +12,10 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { OptimizedImage } from './components/OptimizedImage';
 import DishSuggestionForm from './components/DishSuggestionForm';
 import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { motion, AnimatePresence } from 'motion/react';
-import { PullToRefresh } from './components/PullToRefresh';
 import { CommunityFeed } from './components/community/CommunityFeed';
 import { AdminCommunityDashboard } from './components/AdminCommunityDashboard';
 import {
@@ -193,7 +193,8 @@ const CommentModal = ({ isOpen, onClose, post, comments, onAddComment, isLoading
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className={`w-full max-w-md h-[80vh] rounded-t-[40px] flex flex-col overflow-hidden relative ${isDark ? 'bg-[#121212]' : 'bg-white'}`}
+            className={`w-full max-w-md h-[80vh] rounded-t-[40px] flex flex-col overflow-hidden relative ${isDark ? 'bg-[#0d0d0d]/80 border-t border-white/10' : 'bg-white/70 border-t border-white/80'}`}
+            style={{ backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)' }}
           >
             <header className="px-8 pt-8 pb-4 flex items-center justify-between">
               <div>
@@ -410,7 +411,8 @@ const ShoppingAddModal = ({ isOpen, onClose, onAdd, t, isDark }: any) => {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className={`relative w-full max-w-lg rounded-t-[32px] p-6 pb-12 shadow-2xl ${isDark ? 'bg-[#121212] border-t border-white/10' : 'bg-white'}`}
+            className={`relative w-full max-w-lg rounded-t-[32px] p-6 pb-12 shadow-2xl ${isDark ? 'bg-[#0d0d0d]/80 border-t border-white/10' : 'bg-white/75 border-t border-white/80'}`}
+            style={{ backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)' }}
           >
             <div className="w-12 h-1.5 bg-stone-300/40 rounded-full mx-auto mb-8" />
 
@@ -995,7 +997,7 @@ const OrdersHistoryView = ({ currentUser, t, isDark }: { currentUser: any; t: an
                 <div className="flex -space-x-3 overflow-hidden">
                   {(order.items || []).slice(0, 4).map((item: any, idx: number) => (
                     <div key={idx} className={`w-10 h-10 rounded-xl border-2 ${isDark ? 'border-[#111111] bg-stone-800' : 'border-white bg-stone-100'} flex items-center justify-center text-xs shadow-sm overflow-hidden`}>
-                      {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : '📦'}
+                      {item.image ? <OptimizedImage src={item.image} className="w-full h-full object-cover" /> : '📦'}
                     </div>
                   ))}
                   {order.items?.length > 4 && (
@@ -1323,13 +1325,20 @@ const ModernAlertComponent = ({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 30 }}
           transition={{ type: 'spring', damping: 25, stiffness: 400 }}
-          className="w-full max-w-[320px] bg-white rounded-[40px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.3)] border border-white/20"
+          className="w-full max-w-[320px] rounded-[40px] overflow-hidden"
+          style={{
+            background: 'rgba(255, 255, 255, 0.72)',
+            backdropFilter: 'blur(40px)',
+            WebkitBackdropFilter: 'blur(40px)',
+            border: '1px solid rgba(255, 255, 255, 0.55)',
+            boxShadow: '0 30px 70px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.3) inset',
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* En-tête de l'alerte (couleur selon le type) */}
-          <div className={`h-32 flex items-center justify-center relative overflow-hidden ${type === 'success' ? 'bg-emerald-50 text-emerald-500' :
-            type === 'error' ? 'bg-rose-50 text-rose-500' :
-              'bg-[#fb5607]/5 text-[#fb5607]'
+          <div className={`h-32 flex items-center justify-center relative overflow-hidden ${type === 'success' ? 'bg-emerald-500/10 text-emerald-500' :
+            type === 'error' ? 'bg-rose-500/10 text-rose-500' :
+              'bg-[#fb5607]/8 text-[#fb5607]'
             }`}>
             {/* Effet lumineux en arrière-plan */}
             <div className={`absolute inset-0 opacity-20 blur-3xl ${type === 'success' ? 'bg-emerald-400' :
@@ -1744,7 +1753,7 @@ const StoreProductCard: React.FC<{
         {/* Image */}
         <div className={`w-[88px] h-[88px] rounded-[16px] flex-shrink-0 overflow-hidden ${isDark ? 'bg-white/5' : 'bg-[#f4f7f5]'}`}>
           {product.image_url
-            ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+            ? <OptimizedImage src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
             : <span className="text-4xl flex items-center justify-center w-full h-full">{product.emoji || '📦'}</span>
           }
         </div>
@@ -2292,6 +2301,17 @@ export default function App() {
     ]);
   };
 
+  const refreshExplorer = async () => {
+    if (!navigator.onLine) {
+      showAlert(t.offlineMessage || "Vous u{00ea}tes hors ligne.", 'error');
+      return;
+    }
+    await Promise.all([
+      syncRecipes(),
+      syncSections()
+    ]);
+  };
+
   useEffect(() => {
     syncRecipes();
     syncSections();
@@ -2377,6 +2397,52 @@ export default function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState('home');
+
+  useEffect(() => {
+    const silentCron = async () => {
+      if (!navigator.onLine || !dbService.supabase) return;
+      try {
+        const [remoteRecipes, sections] = await Promise.all([
+          dbService.getRemoteRecipes().catch(() => null),
+          dbService.getRemoteSections().catch(() => null)
+        ]);
+
+        if (remoteRecipes && remoteRecipes.length > 0) {
+           setAllRecipes(prev => JSON.stringify(prev) !== JSON.stringify(remoteRecipes) ? remoteRecipes : prev);
+        }
+        if (sections && sections.length > 0) {
+           setDynamicSections(prev => JSON.stringify(prev) !== JSON.stringify(sections) ? sections : prev);
+        }
+        if (activeTab === 'community') {
+           const posts = await dbService.getCommunityPosts(currentUser?.id, 0, 10).catch(() => null);
+           if (posts && posts.length > 0) {
+              setCommunityPosts(prev => {
+                if (prev.length === 0) return posts;
+                let newArr = [...prev];
+                let changed = false;
+                posts.forEach(newPost => {
+                  const idx = newArr.findIndex(p => p.id === newPost.id);
+                  if (idx !== -1) {
+                    if (JSON.stringify(newArr[idx]) !== JSON.stringify(newPost)) {
+                       newArr[idx] = newPost;
+                       changed = true;
+                    }
+                  } else {
+                    newArr.unshift(newPost);
+                    changed = true;
+                  }
+                });
+                return changed ? newArr : prev;
+              });
+           }
+        }
+      } catch (err) { }
+    };
+    const intervalId = setInterval(silentCron, 3000);
+    return () => clearInterval(intervalId);
+  }, [activeTab, currentUser]);
+
+
   const [history, setHistory] = useState<string[]>(['home']);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -2389,7 +2455,7 @@ export default function App() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isNotifCenterOpen, setIsNotifCenterOpen] = useState(false);
   const [selectedNotifDetail, setSelectedNotifDetail] = useState<PushNotif | null>(null);
-  const { notifications, unreadCount, currentBanner, dismissBanner, markAllRead } = usePushNotifications();
+  const { notifications, unreadCount, currentBanner, dismissBanner, markAllRead, dismissNotification } = usePushNotifications();
 
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
   const [isCommunityLoading, setIsCommunityLoading] = useState(false);
@@ -3034,7 +3100,7 @@ export default function App() {
     const populaires = otherRecipes.slice(0, 10);
 
     return (
-      <PullToRefresh onRefresh={refreshHome} isDark={isDark} scrollRef={mainScrollRef as any}>
+      
         <div className="flex-1 flex flex-col pb-44" style={{
           background: isDark ? '#000000ff' : '#f3f4f6',
           minHeight: '100vh',
@@ -3054,7 +3120,7 @@ export default function App() {
             borderBottom: isDark ? '1px solid #ffffff10' : '1px solid #00000005'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <img src="/icon.png" alt="AfroCuisto Logo" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
+              <OptimizedImage src="/icon.png" alt="AfroCuisto Logo" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
               <span style={{ fontSize: '22px', fontWeight: 900, color: isDark ? '#ffffff' : '#111827', letterSpacing: '-0.02em' }}>AfroCuisto</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -3220,7 +3286,7 @@ export default function App() {
                             boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
                             overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
                           }}>
-                            <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <OptimizedImage priority={true} src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                         </motion.div>
                       );
@@ -3272,7 +3338,7 @@ export default function App() {
                             boxShadow: '0 12px 30px rgba(0,0,0,0.2)', backgroundColor: '#ddd',
                             overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
                           }}>
-                            <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <OptimizedImage src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
 
                           {/* Region / Category Badge */}
@@ -3346,7 +3412,7 @@ export default function App() {
                           }}>
                             {/* Zone image */}
                             <div className="relative" style={{ aspectRatio: '4 / 3' }}>
-                              <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
+                              <OptimizedImage src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
 
                               {/* Bouton cœur — haut droite */}
                               <button
@@ -3503,11 +3569,12 @@ export default function App() {
           })}
 
         </div >
-      </PullToRefresh>
+      
     );
   };
 
   const renderExplorer = () => (
+    
     <div className="flex-1 flex flex-col pb-44">
       {/* Immersive Search Header -> Now using Home page style button */}
       <header style={{
@@ -3558,7 +3625,7 @@ export default function App() {
                 className="bg-white rounded-3xl overflow-hidden shadow-sm shadow-stone-200/50 flex flex-col h-full cursor-pointer hover:shadow-md transition-shadow"
               >
                 <div className="h-32 relative flex-shrink-0">
-                  <img src={recipe.image} className="w-full h-full object-cover" />
+                  <OptimizedImage src={recipe.image} className="w-full h-full object-cover" />
                   <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg text-white text-[10px] font-black tracking-widest">
                     {recipe.cookTime}
                   </div>
@@ -3667,7 +3734,7 @@ export default function App() {
                             boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
                             overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
                           }}>
-                            <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <OptimizedImage src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                         </motion.div>
                       ))}
@@ -3704,7 +3771,7 @@ export default function App() {
                               overflow: 'hidden', border: '1px solid rgba(0,0,0,0.04)',
                             }}>
                               <div className="relative" style={{ aspectRatio: '4 / 3' }}>
-                                <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
+                                <OptimizedImage src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
 
                                 <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} style={{ position: 'absolute', top: '10px', right: '10px', width: '30px', height: '30px', borderRadius: '50%', background: isFav ? '#ef4444' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
                                   <Heart size={14} style={{ color: isFav ? '#fff' : '#ef4444', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
@@ -3754,7 +3821,7 @@ export default function App() {
                           >
                             <div className="hlist-card" style={{ borderRadius: '20px', overflow: 'hidden' }}>
                               <div className="relative" style={{ aspectRatio: '4 / 3' }}>
-                                <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
+                                <OptimizedImage src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
                                 <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} style={{ position: 'absolute', top: '8px', right: '8px', width: '28px', height: '28px', borderRadius: '50%', background: isFav ? '#ef4444' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
                                   <Heart size={13} style={{ color: isFav ? '#fff' : '#ef4444', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
                                 </button>
@@ -3807,7 +3874,7 @@ export default function App() {
                           }}
                         >
                           <div style={{ width: '76px', height: '76px', flexShrink: 0, borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}>
-                            <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <OptimizedImage src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p className="hlist-card-title" style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 5px', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isDark ? '#ffffff' : '#1a1a1a' }}>
@@ -3839,6 +3906,7 @@ export default function App() {
         )
       }
     </div >
+    
   );
 
   const renderCommunity = () => {
@@ -3987,11 +4055,21 @@ export default function App() {
       : communityPosts;
 
     return (
-      <PullToRefresh onRefresh={refreshCommunity} isDark={isDark} scrollRef={mainScrollRef as any}>
+      
         <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
           <header
-            className="px-6 pb-6 flex flex-col gap-1"
-            style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px' }}
+            style={{
+              padding: '16px 24px',
+              paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px',
+              paddingBottom: '16px',
+              position: 'sticky',
+              top: 0,
+              background: isDark ? '#000000ff' : '#f3f4f6',
+              zIndex: 50,
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.04)',
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -4016,7 +4094,7 @@ export default function App() {
                 </button>
               )}
             </div>
-            <p className={`text-xs font-medium opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
+            <p className={`text-xs font-medium mt-1 opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
               {showSavedPosts ? "Vos publications sauvegardées" : t.communityDesc}
             </p>
           </header>
@@ -4054,7 +4132,7 @@ export default function App() {
             isDark={isDark}
           />
         </div>
-      </PullToRefresh>
+      
     );
   };
 
@@ -4097,7 +4175,7 @@ export default function App() {
           {favoriteRecipes.length > 0 ? (
             favoriteRecipes.map(recipe => (
               <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className={`p-3 rounded-[28px] flex items-center gap-4 transition-all shadow-[0_8px_20px_rgba(0,0,0,0.06)] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-white border-stone-100/50 shadow-stone-200/30'}`}>
-                <img src={recipe.image} className="w-16 h-16 rounded-2xl object-cover shadow-sm" />
+                <OptimizedImage src={recipe.image} className="w-16 h-16 rounded-2xl object-cover shadow-sm" />
                 <div className="flex-1 min-w-0">
                   <h4 className={`font-bold text-sm truncate ${isDark ? 'text-white' : 'text-stone-800'}`}>{recipe.name}</h4>
                   <div className="flex items-center gap-3 mt-1.5">
@@ -4554,7 +4632,7 @@ export default function App() {
               >
                 <div className="relative h-[48vh] w-full shrink-0 overflow-hidden">
                   <div className="absolute inset-0 w-full h-full z-10 bg-stone-100">
-                    <img src={recipe.image} className="w-full h-full object-cover" alt={recipe.name} />
+                    <OptimizedImage src={recipe.image} className="w-full h-full object-cover" alt={recipe.name} />
                     <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/10 pointer-events-none"></div>
                   </div>
 
@@ -4663,7 +4741,7 @@ export default function App() {
                             className="flex-shrink-0 w-36 cursor-pointer group"
                           >
                             <div className="h-32 rounded-[24px] overflow-hidden mb-3 relative shadow-md border border-stone-100 transition-transform group-hover:scale-95 duration-500">
-                              <img src={r.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={r.name} />
+                              <OptimizedImage src={r.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={r.name} />
                             </div>
                             <h4 className="font-bold text-sm text-stone-900 leading-tight truncate mb-1">{r.name}</h4>
                             <span className="text-[10px] font-black text-stone-400 flex items-center gap-1 uppercase tracking-tighter">
@@ -4784,7 +4862,7 @@ export default function App() {
             {/* Header Image */}
             <div className="relative h-[48vh] w-full shrink-0 overflow-hidden bg-stone-100">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                <OptimizedImage src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[120px] bg-stone-50">
                   {product.emoji || '📦'}
@@ -5165,7 +5243,7 @@ export default function App() {
                         <div key={item.id} className="py-6 flex items-center gap-5">
                           <div className={`w-24 h-24 rounded-3xl overflow-hidden flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-white/5' : 'bg-[#F4F7F5]'}`}>
                             {product?.image_url ? (
-                              <img src={product.image_url} alt={item.item} className="w-full h-full object-cover" />
+                              <OptimizedImage src={product.image_url} alt={item.item} className="w-full h-full object-cover" />
                             ) : (
                               <span className="text-4xl">{product?.emoji || '📦'}</span>
                             )}
@@ -5457,7 +5535,7 @@ export default function App() {
           <div className="p-7 flex items-center gap-4 relative z-10">
             <div className="w-14 h-14 rounded-[18px] bg-white text-3xl flex-shrink-0 backdrop-blur-sm overflow-hidden border-2 border-white/20">
               {banner.image_url ? (
-                <img src={banner.image_url} alt="" className="w-full h-full object-cover" />
+                <OptimizedImage priority={true} src={banner.image_url} alt="" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-stone-300">📦</span>
               )}
@@ -5892,7 +5970,7 @@ export default function App() {
               <motion.div key="brand" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.32 }} className="mb-6">
                 <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.05 }}
                   className={`w-14 h-14 rounded-[16px] flex items-center justify-center mb-4 ${isDark ? 'bg-[#fb5607]/20 border border-[#fb5607]/30' : 'bg-[#fb5607]/10 border border-[#fb5607]/20'}`}>
-                  <img src="/images/chef_icon_v2.png" className="w-9 h-9 object-contain" alt="AfroCuisto" />
+                  <OptimizedImage src="/images/chef_icon_v2.png" className="w-9 h-9 object-contain" alt="AfroCuisto" />
                 </motion.div>
                 <h1 className={`text-[26px] font-black tracking-tight leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>
                   {authMode === 'login' ? 'Se connecter' : 'Créer un compte'}
@@ -6507,7 +6585,7 @@ export default function App() {
                           className={`flex items-center gap-3 p-3 rounded-2xl active:scale-[0.97] transition-all cursor-pointer ${isDark ? '' : 'bg-stone-50'}`}
                           style={isDark ? { background: 'rgba(255,255,255,0.05)' } : {}}
                         >
-                          <img src={recipe.image} className="w-10 h-10 rounded-xl object-cover" alt={recipe.name} />
+                          <OptimizedImage src={recipe.image} className="w-10 h-10 rounded-xl object-cover" alt={recipe.name} />
                           <div className="flex-1 min-w-0">
                             <p className={`text-sm font-bold truncate ${isDark ? 'text-white/80' : 'text-stone-800'}`}>{recipe.name}</p>
                             <p className={`text-[10px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{recipe.region}</p>
@@ -6621,7 +6699,7 @@ export default function App() {
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
           >
             <div onClick={e => e.stopPropagation()}>
-              <NotifCenter notifications={notifications} onMarkAllRead={markAllRead} onClose={() => setIsNotifCenterOpen(false)} onViewMore={notif => setSelectedNotifDetail(notif)} isDark={isDark} />
+              <NotifCenter notifications={notifications} onMarkAllRead={markAllRead} onClose={() => setIsNotifCenterOpen(false)} onViewMore={notif => setSelectedNotifDetail(notif)} onDismissOne={dismissNotification} isDark={isDark} />
             </div>
           </motion.div>
         )}
