@@ -39,6 +39,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
 }) => {
     const scrollRef = React.useRef<HTMLDivElement>(null);
     const [isInteracting, setIsInteracting] = React.useState(false);
+    const currentIndex = React.useRef(0);
     const interactionTimeout = React.useRef<NodeJS.Timeout | null>(null);
 
     const handleInteraction = (interacting: boolean) => {
@@ -46,10 +47,10 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
         if (interactionTimeout.current) clearTimeout(interactionTimeout.current);
 
         if (interacting) {
-            // Auto-reset interacting state after 5 seconds of inactivity (especially for mobile)
+            // Resume auto-scroll 4 seconds after last interaction
             interactionTimeout.current = setTimeout(() => {
                 setIsInteracting(false);
-            }, 5000);
+            }, 4000);
         }
     };
 
@@ -60,45 +61,47 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
     const n = displayItems.length;
 
     const config = section?.config || {};
-    const rawAutoScroll = config.auto_scroll ?? config.autoScroll ?? config.autoscroll;
+    const rawAutoScroll = config.auto_scroll ?? config.autoScroll ?? config.autoscroll ?? config.autoplay;
     const shouldAutoScroll = rawAutoScroll === true || rawAutoScroll === 'true' ||
-        rawAutoScroll === 1 || rawAutoScroll === '1' || (section?.title?.toLowerCase() === 'test');
-    const rawInterval = config.scroll_interval ?? config.scrollInterval ?? config.interval;
-    const intervalTime = Number(rawInterval) || 4000;
+        rawAutoScroll === 1 || rawAutoScroll === '1';
+    const rawInterval = config.scroll_interval ?? config.scrollInterval ?? config.interval ?? config.autoplay_interval;
+    const intervalTime = Math.max(1500, Number(rawInterval) || 4000);
+    const cardWidth = (section?.type === 'banner' || section?.type === 'advertising') ? 340 + 16 : 280 + 16;
 
     React.useEffect(() => {
-        console.log(`[Carousel Debug] ${section?.title} - shouldAutoScroll: ${shouldAutoScroll}, isInteracting: ${isInteracting}`);
-
         if (!shouldAutoScroll || isInteracting || n <= 1 || !scrollRef.current) return;
 
         const interval = setInterval(() => {
             const container = scrollRef.current;
-            if (container) {
-                const cardWidth = section?.type === 'banner' ? 330 + 16 : 280 + 16;
-                const maxScroll = container.scrollWidth - container.clientWidth;
+            if (!container) return;
 
-                console.log(`[Carousel Debug] Rolling: ${container.scrollLeft} / ${maxScroll}`);
+            // Advance to next card index, loop back to 0
+            currentIndex.current = (currentIndex.current + 1) % n;
+            const targetScroll = currentIndex.current * cardWidth;
 
-                const currentScroll = Math.ceil(container.scrollLeft);
-                const behavior = (config.scroll_behavior || 'smooth') as ScrollBehavior;
-
-                if (currentScroll >= maxScroll - 20) {
-                    container.scrollTo({ left: 0, behavior });
-                } else {
-                    container.scrollBy({ left: cardWidth, behavior });
-                }
-            }
+            container.scrollTo({
+                left: targetScroll,
+                behavior: 'smooth'
+            });
         }, intervalTime);
 
         return () => {
             clearInterval(interval);
             if (interactionTimeout.current) clearTimeout(interactionTimeout.current);
         };
-    }, [n, section?.id, shouldAutoScroll, intervalTime, isInteracting]);
+    }, [n, section?.id, shouldAutoScroll, intervalTime, isInteracting, cardWidth]);
+
+    // Reset index when user manually scrolls
+    const handleScroll = () => {
+        if (!scrollRef.current) return;
+        const newIndex = Math.round(scrollRef.current.scrollLeft / cardWidth);
+        currentIndex.current = newIndex;
+    };
 
     if (!n) return null;
 
     const isFav = (id: string) => currentUser?.favorites?.includes(id) ?? false;
+
 
     return (
         <section style={{ marginBottom: '12px', marginLeft: '-20px' }}>
@@ -125,6 +128,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
             <div
                 ref={scrollRef}
                 className="hide-scrollbar"
+                onScroll={handleScroll}
                 onMouseEnter={() => handleInteraction(true)}
                 onMouseLeave={() => handleInteraction(false)}
                 onTouchStart={() => handleInteraction(true)}

@@ -655,7 +655,7 @@ export const CommunityFeed = ({
             <div className="w-full">
                 {/* ── Filtres de Catégories (Sticky) ── */}
                 {!showSavedOnly && (
-                    <div className={`sticky top-0 z-30 pt-1 -mx-6 px-6 mb-2 ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
+                    <div className={`pt-1 -mx-6 px-6 mb-2 ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
                         <CategoryFilter
                             selected={selectedCategory}
                             onSelect={setSelectedCategory}

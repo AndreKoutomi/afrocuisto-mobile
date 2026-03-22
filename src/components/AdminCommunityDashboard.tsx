@@ -292,6 +292,40 @@ export const AdminCommunityDashboard: React.FC<{
         </div>
     );
 
+    const [editingSection, setEditingSection] = React.useState<any | null>(null);
+    const [editForm, setEditForm] = React.useState<{ auto_scroll: boolean; scroll_interval: number }>({ auto_scroll: false, scroll_interval: 4 });
+    const [saving, setSaving] = React.useState(false);
+
+    const openEdit = (section: any) => {
+        const cfg = section.config || {};
+        const rawAutoScroll = cfg.auto_scroll ?? cfg.autoScroll ?? cfg.autoscroll ?? cfg.autoplay;
+        const rawInterval = cfg.scroll_interval ?? cfg.scrollInterval ?? cfg.interval ?? cfg.autoplay_interval;
+        setEditForm({
+            auto_scroll: !!(rawAutoScroll === true || rawAutoScroll === 'true' || rawAutoScroll === 1 || rawAutoScroll === '1'),
+            scroll_interval: Math.round((Math.max(1500, Number(rawInterval) || 4000)) / 1000)
+        });
+        setEditingSection(section);
+    };
+
+    const saveSection = async () => {
+        if (!editingSection) return;
+        setSaving(true);
+        const newConfig = {
+            ...editingSection.config,
+            autoplay: editForm.auto_scroll,
+            autoplay_interval: editForm.scroll_interval * 1000,
+            // also write normalized keys for compatibility
+            auto_scroll: editForm.auto_scroll,
+            scroll_interval: editForm.scroll_interval * 1000
+        };
+        const ok = await dbService.adminUpdateSection(editingSection.id, { config: newConfig });
+        if (ok) {
+            setSections(prev => prev.map(s => s.id === editingSection.id ? { ...s, config: newConfig } : s));
+            setEditingSection(null);
+        }
+        setSaving(false);
+    };
+
     const renderSectionsList = () => (
         <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
@@ -302,25 +336,107 @@ export const AdminCommunityDashboard: React.FC<{
             </div>
             {loading ? <Loader isDark={isDark} /> : (
                 <div className="space-y-4">
-                    {sections.filter(s => !searchQuery || s.title?.toLowerCase().includes(searchQuery.toLowerCase())).map(section => (
-                        <div key={section.id} className={`p-4 rounded-[28px] border transition-all ${isDark ? 'bg-white/5 border-white/8' : 'bg-white border-stone-100 shadow-sm'}`}>
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h4 className={`font-black text-[15px] ${isDark ? 'text-white' : 'text-stone-900'}`}>{section.title || "Sans titre"}</h4>
-                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${section.config?.page === 'home' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{section.config?.page}</span>
+                    {sections.filter(s => !searchQuery || s.title?.toLowerCase().includes(searchQuery.toLowerCase())).map(section => {
+                        const cfg = section.config || {};
+                        const autoScrollOn = !!(cfg.autoplay === true || cfg.auto_scroll === true || cfg.autoplay === 'true' || cfg.auto_scroll === 'true' || cfg.autoplay === 1 || cfg.auto_scroll === 1);
+                        const intervalSec = Math.round(Math.max(1500, Number(cfg.autoplay_interval ?? cfg.scroll_interval ?? 4000)) / 1000);
+
+                        return (
+                            <div key={section.id} className={`p-4 rounded-[28px] border transition-all ${isDark ? 'bg-white/5 border-white/8' : 'bg-white border-stone-100 shadow-sm'}`}>
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h4 className={`font-black text-[15px] ${isDark ? 'text-white' : 'text-stone-900'}`}>{section.title || "Sans titre"}</h4>
+                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${section.config?.page === 'home' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{section.config?.page}</span>
+                                        </div>
+                                        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{section.type}</p>
                                     </div>
-                                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{section.type}</p>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => openEdit(section)} className="p-2.5 bg-blue-50 rounded-xl text-blue-500 hover:bg-blue-100 transition-colors"><Edit3 size={18} /></button>
+                                        <button onClick={() => { if (window.confirm('Supprimer cette section ?')) dbService.adminDeleteSection(section.id).then(() => setSections(prev => prev.filter(s => s.id !== section.id))); }} className="p-2.5 bg-rose-50 rounded-xl text-rose-300 hover:text-rose-500"><Trash2 size={18} /></button>
+                                    </div>
                                 </div>
+
+                                {/* Auto-scroll indicator badge */}
                                 <div className="flex items-center gap-2">
-                                    <button className="p-2.5 bg-stone-100 rounded-xl text-stone-400 hover:text-stone-600"><Edit3 size={18} /></button>
-                                    <button onClick={() => { if (window.confirm('Supprimer cette section ?')) dbService.adminDeleteSection(section.id).then(() => setSections(prev => prev.filter(s => s.id !== section.id))); }} className="p-2.5 bg-rose-50 rounded-xl text-rose-300 hover:text-rose-500"><Trash2 size={18} /></button>
+                                    <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1.5 ${autoScrollOn ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${autoScrollOn ? 'bg-emerald-500 animate-pulse' : 'bg-stone-300'}`} />
+                                        {autoScrollOn ? `Défilement auto • ${intervalSec}s` : 'Défilement auto: désactivé'}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Section Edit Modal */}
+            <AnimatePresence>
+                {editingSection && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className={`fixed inset-6 z-[1100] p-6 rounded-[32px] border flex flex-col shadow-2xl ${isDark ? 'bg-stone-900 border-white/10' : 'bg-white border-stone-100'}`}
+                    >
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className={`font-black text-lg ${isDark ? 'text-white' : 'text-stone-900'}`}>{editingSection.title || 'Section'}</h3>
+                                <p className={`text-[10px] font-bold uppercase tracking-widest mt-0.5 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>Configuration du carrousel</p>
+                            </div>
+                            <button onClick={() => setEditingSection(null)} className="p-2 rounded-full bg-stone-100 text-stone-500"><XCircle size={18} /></button>
+                        </div>
+
+                        <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar">
+                            {/* Auto-scroll toggle */}
+                            <div className={`p-5 rounded-3xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className={`font-black text-[14px] ${isDark ? 'text-white' : 'text-stone-800'}`}>Défilement automatique</p>
+                                        <p className={`text-[11px] font-medium mt-0.5 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Les cartes défilent automatiquement</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setEditForm(f => ({ ...f, auto_scroll: !f.auto_scroll }))}
+                                        className={`w-12 h-6 rounded-full relative transition-all duration-300 ${editForm.auto_scroll ? 'bg-emerald-500' : isDark ? 'bg-white/20' : 'bg-stone-200'}`}
+                                    >
+                                        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${editForm.auto_scroll ? 'left-6' : 'left-0.5'}`} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Scroll interval */}
+                            <div className={`p-5 rounded-3xl border transition-all ${editForm.auto_scroll ? '' : 'opacity-40 pointer-events-none'} ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
+                                <p className={`font-black text-[14px] mb-1 ${isDark ? 'text-white' : 'text-stone-800'}`}>Intervalle de défilement</p>
+                                <p className={`text-[11px] font-medium mb-4 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Durée entre chaque carte (secondes)</p>
+                                <div className="flex items-center gap-4">
+                                    <button onClick={() => setEditForm(f => ({ ...f, scroll_interval: Math.max(2, f.scroll_interval - 1) }))} className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl font-black ${isDark ? 'bg-white/10 text-white' : 'bg-stone-200 text-stone-700'}`}>−</button>
+                                    <div className="flex-1 text-center">
+                                        <span className={`text-4xl font-black ${isDark ? 'text-white' : 'text-stone-900'}`}>{editForm.scroll_interval}</span>
+                                        <span className={`text-sm font-bold ml-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>sec</span>
+                                    </div>
+                                    <button onClick={() => setEditForm(f => ({ ...f, scroll_interval: Math.min(30, f.scroll_interval + 1) }))} className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl font-black ${isDark ? 'bg-white/10 text-white' : 'bg-stone-200 text-stone-700'}`}>+</button>
+                                </div>
+                                {/* Visual speed indicator */}
+                                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                                    {[{ label: 'Rapide', val: 2 }, { label: 'Normal', val: 4 }, { label: 'Lent', val: 8 }].map(preset => (
+                                        <button key={preset.label} onClick={() => setEditForm(f => ({ ...f, scroll_interval: preset.val }))}
+                                            className={`py-2 rounded-xl text-[11px] font-black transition-all ${editForm.scroll_interval === preset.val ? 'bg-[#ff6d00] text-white' : isDark ? 'bg-white/10 text-white/50' : 'bg-stone-100 text-stone-500'}`}>
+                                            {preset.label}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         </div>
-                    ))}
-                </div>
-            )}
+
+                        <div className="pt-5 mt-auto flex gap-3">
+                            <button onClick={saveSection} disabled={saving} className="flex-1 py-4 bg-[#ff6d00] text-white rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 active:scale-95 transition-all disabled:opacity-50">
+                                {saving ? 'Enregistrement...' : 'Enregistrer'}
+                            </button>
+                            <button onClick={() => setEditingSection(null)} className={`px-6 py-4 rounded-2xl font-black text-sm ${isDark ? 'bg-white/10 text-white/60' : 'bg-stone-100 text-stone-500'}`}>Annuler</button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 

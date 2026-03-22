@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================================
  * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
  * ============================================================================
@@ -274,11 +274,9 @@ const formatTimeAgo = (dateStr: string) => {
 // Material-style SVG icons (filled active, outlined inactive)
 // Icônes personnalisées pour la barre de navigation
 const NavIcon = ({ id, active, isDark }: { id: string; active: boolean; isDark?: boolean }) => {
-  // Couleur unique orange demandée pour le menu actif et non actif
-  const color = '#F94D00';
-  const inactiveOpacity = active ? 1 : 0.6; // Légère transparence pour les inactifs pour mieux distinguer
-  const inactiveColor = isDark ? `rgba(249, 77, 0, 0.7)` : `rgba(249, 77, 0, 0.6)`;
-  const finalInactiveColor = active ? color : inactiveColor;
+// Application de la palette orange-amber : actif=#ff4800, inactif=#ffb600
+  const color = '#ff4800'; // Crimson Carrot — icône active
+  const finalInactiveColor = isDark ? '#e9ecef' : '#1a1a1a'; // Blanc cassé (dark) / Noir (light)
 
   const icons: Record<string, React.ReactElement> = {
     home: active ? (
@@ -325,7 +323,7 @@ const NavButton = ({ iconId, label, isActive, onClick, isDark }: { iconId: strin
         minWidth: '46px',
         padding: isActive ? '0 16px' : '0',
         borderRadius: '24px',
-        backgroundColor: isActive ? (isDark ? 'rgba(249,77,0,0.15)' : 'rgba(249,77,0,0.1)') : 'transparent',
+        backgroundColor: isActive ? (isDark ? 'rgba(255,72,0,0.18)' : 'rgba(255,109,0,0.1)') : 'transparent',
         transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)'
       }}
     >
@@ -342,8 +340,9 @@ const NavButton = ({ iconId, label, isActive, onClick, isDark }: { iconId: strin
           }}
         >
           <span
-            className="text-[12px] font-black text-[#F94D00]"
+            className="text-[12px] font-black"
             style={{
+              color: '#ff4800', // Crimson Carrot — texte actif
               overflow: 'hidden',
               whiteSpace: 'nowrap',
               paddingLeft: isActive ? '6px' : '0px',
@@ -5715,8 +5714,8 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Enhanced Category Filter */}
-              <div style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }} className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-6 px-5">
+              {/* Category Filter — nouveau style vertical chips */}
+              <div style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }} className="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-4 px-5">
                 {STORE_CATEGORIES.map(cat => {
                   const icons: Record<string, string> = {
                     'Tout': '🛍️',
@@ -5728,17 +5727,23 @@ export default function App() {
                     'Viandes': '🥩',
                     'Poissons': '🐟'
                   };
+                  const isActive = selectedStoreCategory === cat;
                   return (
                     <button
                       key={cat}
                       onClick={() => setSelectedStoreCategory(cat)}
-                      className={`flex items-center gap-2.5 px-5 py-3 rounded-full whitespace-nowrap transition-all active:scale-95 ${selectedStoreCategory === cat
-                        ? 'bg-[#38b000] text-white shadow-lg shadow-[#38b000]/20'
-                        : isDark ? 'bg-white/5 text-white/60 border border-white/10' : 'bg-white text-stone-500 border border-stone-100 shadow-sm'
+                      className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-2xl whitespace-nowrap transition-all duration-200 active:scale-95 shrink-0 ${isActive
+                          ? 'bg-[#38b000] shadow-lg shadow-[#38b000]/30'
+                          : isDark
+                            ? 'bg-white/6 border border-white/8'
+                            : 'bg-white border border-stone-100 shadow-sm'
                         }`}
                     >
-                      <span className="text-[18px]">{icons[cat] || '📦'}</span>
-                      <span className="text-[14px] font-black">{cat}</span>
+                      <span className={`text-[20px] leading-none ${isActive ? 'grayscale-0' : ''}`}>{icons[cat] || '📦'}</span>
+                      <span className={`text-[10px] font-black tracking-wide ${isActive
+                          ? 'text-white'
+                          : isDark ? 'text-white/50' : 'text-stone-500'
+                        }`}>{cat}</span>
                     </button>
                   );
                 })}
@@ -6559,8 +6564,21 @@ export default function App() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: 'spring', damping: 24, stiffness: 360, mass: 0.85 }}
-            className={`absolute bottom-0 w-full z-[800] rounded-t-[32px] ${isDark ? 'bg-[#111827] border-t border-white/5' : 'bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.04)]'}`}
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px))' }}
+            className={`absolute bottom-0 w-full z-[800] rounded-t-[32px]`}
+            style={{
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 16px))',
+              background: isDark
+                ? 'rgba(10, 10, 18, 0.82)'
+                : 'rgba(255, 255, 255, 0.72)',
+              backdropFilter: 'blur(28px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+              borderTop: isDark
+                ? '1px solid rgba(255, 255, 255, 0.06)'
+                : '1px solid rgba(255, 255, 255, 0.9)',
+              boxShadow: isDark
+                ? '0 -8px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.04)'
+                : '0 -8px 40px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255,255,255,1)',
+            }}
           >
             <div className="flex items-center justify-between px-6 mx-auto relative max-w-[500px]" style={{ height: 76 }}>
 
