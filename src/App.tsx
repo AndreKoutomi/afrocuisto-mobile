@@ -118,12 +118,12 @@ const getInitials = (name: string | undefined | null) => {
 // --- Sub-Components & Helpers ---
 
 // Petit badge pour afficher la difficulté d'une recette avec une couleur spécifique
-const DifficultyBadge = ({ difficulty, t }: { difficulty: Difficulty; t: any }) => {
+const DifficultyBadge = ({ difficulty, t, isDark }: { difficulty: Difficulty; t: any; isDark?: boolean }) => {
   const colors: Record<string, string> = {
-    'Facile': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    'Très Facile': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    'Moyen': 'bg-amber-100 text-amber-700 border-amber-200',
-    'Difficile': 'bg-rose-100 text-rose-700 border-rose-200'
+    'Facile': isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    'Très Facile': isDark ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    'Moyen': isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-amber-100 text-amber-700 border-amber-200',
+    'Difficile': isDark ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-rose-100 text-rose-700 border-rose-200'
   };
 
   const labels: Record<string, string> = {
@@ -133,7 +133,7 @@ const DifficultyBadge = ({ difficulty, t }: { difficulty: Difficulty; t: any }) 
     'Difficile': t?.hard || 'Difficile'
   };
 
-  const colorClass = colors[difficulty] || 'bg-stone-100 text-stone-600 border-stone-200';
+  const colorClass = colors[difficulty] || (isDark ? 'bg-stone-800 text-stone-400 border-stone-700' : 'bg-stone-100 text-stone-600 border-stone-200');
   const label = labels[difficulty] || difficulty || '—';
 
   return (
@@ -275,7 +275,7 @@ const formatTimeAgo = (dateStr: string) => {
 // Material-style SVG icons (filled active, outlined inactive)
 // Icônes personnalisées pour la barre de navigation
 const NavIcon = ({ id, active, isDark }: { id: string; active: boolean; isDark?: boolean }) => {
-// Application de la palette orange-amber : actif=#ff4800, inactif=#ffb600
+  // Application de la palette orange-amber : actif=#ff4800, inactif=#ffb600
   const color = '#ff4800'; // Crimson Carrot — icône active
   const finalInactiveColor = isDark ? '#e9ecef' : '#1a1a1a'; // Blanc cassé (dark) / Noir (light)
 
@@ -2408,33 +2408,33 @@ export default function App() {
         ]);
 
         if (remoteRecipes && remoteRecipes.length > 0) {
-           setAllRecipes(prev => JSON.stringify(prev) !== JSON.stringify(remoteRecipes) ? remoteRecipes : prev);
+          setAllRecipes(prev => JSON.stringify(prev) !== JSON.stringify(remoteRecipes) ? remoteRecipes : prev);
         }
         if (sections && sections.length > 0) {
-           setDynamicSections(prev => JSON.stringify(prev) !== JSON.stringify(sections) ? sections : prev);
+          setDynamicSections(prev => JSON.stringify(prev) !== JSON.stringify(sections) ? sections : prev);
         }
         if (activeTab === 'community') {
-           const posts = await dbService.getCommunityPosts(currentUser?.id, 0, 10).catch(() => null);
-           if (posts && posts.length > 0) {
-              setCommunityPosts(prev => {
-                if (prev.length === 0) return posts;
-                let newArr = [...prev];
-                let changed = false;
-                posts.forEach(newPost => {
-                  const idx = newArr.findIndex(p => p.id === newPost.id);
-                  if (idx !== -1) {
-                    if (JSON.stringify(newArr[idx]) !== JSON.stringify(newPost)) {
-                       newArr[idx] = newPost;
-                       changed = true;
-                    }
-                  } else {
-                    newArr.unshift(newPost);
+          const posts = await dbService.getCommunityPosts(currentUser?.id, 0, 10).catch(() => null);
+          if (posts && posts.length > 0) {
+            setCommunityPosts(prev => {
+              if (prev.length === 0) return posts;
+              let newArr = [...prev];
+              let changed = false;
+              posts.forEach(newPost => {
+                const idx = newArr.findIndex(p => p.id === newPost.id);
+                if (idx !== -1) {
+                  if (JSON.stringify(newArr[idx]) !== JSON.stringify(newPost)) {
+                    newArr[idx] = newPost;
                     changed = true;
                   }
-                });
-                return changed ? newArr : prev;
+                } else {
+                  newArr.unshift(newPost);
+                  changed = true;
+                }
               });
-           }
+              return changed ? newArr : prev;
+            });
+          }
         }
       } catch (err) { }
     };
@@ -3100,57 +3100,57 @@ export default function App() {
     const populaires = otherRecipes.slice(0, 10);
 
     return (
-      
-        <div className="flex-1 flex flex-col pb-44" style={{
+
+      <div className="flex-1 flex flex-col pb-44" style={{
+        background: isDark ? '#000000ff' : '#f3f4f6',
+        minHeight: '100vh',
+      }}>
+        {/* Top bar */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px 24px',
+          paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 12px)' : '24px',
+          position: 'sticky',
+          top: 0,
           background: isDark ? '#000000ff' : '#f3f4f6',
-          minHeight: '100vh',
+          zIndex: 100,
+          backdropFilter: 'blur(20px)',
+          borderBottom: isDark ? '1px solid #ffffff10' : '1px solid #00000005'
         }}>
-          {/* Top bar */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '16px 24px',
-            paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 12px)' : '24px',
-            position: 'sticky',
-            top: 0,
-            background: isDark ? '#000000ff' : '#f3f4f6',
-            zIndex: 100,
-            backdropFilter: 'blur(20px)',
-            borderBottom: isDark ? '1px solid #ffffff10' : '1px solid #00000005'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <OptimizedImage src="/icon.png" alt="AfroCuisto Logo" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
-              <span style={{ fontSize: '22px', fontWeight: 900, color: isDark ? '#ffffff' : '#111827', letterSpacing: '-0.02em' }}>AfroCuisto</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              {isOffline && (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                  <WifiOff size={16} style={{ color: '#ef4444' }} />
-                </motion.div>
-              )}
-              {isSyncing && !isOffline && (
-                <motion.div
-                  className="flex items-center justify-center text-[#fb5607]"
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-                >
-                  <RefreshCw size={14} />
-                </motion.div>
-              )}
-              <button onClick={() => setIsNotifCenterOpen(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, position: 'relative' }}>
-                <Bell size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
-                {unreadCount > 0 && (
-                  <span style={{ position: 'absolute', top: -4, right: -4, background: '#F94D00', color: '#fff', fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${isDark ? '#000' : '#f3f4f6'}` }}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
-              <button onClick={() => setIsSearchExpanded(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <Search size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
-              </button>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <OptimizedImage src="/icon.png" alt="AfroCuisto Logo" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
+            <span style={{ fontSize: '22px', fontWeight: 900, color: isDark ? '#ffffff' : '#111827', letterSpacing: '-0.02em' }}>AfroCuisto</span>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {isOffline && (
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                <WifiOff size={16} style={{ color: '#ef4444' }} />
+              </motion.div>
+            )}
+            {isSyncing && !isOffline && (
+              <motion.div
+                className="flex items-center justify-center text-[#fb5607]"
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+              >
+                <RefreshCw size={14} />
+              </motion.div>
+            )}
+            <button onClick={() => setIsNotifCenterOpen(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, position: 'relative' }}>
+              <Bell size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
+              {unreadCount > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -4, background: '#F94D00', color: '#fff', fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${isDark ? '#000' : '#f3f4f6'}` }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <button onClick={() => setIsSearchExpanded(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
+              <Search size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
+            </button>
+          </div>
+        </div>
 
 
 
@@ -3163,326 +3163,228 @@ export default function App() {
 
 
 
-          {/* Dynamic Sections from Admin CMS */}
-          {dynamicSections.filter((section: any) => !section.config?.page || section.config.page === 'home').map((section, sidx) => {
-            let sectionRecipes: Recipe[] = [];
+        {/* Dynamic Sections from Admin CMS */}
+        {dynamicSections.filter((section: any) => !section.config?.page || section.config.page === 'home').map((section, sidx) => {
+          let sectionRecipes: Recipe[] = [];
 
-            if (section.type === 'category') {
-              sectionRecipes = allRecipes.filter(r => r.category === section.config?.category);
-            } else if (section.type === 'region') {
-              sectionRecipes = allRecipes.filter(r => r.region?.toLowerCase().includes(section.config?.region?.toLowerCase() || ''));
-            } else if (section.type === 'quick') {
-              const maxTime = parseInt(section.config?.max_prep_time) || 30;
-              sectionRecipes = allRecipes.filter(r => (parseInt(r.prep_time) || 60) <= maxTime);
-            } else if (section.type === 'all') {
-              sectionRecipes = [...allRecipes];
-            } else if (section.type === 'advertising') {
-              const productIds = section.config?.merchant_ids || section.merchant_ids || [];
-              sectionRecipes = allProducts.filter(p => productIds.includes(p.id));
-            } else {
-              // Default to manual selection or 'query' (backwards compatibility)
-              sectionRecipes = allRecipes.filter(r => section.recipe_ids?.includes(r.id));
-            }
+          if (section.type === 'category') {
+            sectionRecipes = allRecipes.filter(r => r.category === section.config?.category);
+          } else if (section.type === 'region') {
+            sectionRecipes = allRecipes.filter(r => r.region?.toLowerCase().includes(section.config?.region?.toLowerCase() || ''));
+          } else if (section.type === 'quick') {
+            const maxTime = parseInt(section.config?.max_prep_time) || 30;
+            sectionRecipes = allRecipes.filter(r => (parseInt(r.prep_time) || 60) <= maxTime);
+          } else if (section.type === 'all') {
+            sectionRecipes = [...allRecipes];
+          } else if (section.type === 'advertising') {
+            const productIds = section.config?.merchant_ids || section.merchant_ids || [];
+            sectionRecipes = allProducts.filter(p => productIds.includes(p.id));
+          } else {
+            // Default to manual selection or 'query' (backwards compatibility)
+            sectionRecipes = allRecipes.filter(r => section.recipe_ids?.includes(r.id));
+          }
 
-            // Apply limit only if explicitly configured — default to 200 to show all selected recipes
-            sectionRecipes = sectionRecipes.slice(0, section.config?.limit || 200);
+          // Apply limit only if explicitly configured — default to 200 to show all selected recipes
+          sectionRecipes = sectionRecipes.slice(0, section.config?.limit || 200);
 
-            if (sectionRecipes.length === 0) return null;
+          if (sectionRecipes.length === 0) return null;
 
-            if (section.type === 'dynamic_carousel' || section.type === 'featured' || section.type === 'banner' || section.type === 'advertising') {
-              return (
-                <FeaturedCarousel
-                  key={section.id}
-                  section={section}
-                  recipes={section.type === 'advertising' ? [] : sectionRecipes}
-                  merchants={allMerchants}
-                  products={section.type === 'advertising' ? sectionRecipes : allProducts}
-                  setSelectedRecipe={setSelectedRecipe}
-                  currentUser={currentUser}
-                  toggleFavorite={toggleFavorite}
-                  isDark={isDark}
-                />
-              );
-            }
-            if (section.type === 'horizontal_list_v2') {
-              return (
-                <section key={section.id} className="mb-2">
-                  {/* Section header */}
-                  <div className="px-8 flex justify-between items-end mb-1">
-                    <div className="flex flex-col">
-                      <h2 style={{ paddingTop: '0px' }} className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                      {section.subtitle && <p className="text-[10px] text-stone-400 font-bold tracking-widest mt-1">{section.subtitle}</p>}
-                    </div>
+          if (section.type === 'dynamic_carousel' || section.type === 'featured' || section.type === 'banner' || section.type === 'advertising') {
+            return (
+              <FeaturedCarousel
+                key={section.id}
+                section={section}
+                recipes={section.type === 'advertising' ? [] : sectionRecipes}
+                merchants={allMerchants}
+                products={section.type === 'advertising' ? sectionRecipes : allProducts}
+                setSelectedRecipe={setSelectedRecipe}
+                currentUser={currentUser}
+                toggleFavorite={toggleFavorite}
+                isDark={isDark}
+              />
+            );
+          }
+          if (section.type === 'horizontal_list_v2') {
+            return (
+              <section key={section.id} className="mb-2">
+                {/* Section header */}
+                <div className="px-8 flex justify-between items-end mb-1">
+                  <div className="flex flex-col">
+                    <h2 style={{ paddingTop: '0px' }} className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
+                    {section.subtitle && <p className="text-[10px] text-stone-400 font-bold tracking-widest mt-1">{section.subtitle}</p>}
                   </div>
+                </div>
 
-                  {/* Horizontal scroll tray v2 — styled like 'Nos suggestions' */}
-                  <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '32px', paddingTop: '10px' }} className="no-scrollbar">
-                    {sectionRecipes.map((recipe) => {
-                      const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-                      return (
-                        <motion.div
-                          key={recipe.id}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setSelectedRecipe(recipe)}
-                          style={{
-                            minWidth: '280px', height: '150px',
-                            background: isDark ? '#111111' : '#ffffff',
-                            borderRadius: '24px',
-                            borderWidth: '1px',
-                            borderColor: '#ffffff15',
-                            padding: '24px 110px 24px 24px',
-                            position: 'relative',
-                            boxShadow: isDark ? '0 8px 30px rgba(0, 0, 0, 1)' : '0 12px 30px rgba(0,0,0,0.06)',
-                            cursor: 'pointer',
-                            flexShrink: 0
-                          }}
-                        >
-                          <h3 style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#ffffff' : '#111827', margin: '0 0 12px', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
+                {/* Horizontal scroll tray v2 — styled like 'Nos suggestions' */}
+                <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '32px', paddingTop: '10px' }} className="no-scrollbar">
+                  {sectionRecipes.map((recipe) => {
+                    const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
+                    return (
+                      <motion.div
+                        key={recipe.id}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedRecipe(recipe)}
+                        style={{
+                          minWidth: '280px', height: '150px',
+                          background: isDark ? '#111111' : '#ffffff',
+                          borderRadius: '24px',
+                          borderWidth: '1px',
+                          borderColor: '#ffffff15',
+                          padding: '24px 110px 24px 24px',
+                          position: 'relative',
+                          boxShadow: isDark ? '0 8px 30px rgba(0, 0, 0, 1)' : '0 12px 30px rgba(0,0,0,0.06)',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                      >
+                        <h3 style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#ffffff' : '#111827', margin: '0 0 12px', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
 
-                          {/* Pilules d'informations (Région & Temps) */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                              <span style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                padding: '5px 12px', borderRadius: '50px',
-                                backgroundColor: isDark ? 'rgba(251, 86, 7, 0.15)' : 'rgba(251, 86, 7, 0.08)',
-                                color: '#fb5607', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
-                                border: isDark ? '1px solid rgba(251, 86, 7, 0.3)' : '1px solid rgba(251, 86, 7, 0.2)'
-                              }}>
-                                {recipe.region || "Chef"}
-                              </span>
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <span style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                padding: '5px 12px', borderRadius: '50px',
-                                backgroundColor: isDark ? '#374151' : '#f3f4f6',
-                                color: isDark ? '#e5e7eb' : '#4b5563', fontSize: '11px', fontWeight: 800,
-                                border: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'
-                              }}>
-                                <Clock size={12} strokeWidth={2.5} className="mb-[1px]" />
-                                {recipe.prepTime}
-                              </span>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
-                                style={{
-                                  width: 28, height: 28, borderRadius: '50%',
-                                  background: isFav ? '#ef4444' : (isDark ? '#374151' : '#f3f4f6'),
-                                  border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  cursor: 'pointer', flexShrink: 0
-                                }}
-                              >
-                                <Heart size={14} style={{ color: isFav ? '#fff' : (isDark ? '#9ca3af' : '#6b7280'), fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
-                              </button>
-                            </div>
+                        {/* Pilules d'informations (Région & Temps) */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              padding: '5px 12px', borderRadius: '50px',
+                              backgroundColor: isDark ? 'rgba(251, 86, 7, 0.15)' : 'rgba(251, 86, 7, 0.08)',
+                              color: '#fb5607', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                              border: isDark ? '1px solid rgba(251, 86, 7, 0.3)' : '1px solid rgba(251, 86, 7, 0.2)'
+                            }}>
+                              {recipe.region || "Chef"}
+                            </span>
                           </div>
 
-                          {/* Circular overflowing image */}
-                          <div style={{
-                            position: 'absolute', right: '-35px', top: '50%', transform: 'translateY(-50%)',
-                            width: '130px', height: '130px', borderRadius: '50%',
-                            boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
-                            overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
-                          }}>
-                            <OptimizedImage priority={true} src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </section>
-              );
-            }
-
-            if (section.type === 'horizontal_list') {
-              return (
-                <section key={section.id} className="mb-1">
-                  {/* Section header */}
-                  <div className="px-8 flex justify-between items-end mb-1">
-                    <div className="flex flex-col">
-                      <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                      {section.subtitle && <p className="text-[10px] text-stone-400 font-bold  tracking-widest mt-1">{section.subtitle}</p>}
-                    </div>
-
-                  </div>
-
-                  {/* Horizontal scroll tray — styled like 'Recettes Populaires' */}
-                  <div style={{ display: 'flex', overflowX: 'auto', gap: '24px', paddingBottom: '40px', paddingTop: '68px', paddingLeft: '32px', paddingRight: '32px' }} className="no-scrollbar">
-                    {sectionRecipes.map((recipe, ridx) => {
-                      const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-                      return (
-                        <motion.div
-                          key={recipe.id}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setSelectedRecipe(recipe)}
-                          style={{
-                            minWidth: '170px', width: '170px',
-                            background: isDark ? '#111111' : '#ffffff',
-                            borderRadius: '28px',
-                            borderWidth: '1px',
-                            borderColor: '#ffffff15',
-                            padding: '85px 20px 20px',
-                            position: 'relative',
-                            boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.3)' : '0 12px 30px rgba(0,0,0,0.04)',
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                            display: 'flex', flexDirection: 'column'
-                          }}
-                        >
-                          {/* Top overflowing circular image */}
-                          <div style={{
-                            position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)',
-                            width: '130px', height: '130px', borderRadius: '50%',
-                            boxShadow: '0 12px 30px rgba(0,0,0,0.2)', backgroundColor: '#ddd',
-                            overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
-                          }}>
-                            <OptimizedImage src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          </div>
-
-                          {/* Region / Category Badge */}
-                          <div style={{
-                            position: 'absolute', top: '56px', left: '50%', transform: 'translateX(-50%)',
-                            background: '#fb5607', color: '#fff',
-                            padding: '3px 10px', borderRadius: '12px',
-                            fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                            boxShadow: '0 2px 8px rgba(251,86,7,0.4)',
-                            zIndex: 10,
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {recipe.region || recipe.category || 'Mets Local'}
-                          </div>
-
-                          <h3 style={{ fontSize: 17, fontWeight: 600, color: isDark ? '#f3f4f6' : '#000000ff', margin: '0 0 10px', lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {recipe.name}
-                          </h3>
-
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto' }}>
-                            <span style={{ fontSize: 13, fontWeight: 900, color: isDark ? '#ffffff' : '#111827' }}>
-                              {recipe.prepTime ? `${recipe.prepTime} min` : '30 min'}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '5px',
+                              padding: '5px 12px', borderRadius: '50px',
+                              backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                              color: isDark ? '#e5e7eb' : '#4b5563', fontSize: '11px', fontWeight: 800,
+                              border: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'
+                            }}>
+                              <Clock size={12} strokeWidth={2.5} className="mb-[1px]" />
+                              {recipe.prepTime}
                             </span>
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
                               style={{
-                                width: 36, height: 36, borderRadius: '50%',
-                                background: isFav ? '#ef4444' : (isDark ? '#374151' : '#111827'),
-                                border: 'none', color: '#ffffff',
+                                width: 28, height: 28, borderRadius: '50%',
+                                background: isFav ? '#ef4444' : (isDark ? '#374151' : '#f3f4f6'),
+                                border: 'none',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 cursor: 'pointer', flexShrink: 0
                               }}
                             >
-                              <Heart size={18} style={{ color: isFav ? '#fff' : '#fff', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2} />
+                              <Heart size={14} style={{ color: isFav ? '#fff' : (isDark ? '#9ca3af' : '#6b7280'), fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
                             </button>
                           </div>
-                        </motion.div>
-                      );
-                    })}
+                        </div>
+
+                        {/* Circular overflowing image */}
+                        <div style={{
+                          position: 'absolute', right: '-35px', top: '50%', transform: 'translateY(-50%)',
+                          width: '130px', height: '130px', borderRadius: '50%',
+                          boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
+                          overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
+                        }}>
+                          <OptimizedImage priority={true} src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          }
+
+          if (section.type === 'horizontal_list') {
+            return (
+              <section key={section.id} className="mb-1">
+                {/* Section header */}
+                <div className="px-8 flex justify-between items-end mb-1">
+                  <div className="flex flex-col">
+                    <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
+                    {section.subtitle && <p className="text-[10px] text-stone-400 font-bold  tracking-widest mt-1">{section.subtitle}</p>}
                   </div>
-                </section>
-              );
-            }
 
-            if (section.type === 'vertical_list_2') {
-              return (
-                <section key={section.id} className="mb-10">
-                  <div className="px-8 flex justify-between items-end mb-4">
-                    <div className="flex flex-col">
-                      <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                      {section.subtitle && <p className="text-[10px] text-stone-400 font-bold tracking-widest mt-1">{section.subtitle}</p>}
-                    </div>
-                  </div>
+                </div>
 
-                  {/* Zone Grille — alignement avec le header */}
-                  <div className="px-8 grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                    {sectionRecipes.map((recipe, ridx) => {
-                      const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-                      const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
-                      return (
-                        <motion.div
-                          key={recipe.id}
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => setSelectedRecipe(recipe)}
-                          className="cursor-pointer"
-                        >
-                          <div className="hlist-card" style={{
-                            borderRadius: '20px',
-                            overflow: 'hidden',
-                          }}>
-                            {/* Zone image */}
-                            <div className="relative" style={{ aspectRatio: '4 / 3' }}>
-                              <OptimizedImage src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
+                {/* Horizontal scroll tray — styled like 'Recettes Populaires' */}
+                <div style={{ display: 'flex', overflowX: 'auto', gap: '24px', paddingBottom: '40px', paddingTop: '68px', paddingLeft: '32px', paddingRight: '32px' }} className="no-scrollbar">
+                  {sectionRecipes.map((recipe, ridx) => {
+                    const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
+                    return (
+                      <motion.div
+                        key={recipe.id}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedRecipe(recipe)}
+                        style={{
+                          minWidth: '170px', width: '170px',
+                          background: isDark ? '#111111' : '#ffffff',
+                          borderRadius: '28px',
+                          borderWidth: '1px',
+                          borderColor: '#ffffff15',
+                          padding: '85px 20px 20px',
+                          position: 'relative',
+                          boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.3)' : '0 12px 30px rgba(0,0,0,0.04)',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          display: 'flex', flexDirection: 'column'
+                        }}
+                      >
+                        {/* Top overflowing circular image */}
+                        <div style={{
+                          position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)',
+                          width: '130px', height: '130px', borderRadius: '50%',
+                          boxShadow: '0 12px 30px rgba(0,0,0,0.2)', backgroundColor: '#ddd',
+                          overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
+                        }}>
+                          <OptimizedImage src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
 
-                              {/* Bouton cœur — haut droite */}
-                              <button
-                                onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
-                                style={{
-                                  position: 'absolute', top: '8px', right: '8px',
-                                  width: '28px', height: '28px', borderRadius: '50%',
-                                  background: isFav ? '#ef4444' : 'rgba(255,255,255,0.85)',
-                                  backdropFilter: 'blur(4px)',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  border: 'none', cursor: 'pointer',
-                                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                                  transition: 'all 0.2s',
-                                }}
-                              >
-                                <Heart size={13} style={{ color: isFav ? '#fff' : '#ef4444', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
-                              </button>
+                        {/* Region / Category Badge */}
+                        <div style={{
+                          position: 'absolute', top: '56px', left: '50%', transform: 'translateX(-50%)',
+                          background: '#fb5607', color: '#fff',
+                          padding: '3px 10px', borderRadius: '12px',
+                          fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                          boxShadow: '0 2px 8px rgba(251,86,7,0.4)',
+                          zIndex: 10,
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {recipe.region || recipe.category || 'Mets Local'}
+                        </div>
 
-                              {/* Badge note — bas gauche */}
-                              <div style={{
-                                position: 'absolute', bottom: '8px', left: '8px',
-                                background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(6px)',
-                                borderRadius: '8px', padding: '2px 7px',
-                                display: 'flex', alignItems: 'center', gap: '3px',
-                                boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
-                              }}>
-                                <Star size={10} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
-                                <span style={{ fontSize: '10px', fontWeight: 800, color: '#374151', lineHeight: 1 }}>{ratingNum}</span>
-                              </div>
-                            </div>
+                        <h3 style={{ fontSize: 17, fontWeight: 600, color: isDark ? '#f3f4f6' : '#000000ff', margin: '0 0 10px', lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {recipe.name}
+                        </h3>
 
-                            {/* Contenu texte */}
-                            <div style={{ padding: '10px 12px 12px' }}>
-                              {/* Nom */}
-                              <h3 className="hlist-card-title" style={{
-                                fontSize: '13px', fontWeight: 800,
-                                lineHeight: 1.25, margin: '0 0 5px',
-                                display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                                color: isDark ? '#ffffff' : '#1a1a1a',
-                              }}>
-                                {recipe.name}
-                              </h3>
-                              {/* Temps de préparation */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
-                                <div className="hlist-card-badge" style={{ borderRadius: '20px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <Clock size={10} className="hlist-card-clock" />
-                                  <span className="hlist-card-time" style={{ fontSize: '11px', fontWeight: 700 }}>
-                                    {recipe.prepTime ? `${recipe.prepTime} min` : '30 min'}
-                                  </span>
-                                </div>
-                              </div>
-                              {/* Description */}
-                              <p style={{
-                                fontSize: '10px', color: '#9ca3af', fontWeight: 500,
-                                lineHeight: 1.4, margin: '0 0 8px',
-                                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                              }}>
-                                {recipe.description || recipe.region || recipe.category || 'Recette africaine traditionnelle'}
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </section>
-              );
-            }
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto' }}>
+                          <span style={{ fontSize: 13, fontWeight: 900, color: isDark ? '#ffffff' : '#111827' }}>
+                            {recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}
+                          </span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
+                            style={{
+                              width: 36, height: 36, borderRadius: '50%',
+                              background: isFav ? '#ef4444' : (isDark ? 'rgba(255,255,255,0.1)' : '#111827'),
+                              border: 'none', color: '#ffffff',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', flexShrink: 0
+                            }}
+                          >
+                            <Heart size={18} style={{ color: isFav ? '#fff' : '#fff', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          }
 
-            // ── VERTICAL LIST (vertical_list_1 et fallback) ──
+          if (section.type === 'vertical_list_2') {
             return (
               <section key={section.id} className="mb-10">
                 <div className="px-8 flex justify-between items-end mb-4">
@@ -3491,74 +3393,86 @@ export default function App() {
                     {section.subtitle && <p className="text-[10px] text-stone-400 font-bold tracking-widest mt-1">{section.subtitle}</p>}
                   </div>
                 </div>
-                <div className="px-8 flex flex-col gap-3">
+
+                {/* Zone Grille — alignement avec le header */}
+                <div className="px-8 grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
                   {sectionRecipes.map((recipe, ridx) => {
                     const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-                    const ratingNum = (4.0 + (ridx % 5) * 0.1).toFixed(1);
+                    const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
                     return (
                       <motion.div
                         key={recipe.id}
-                        whileTap={{ scale: 0.98 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => setSelectedRecipe(recipe)}
-                        style={{
-                          background: '#fff',
-                          borderRadius: '18px',
-                          boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
-                          border: '1px solid rgba(0,0,0,0.04)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '14px',
-                          padding: '12px',
-                          cursor: 'pointer',
-                          overflow: 'hidden',
-                        }}
+                        className="cursor-pointer"
                       >
-                        {/* Image */}
-                        <div style={{
-                          width: '76px', height: '76px', flexShrink: 0,
-                          borderRadius: '14px', overflow: 'hidden',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                        <div className="hlist-card" style={{
+                          borderRadius: '20px',
+                          overflow: 'hidden',
                         }}>
-                          <img
-                            src={recipe.image}
-                            alt={recipe.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        </div>
+                          {/* Zone image */}
+                          <div className="relative" style={{ aspectRatio: '4 / 3' }}>
+                            <OptimizedImage src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
 
-                        {/* Center info */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          {/* Name */}
-                          <p style={{
-                            fontSize: '14px', fontWeight: 800, color: '#1a1a1a',
-                            margin: '0 0 5px', lineHeight: 1.25,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {recipe.name}
-                          </p>
-                          {/* Time row */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                            <Clock size={11} style={{ color: '#9ca3af', flexShrink: 0 }} />
-                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af' }}>
-                              {recipe.prepTime ? `${recipe.prepTime} min` : '30 min'}
-                            </span>
-                          </div>
-                          {/* Rating + region + difficulty */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-                            <Star size={11} style={{ color: '#f59e0b', fill: '#f59e0b', flexShrink: 0 }} />
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151' }}>{ratingNum}</span>
-                            <span style={{ fontSize: '10px', color: '#d1d5db' }}>·</span>
-                            <span style={{ fontSize: '11px', fontWeight: 500, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '90px' }}>
-                              {recipe.region || recipe.category || 'Africain'}
-                            </span>
-                            <span style={{ fontSize: '10px', color: '#d1d5db' }}>·</span>
-                            <DifficultyBadge difficulty={recipe.difficulty} t={t} />
-                          </div>
-                        </div>
+                            {/* Bouton cœur — haut droite */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
+                              style={{
+                                position: 'absolute', top: '8px', right: '8px',
+                                width: '28px', height: '28px', borderRadius: '50%',
+                                background: isFav ? '#ef4444' : 'rgba(0,0,0,0.3)',
+                                backdropFilter: 'blur(8px)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                border: 'none', cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                transition: 'all 0.2s',
+                              }}
+                            >
+                              <Heart size={13} style={{ color: '#fff', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
+                            </button>
 
-                        {/* Right: chevron only */}
-                        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                          <ChevronRight size={16} style={{ color: '#d1d5db' }} />
+                            {/* Badge note — bas gauche */}
+                            <div style={{
+                              position: 'absolute', bottom: '8px', left: '8px',
+                              background: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(6px)',
+                              borderRadius: '8px', padding: '2px 7px',
+                              display: 'flex', alignItems: 'center', gap: '3px',
+                              boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
+                            }}>
+                              <Star size={10} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
+                              <span style={{ fontSize: '10px', fontWeight: 800, color: isDark ? '#fff' : '#374151', lineHeight: 1 }}>{ratingNum}</span>
+                            </div>
+                          </div>
+
+                          {/* Contenu texte */}
+                          <div style={{ padding: '10px 12px 12px' }}>
+                            {/* Nom */}
+                            <h3 className="hlist-card-title" style={{
+                              fontSize: '13px', fontWeight: 800,
+                              lineHeight: 1.25, margin: '0 0 5px',
+                              display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                              color: isDark ? '#ffffff' : '#1a1a1a',
+                            }}>
+                              {recipe.name}
+                            </h3>
+                            {/* Temps de préparation */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+                              <div className="hlist-card-badge" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', borderRadius: '20px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={10} className="hlist-card-clock" style={{ color: isDark ? '#9ca3af' : '#6b7280' }} />
+                                <span className="hlist-card-time" style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#9ca3af' : '#374151' }}>
+                                  {recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}
+                                </span>
+                              </div>
+                            </div>
+                            {/* Description */}
+                            <p style={{
+                              fontSize: '10px', color: '#9ca3af', fontWeight: 500,
+                              lineHeight: 1.4, margin: '0 0 8px',
+                              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                            }}>
+                              {recipe.description || recipe.region || recipe.category || 'Recette africaine traditionnelle'}
+                            </p>
+                          </div>
                         </div>
                       </motion.div>
                     );
@@ -3566,15 +3480,101 @@ export default function App() {
                 </div>
               </section>
             );
-          })}
+          }
 
-        </div >
-      
+          // ── VERTICAL LIST (vertical_list_1 et fallback) ──
+          return (
+            <section key={section.id} className="mb-10">
+              <div className="px-8 flex justify-between items-end mb-4">
+                <div className="flex flex-col">
+                  <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
+                  {section.subtitle && <p className="text-[10px] text-stone-400 font-bold tracking-widest mt-1">{section.subtitle}</p>}
+                </div>
+              </div>
+              <div className="px-8 flex flex-col gap-3">
+                {sectionRecipes.map((recipe, ridx) => {
+                  const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
+                  const ratingNum = (4.0 + (ridx % 5) * 0.1).toFixed(1);
+                  return (
+                    <motion.div
+                      key={recipe.id}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setSelectedRecipe(recipe)}
+                      style={{
+                        background: isDark ? '#1f2937' : '#fff',
+                        borderRadius: '18px',
+                        boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.2)' : '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
+                        border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        padding: '12px',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {/* Image */}
+                      <div style={{
+                        width: '76px', height: '76px', flexShrink: 0,
+                        borderRadius: '14px', overflow: 'hidden',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                      }}>
+                        <img
+                          src={recipe.image}
+                          alt={recipe.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </div>
+
+                      {/* Center info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Name */}
+                        <p style={{
+                          fontSize: '14px', fontWeight: 800, color: isDark ? '#fff' : '#1a1a1a',
+                          margin: '0 0 5px', lineHeight: 1.25,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {recipe.name}
+                        </p>
+                        {/* Time row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                          <Clock size={11} style={{ color: '#9ca3af', flexShrink: 0 }} />
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af' }}>
+                            {recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}
+                          </span>
+                        </div>
+                        {/* Rating + region + difficulty */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                          <Star size={11} style={{ color: '#f59e0b', fill: '#f59e0b', flexShrink: 0 }} />
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#fff' : '#374151' }}>{ratingNum}</span>
+                          <span style={{ fontSize: '10px', color: '#d1d5db' }}>·</span>
+                          <span style={{ fontSize: '11px', fontWeight: 500, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '90px' }}>
+                            {recipe.region || recipe.category || 'Africain'}
+                          </span>
+                          <span style={{ fontSize: '10px', color: '#d1d5db' }}>·</span>
+                          <DifficultyBadge difficulty={recipe.difficulty} t={t} isDark={isDark} />
+                        </div>
+                      </div>
+
+                      {/* Right: chevron only */}
+                      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                        <ChevronRight size={16} style={{ color: '#d1d5db' }} />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+
+      </div >
+
     );
   };
 
   const renderExplorer = () => (
-    
+
     <div className="flex-1 flex flex-col pb-44">
       {/* Immersive Search Header -> Now using Home page style button */}
       <header style={{
@@ -3634,7 +3634,7 @@ export default function App() {
                   <h4 className="font-bold text-stone-800 text-sm leading-tight line-clamp-2 mb-1">{recipe.name}</h4>
                   <p className="text-[10px] text-stone-400 mb-2 font-medium flex items-center gap-1"><MapPin size={10} /> {recipe.region}</p>
                   <div className="flex items-center justify-between mt-auto pt-2 border-t border-stone-50">
-                    <DifficultyBadge difficulty={recipe.difficulty} t={t} />
+                    <DifficultyBadge difficulty={recipe.difficulty} t={t} isDark={isDark} />
                   </div>
                 </div>
               </motion.div>
@@ -3766,27 +3766,27 @@ export default function App() {
                             style={{ width: 'min(48vw, 185px)' }}
                           >
                             <div style={{
-                              background: '#fff', borderRadius: '20px',
-                              boxShadow: '0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
-                              overflow: 'hidden', border: '1px solid rgba(0,0,0,0.04)',
+                              background: isDark ? '#111111' : '#fff', borderRadius: '20px',
+                              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
+                              overflow: 'hidden', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)',
                             }}>
                               <div className="relative" style={{ aspectRatio: '4 / 3' }}>
                                 <OptimizedImage src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
 
-                                <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} style={{ position: 'absolute', top: '10px', right: '10px', width: '30px', height: '30px', borderRadius: '50%', background: isFav ? '#ef4444' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
-                                  <Heart size={14} style={{ color: isFav ? '#fff' : '#ef4444', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
+                                <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} style={{ position: 'absolute', top: '10px', right: '10px', width: '30px', height: '30px', borderRadius: '50%', background: isFav ? '#ef4444' : 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', transition: 'all 0.2s' }}>
+                                  <Heart size={14} style={{ color: '#fff', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
                                 </button>
-                                <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(6px)', borderRadius: '8px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
+                                <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(6px)', borderRadius: '8px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
                                   <Star size={10} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
-                                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#374151', lineHeight: 1 }}>{ratingNum}</span>
+                                  <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#fff' : '#374151', lineHeight: 1 }}>{ratingNum}</span>
                                 </div>
                               </div>
                               <div style={{ padding: '12px 14px 14px' }}>
-                                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.25, margin: '0 0 6px', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
+                                <h3 style={{ fontSize: '15px', fontWeight: 800, color: isDark ? '#fff' : '#1a1a1a', lineHeight: 1.25, margin: '0 0 6px', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
-                                  <div style={{ background: '#f3f4f6', borderRadius: '20px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Clock size={10} style={{ color: '#6b7280' }} />
-                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151' }}>{recipe.prepTime ? `${recipe.prepTime} min` : '30 min'}</span>
+                                  <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', borderRadius: '20px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Clock size={10} style={{ color: isDark ? '#9ca3af' : '#6b7280' }} />
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#9ca3af' : '#374151' }}>{recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}</span>
                                   </div>
                                 </div>
                               </div>
@@ -3822,12 +3822,12 @@ export default function App() {
                             <div className="hlist-card" style={{ borderRadius: '20px', overflow: 'hidden' }}>
                               <div className="relative" style={{ aspectRatio: '4 / 3' }}>
                                 <OptimizedImage src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
-                                <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} style={{ position: 'absolute', top: '8px', right: '8px', width: '28px', height: '28px', borderRadius: '50%', background: isFav ? '#ef4444' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
-                                  <Heart size={13} style={{ color: isFav ? '#fff' : '#ef4444', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
+                                <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} style={{ position: 'absolute', top: '8px', right: '8px', width: '28px', height: '28px', borderRadius: '50%', background: isFav ? '#ef4444' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.85)'), backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
+                                  <Heart size={13} style={{ color: isFav ? '#fff' : (isDark ? '#e5e7eb' : '#ef4444'), fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
                                 </button>
-                                <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(6px)', borderRadius: '8px', padding: '2px 7px', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
+                                <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(6px)', borderRadius: '8px', padding: '2px 7px', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
                                   <Star size={10} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
-                                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#374151', lineHeight: 1 }}>{ratingNum}</span>
+                                  <span style={{ fontSize: '10px', fontWeight: 800, color: isDark ? '#fff' : '#374151', lineHeight: 1 }}>{ratingNum}</span>
                                 </div>
                               </div>
                               <div style={{ padding: '10px 12px 12px' }}>
@@ -3835,7 +3835,7 @@ export default function App() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
                                   <div className="hlist-card-badge" style={{ borderRadius: '20px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <Clock size={10} className="hlist-card-clock" />
-                                    <span className="hlist-card-time" style={{ fontSize: '11px', fontWeight: 700 }}>{recipe.prepTime ? `${recipe.prepTime} min` : '30 min'}</span>
+                                    <span className="hlist-card-time" style={{ fontSize: '11px', fontWeight: 700 }}>{recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}</span>
                                   </div>
                                 </div>
                               </div>
@@ -3882,17 +3882,17 @@ export default function App() {
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
                               <Clock size={11} style={{ color: '#9ca3af', flexShrink: 0 }} />
-                              <span style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af' }}>{recipe.prepTime ? `${recipe.prepTime} min` : '30 min'}</span>
+                              <span style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af' }}>{recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                               <Star size={11} style={{ color: '#f59e0b', fill: '#f59e0b', flexShrink: 0 }} />
-                              <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151' }}>{ratingNum}</span>
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#fff' : '#374151' }}>{ratingNum}</span>
                               <span style={{ fontSize: '10px', color: '#d1d5db' }}>·</span>
                               <span style={{ fontSize: '11px', fontWeight: 500, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.region || recipe.category || 'Africain'}</span>
                             </div>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                            <DifficultyBadge difficulty={recipe.difficulty} t={t} />
+                            <DifficultyBadge difficulty={recipe.difficulty} t={t} isDark={isDark} />
                             <ChevronRight size={16} style={{ color: '#d1d5db' }} />
                           </div>
                         </motion.div>
@@ -3906,7 +3906,7 @@ export default function App() {
         )
       }
     </div >
-    
+
   );
 
   const renderCommunity = () => {
@@ -4055,84 +4055,84 @@ export default function App() {
       : communityPosts;
 
     return (
-      
-        <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
-          <header
-            style={{
-              padding: '16px 24px',
-              paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px',
-              paddingBottom: '16px',
-              position: 'sticky',
-              top: 0,
-              background: isDark ? '#000000ff' : '#f3f4f6',
-              zIndex: 50,
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.04)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {showSavedPosts && (
-                  <button
-                    onClick={() => setShowSavedPosts(false)}
-                    className={`w-[42px] h-[42px] -ml-2 rounded-full flex items-center justify-center text-[#fb5607] shadow-sm transition-transform active:scale-95 shrink-0 border ${isDark ? 'bg-white/10 border-white/10 hover:bg-white/20' : 'bg-white border-stone-100 hover:bg-stone-50'}`}
-                  >
-                    <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
-                  </button>
-                )}
-                <h1 className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                  {showSavedPosts ? "Enregistrés" : t.community}
-                </h1>
-              </div>
-              {currentUser && !showSavedPosts && (
+
+      <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
+        <header
+          style={{
+            padding: '16px 24px',
+            paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px',
+            paddingBottom: '16px',
+            position: 'sticky',
+            top: 0,
+            background: isDark ? '#000000ff' : '#f3f4f6',
+            zIndex: 50,
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.04)',
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {showSavedPosts && (
                 <button
-                  onClick={() => setShowSavedPosts(true)}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all active:scale-95 ${isDark ? 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-600 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-stone-50'}`}
+                  onClick={() => setShowSavedPosts(false)}
+                  className={`w-[42px] h-[42px] -ml-2 rounded-full flex items-center justify-center text-[#fb5607] shadow-sm transition-transform active:scale-95 shrink-0 border ${isDark ? 'bg-white/10 border-white/10 hover:bg-white/20' : 'bg-white border-stone-100 hover:bg-stone-50'}`}
                 >
-                  <Bookmark size={18} fill="none" />
+                  <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
                 </button>
               )}
+              <h1 className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>
+                {showSavedPosts ? "Enregistrés" : t.community}
+              </h1>
             </div>
-            <p className={`text-xs font-medium mt-1 opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
-              {showSavedPosts ? "Vos publications sauvegardées" : t.communityDesc}
-            </p>
-          </header>
-
-          <div className="px-6">
-            <CommunityFeed
-              posts={displayedCommunityPosts}
-              currentUser={currentUser}
-              isLoading={isCommunityLoading}
-              t={t}
-              isDark={isDark}
-              onLike={handleLike}
-              onCommentClick={(post) => setSelectedPostForComments(post)}
-              onShare={handleShare}
-              onDeletePost={handleDeletePost}
-              onSavePost={handleSavePost}
-              onFollowAuthor={handleFollowAuthor}
-              onCreatePost={handleCreatePost}
-              onUpdatePost={handleUpdatePost}
-              onLoadMore={loadMoreCommunityPosts}
-              hasMore={hasMoreCommunityPosts}
-              jumpToPostId={jumpToPostId}
-              showSavedOnly={showSavedPosts}
-            />
+            {currentUser && !showSavedPosts && (
+              <button
+                onClick={() => setShowSavedPosts(true)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all active:scale-95 ${isDark ? 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-600 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-stone-50'}`}
+              >
+                <Bookmark size={18} fill="none" />
+              </button>
+            )}
           </div>
+          <p className={`text-xs font-medium mt-1 opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
+            {showSavedPosts ? "Vos publications sauvegardées" : t.communityDesc}
+          </p>
+        </header>
 
-          <CommentModal
-            isOpen={!!selectedPostForComments}
-            onClose={() => setSelectedPostForComments(null)}
-            post={selectedPostForComments}
-            comments={postComments}
-            onAddComment={handleAddComment}
-            isLoading={isCommentsLoading}
+        <div className="px-6">
+          <CommunityFeed
+            posts={displayedCommunityPosts}
+            currentUser={currentUser}
+            isLoading={isCommunityLoading}
             t={t}
             isDark={isDark}
+            onLike={handleLike}
+            onCommentClick={(post) => setSelectedPostForComments(post)}
+            onShare={handleShare}
+            onDeletePost={handleDeletePost}
+            onSavePost={handleSavePost}
+            onFollowAuthor={handleFollowAuthor}
+            onCreatePost={handleCreatePost}
+            onUpdatePost={handleUpdatePost}
+            onLoadMore={loadMoreCommunityPosts}
+            hasMore={hasMoreCommunityPosts}
+            jumpToPostId={jumpToPostId}
+            showSavedOnly={showSavedPosts}
           />
         </div>
-      
+
+        <CommentModal
+          isOpen={!!selectedPostForComments}
+          onClose={() => setSelectedPostForComments(null)}
+          post={selectedPostForComments}
+          comments={postComments}
+          onAddComment={handleAddComment}
+          isLoading={isCommentsLoading}
+          t={t}
+          isDark={isDark}
+        />
+      </div>
+
     );
   };
 
@@ -4745,7 +4745,7 @@ export default function App() {
                             </div>
                             <h4 className="font-bold text-sm text-stone-900 leading-tight truncate mb-1">{r.name}</h4>
                             <span className="text-[10px] font-black text-stone-400 flex items-center gap-1 uppercase tracking-tighter">
-                              <Clock size={10} className="text-[#fb5607]" /> {r.cookTime} • <DifficultyBadge difficulty={r.difficulty} t={t} />
+                              <Clock size={10} className="text-[#fb5607]" /> {r.cookTime} • <DifficultyBadge difficulty={r.difficulty} t={t} isDark={isDark} />
                             </span>
                           </motion.div>
                         ))}
@@ -5811,16 +5811,16 @@ export default function App() {
                       key={cat}
                       onClick={() => setSelectedStoreCategory(cat)}
                       className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-2xl whitespace-nowrap transition-all duration-200 active:scale-95 shrink-0 ${isActive
-                          ? 'bg-[#38b000] shadow-lg shadow-[#38b000]/30'
-                          : isDark
-                            ? 'bg-white/6 border border-white/8'
-                            : 'bg-white border border-stone-100 shadow-sm'
+                        ? 'bg-[#38b000] shadow-lg shadow-[#38b000]/30'
+                        : isDark
+                          ? 'bg-white/6 border border-white/8'
+                          : 'bg-white border border-stone-100 shadow-sm'
                         }`}
                     >
                       <span className={`text-[20px] leading-none ${isActive ? 'grayscale-0' : ''}`}>{icons[cat] || '📦'}</span>
                       <span className={`text-[10px] font-black tracking-wide ${isActive
-                          ? 'text-white'
-                          : isDark ? 'text-white/50' : 'text-stone-500'
+                        ? 'text-white'
+                        : isDark ? 'text-white/50' : 'text-stone-500'
                         }`}>{cat}</span>
                     </button>
                   );
