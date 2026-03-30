@@ -136,13 +136,31 @@ const FullScreenCreatePostForm: React.FC<{
         }
     };
 
+    React.useEffect(() => {
+        const originalBodyOverflow = document.body.style.overflow;
+        const mainElement = document.querySelector('main');
+        const originalMainOverflow = mainElement?.style.overflow;
+
+        document.body.style.overflow = 'hidden';
+        if (mainElement) {
+            mainElement.style.overflow = 'hidden';
+        }
+
+        return () => {
+            document.body.style.overflow = originalBodyOverflow;
+            if (mainElement) {
+                mainElement.style.overflow = originalMainOverflow || '';
+            }
+        };
+    }, []);
+
     return (
         <motion.div
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 320, mass: 0.7 }}
-            className={`absolute inset-0 z-[850] flex flex-col overflow-hidden ${isDark ? 'bg-[#0a0a0a]' : 'bg-[#f7f7f5]'}`}
+            className={`fixed inset-0 z-[850] flex flex-col overflow-hidden ${isDark ? 'bg-[#0a0a0a]' : 'bg-[#f7f7f5]'}`}
             style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
             {/* ── Header compact ── */}
@@ -335,10 +353,28 @@ const CategoryFilter = ({ selected, onSelect, isDark }: { selected: string; onSe
 // ─── Image Lightbox ──────────────────────────────────────────────────────────
 
 const ImageLightbox = ({ imageUrl, onClose }: { imageUrl: string; onClose: () => void }) => {
+    React.useEffect(() => {
+        const originalBodyOverflow = document.body.style.overflow;
+        const mainElement = document.querySelector('main');
+        const originalMainOverflow = mainElement?.style.overflow;
+
+        document.body.style.overflow = 'hidden';
+        if (mainElement) {
+            mainElement.style.overflow = 'hidden';
+        }
+
+        return () => {
+            document.body.style.overflow = originalBodyOverflow;
+            if (mainElement) {
+                mainElement.style.overflow = originalMainOverflow || '';
+            }
+        };
+    }, []);
+
     return (
         <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[1000] bg-black/95 flex items-center justify-center p-4"
             onClick={onClose}
         >
             <motion.button
@@ -351,7 +387,7 @@ const ImageLightbox = ({ imageUrl, onClose }: { imageUrl: string; onClose: () =>
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 src={imageUrl}
-                className="max-w-full max-h-screen object-contain rounded-lg shadow-2xl shadow-black/50"
+                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl shadow-black/50"
                 onClick={(e) => e.stopPropagation()}
             />
         </motion.div>
@@ -578,7 +614,8 @@ export const CommunityFeed = ({
     jumpToPostId,
     showSavedOnly,
     onLoadMore,
-    hasMore
+    hasMore,
+    onFormOpenChange
 }: {
     posts: CommunityPost[];
     currentUser: User | null;
@@ -597,11 +634,16 @@ export const CommunityFeed = ({
     showSavedOnly?: boolean;
     onLoadMore?: () => void;
     hasMore?: boolean;
+    onFormOpenChange?: (isOpen: boolean) => void;
 }) => {
     const [isCreatingPost, setIsCreatingPost] = useState(false);
     const [postToEdit, setPostToEdit] = useState<CommunityPost | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
     const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        onFormOpenChange?.(isCreatingPost || !!postToEdit);
+    }, [isCreatingPost, postToEdit, onFormOpenChange]);
 
     const filteredPosts = posts.filter(p => {
         if (showSavedOnly) return currentUser?.savedPosts?.includes(p.id);

@@ -2122,8 +2122,27 @@ export default function App() {
   }, [currentUser]);
 
   // Cloud Sync & Internet Dependency
-  const [allRecipes, setAllRecipes] = useState<Recipe[]>(recipes); // Use static data as first fallback
-  const [allProducts, setAllProducts] = useState<Product[]>(STORE_PRODUCTS); // Dynamic store products
+  // Prefer cached recipes from localStorage (with real images) over static fallback data (with placeholder images)
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>(() => {
+    try {
+      const cached = localStorage.getItem('afrocuisto_remote_recipes');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) { /* ignore parse errors */ }
+    return recipes; // Static fallback only if no cache
+  });
+  const [allProducts, setAllProducts] = useState<Product[]>(() => {
+    try {
+      const cached = localStorage.getItem('afrocuisto_remote_products');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) { /* ignore parse errors */ }
+    return STORE_PRODUCTS;
+  });
   const [selectedStoreCategory, setSelectedStoreCategory] = useState('Tout');
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [allMerchants, setAllMerchants] = useState<any[]>([]); // Dynamic merchants
@@ -2186,6 +2205,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
+  const [isCommunityFormOpen, setIsCommunityFormOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{
     show: boolean;
     message: string;
@@ -2480,10 +2500,22 @@ export default function App() {
   const [hasMoreCommunityPosts, setHasMoreCommunityPosts] = useState(true);
 
   const syncCommunity = async (page: number = 0) => {
-    if (isCommunityLoading && page === 0) return; // Avoid double initial sync
+    if (isCommunityLoading && page === 0) return;
     setIsCommunityLoading(true);
+    console.log(`[Community] Syncing page ${page}...`);
+
+    // Safety timeout to avoid infinite loading if Supabase hangs
+    const timeoutId = setTimeout(() => {
+      if (isCommunityLoading) {
+        console.warn(`[Community] Sync timeout reached for page ${page}`);
+        setIsCommunityLoading(false);
+      }
+    }, 8000);
+
     try {
       const posts = await dbService.getCommunityPosts(currentUser?.id, page, 10);
+      console.log(`[Community] Received ${posts?.length || 0} posts`);
+      
       if (page === 0) {
         setCommunityPosts(posts || []);
         setCommunityPage(0);
@@ -2493,9 +2525,11 @@ export default function App() {
       }
       if (posts) setHasMoreCommunityPosts(posts.length === 10);
     } catch (err) {
-      console.error('Community sync failed:', err);
+      console.error('[Community] Sync failed:', err);
     } finally {
+      clearTimeout(timeoutId);
       setIsCommunityLoading(false);
+      console.log(`[Community] Sync finished for page ${page}`);
     }
   };
 
@@ -2741,7 +2775,7 @@ export default function App() {
           setHistory(['home']);
           setAuthMode('login');
           setAuthStep('form');
-          setAuthFormData({ name: '', email: '', password: '' });
+          setAuthFormData({ name: '', email: '', password: '', phone: '' });
 
           // Small delay before alert to ensure UI paints the auth screen
           setTimeout(() => {
@@ -2771,7 +2805,14 @@ export default function App() {
     setActiveTab('home');
     setHistory(['home']);
 
-    // 4. Déconnexion distante (Supabase) sans bloquer l'interface
+    // 4. Reset auth form state for a clean login screen
+    setAuthMode('login');
+    setAuthStep('form');
+    setAuthError(null);
+    setAuthFormData({ name: '', email: '', password: '', phone: '' });
+    setOtpInput('');
+
+    // 5. Déconnexion distante (Supabase) sans bloquer l'interface
     dbService.signOut().catch(err => console.error("SignOut error:", err));
 
     showAlert("Vous êtes maintenant déconnecté", "success");
@@ -2836,10 +2877,13 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      const { error } = await dbService.sendResetPasswordEmail(resetEmail.trim());
-      if (error) throw error;
+      const result = await dbService.sendResetPasswordEmail(resetEmail.trim());
+      if (result.error) {
+        throw new Error(result.error.message || "Erreur lors de l'envoi de l'email.");
+      }
       showAlert("Veuillez vérifier votre boîte mail pour réinitialiser votre mot de passe.", "success");
       setAuthMode('login');
+      setAuthStep('form');
     } catch (err: any) {
       setAuthError(err.message || "Erreur lors de l'envoi de l'email.");
     } finally {
@@ -2856,10 +2900,13 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      const { error } = await dbService.updatePassword(authFormData.password);
-      if (error) throw error;
+      const result = await dbService.updatePassword(authFormData.password);
+      if (result.error) {
+        throw new Error(result.error.message || "Erreur lors de la mise à jour.");
+      }
       showAlert("Votre mot de passe a été mis à jour avec succès !", "success");
       setAuthMode('login');
+      setAuthStep('form');
     } catch (err: any) {
       setAuthError(err.message || "Erreur lors de la mise à jour.");
     } finally {
@@ -2869,8 +2916,23 @@ export default function App() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsAuthLoading(true);
     setAuthError(null);
+
+    // Client-side validation before sending OTP
+    if (!authFormData.name.trim() || authFormData.name.trim().length < 2) {
+      setAuthError("Le nom doit contenir au moins 2 caractères.");
+      return;
+    }
+    if (!authFormData.email.trim() || !authFormData.email.includes('@')) {
+      setAuthError("Veuillez saisir une adresse email valide.");
+      return;
+    }
+    if (authFormData.password.length < 6) {
+      setAuthError("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+
+    setIsAuthLoading(true);
     try {
       // Email signup: send email OTP (custom flow)
       const otp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -2883,7 +2945,11 @@ export default function App() {
       setAuthStep('otp');
       setTimeout(() => { otpRefs[0]?.current?.focus(); }, 400);
     } catch (err: any) {
-      setAuthError(err.message || "Erreur lors de l'envoi du code.");
+      if (err.message === 'ERR_SPAM') {
+        setAuthError("Trop de tentatives. Veuillez patienter quelques minutes avant de réessayer.");
+      } else {
+        setAuthError(err.message || "Erreur lors de l'envoi du code.");
+      }
     } finally {
       setIsAuthLoading(false);
     }
@@ -2907,11 +2973,28 @@ export default function App() {
         const fullPhone = authFormData.phone.trim() ? `${phoneCountry}${authFormData.phone.trim()}` : undefined;
         data = await dbService.signUp(authFormData.email.trim(), authFormData.password, authFormData.name.trim(), fullPhone);
       } catch (err: any) {
-        // 2. If user already exists (ghost account), we try to log them in directly
-        // because they proved ownership via OTP.
+        // 2. If user already exists, try different recovery strategies
         if (err.message?.includes("User already registered") || err.message?.includes("already exists")) {
-          console.log("Ghost account detected, attempting recovery login...");
-          data = await dbService.signIn(authFormData.email.trim(), authFormData.password);
+          console.log("Existing account detected, attempting recovery...");
+          try {
+            // First try: login with the password they just provided
+            data = await dbService.signIn(authFormData.email.trim(), authFormData.password);
+          } catch (loginErr: any) {
+            // Second try: recreate the ghost account with the new password
+            // (they proved email ownership via OTP, so this is safe)
+            try {
+              data = await dbService.recreateGhostAccount(
+                authFormData.email.trim(),
+                authFormData.password,
+                authFormData.name.trim()
+              );
+            } catch (recreateErr: any) {
+              throw new Error(
+                "Ce compte existe déjà avec un mot de passe différent. " +
+                "Connectez-vous avec votre ancien mot de passe ou utilisez 'Mot de passe oublié'."
+              );
+            }
+          }
         } else {
           throw err;
         }
@@ -2926,6 +3009,8 @@ export default function App() {
           phone: authFormData.phone.trim() ? `${phoneCountry}${authFormData.phone.trim()}` : '',
           favorites: [],
           shoppingList: [],
+          savedPosts: [],
+          following: [],
           joinedDate: new Date().toLocaleDateString(),
           settings: { darkMode: isDark, language: 'fr', unitSystem: 'metric' }
         };
@@ -2933,18 +3018,18 @@ export default function App() {
         setCurrentUser(userObj);
         dbService.setCurrentUser(userObj);
 
-        showAlert("Compte récupéré et activé ! Bienvenue.", "success");
+        showAlert("Bienvenue sur AfroCuisto ! 🎉", "success");
         setAuthStep('form');
         setAuthFormData({ name: '', email: '', password: '', phone: '' });
       } else {
-        showAlert("Activation réussie ! Connectez-vous maintenant.", "success");
+        showAlert("Inscription réussie ! Connectez-vous maintenant.", "success");
         setAuthMode('login');
         setAuthStep('form');
         setAuthFormData(prev => ({ ...prev, password: '' }));
       }
     } catch (err: any) {
-      setAuthError(err.message || "Erreur lors de l'inscription finale.");
-      showAlert("Échec de la création", "error");
+      console.error("Signup OTP verification error:", err);
+      setAuthError(err.message || "Erreur lors de l'inscription.");
     } finally {
       setIsAuthLoading(false);
     }
@@ -4118,6 +4203,7 @@ export default function App() {
             hasMore={hasMoreCommunityPosts}
             jumpToPostId={jumpToPostId}
             showSavedOnly={showSavedPosts}
+            onFormOpenChange={setIsCommunityFormOpen}
           />
         </div>
 
@@ -6015,7 +6101,7 @@ export default function App() {
                   {(['login', 'signup'] as const).map(mode => (
                     <button
                       key={mode}
-                      onClick={() => { setAuthMode(mode); setAuthError(null); setOtpInput(''); }}
+                      onClick={() => { setAuthMode(mode); setAuthError(null); setOtpInput(''); setAuthStep('form'); }}
                       className={`flex-1 py-3 text-[13px] font-bold z-10 relative transition-colors rounded-[13px] ${authMode === mode
                         ? (isDark ? 'text-white' : 'text-stone-900')
                         : (isDark ? 'text-white/35' : 'text-stone-400')}`}
@@ -6636,7 +6722,7 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {!selectedRecipe && !profileSubView && !selectedProduct && (
+        {!selectedRecipe && !profileSubView && !selectedProduct && !isCommunityFormOpen && (
           <motion.nav
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

@@ -107,7 +107,11 @@ export function usePushNotifications() {
     }, [showBanner]);
 
     const markAllRead = useCallback(() => {
-        notifications.forEach(n => markAsSeen(n.id));
+        notifications.forEach(n => {
+            markAsSeen(n.id);
+            markAsDismissed(n.id);
+        });
+        setNotifications([]);
         setUnreadCount(0);
     }, [notifications]);
 
@@ -476,7 +480,18 @@ export function NotifCenter({ notifications, onMarkAllRead, onClose, onViewMore,
             <div style={{ padding: '20px 20px 12px', borderBottom: `1px solid ${borderColor}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: textMain }}>Notifications</h2>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        {notifications.length > 0 && (
+                            <button
+                                onClick={onMarkAllRead}
+                                style={{
+                                    background: 'transparent', border: `1px solid ${isDark ? '#3f3f46' : '#e5e7eb'}`, borderRadius: 12, padding: '4px 10px',
+                                    fontSize: 12, fontWeight: 600, color: isDark ? '#f87171' : '#dc2626', cursor: 'pointer'
+                                }}
+                            >
+                                Tout effacer
+                            </button>
+                        )}
                         <button
                             onClick={onClose}
                             style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: textSub, fontSize: 18, fontWeight: 300 }}
