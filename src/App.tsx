@@ -343,7 +343,7 @@ const NavButton = ({ iconId, label, isActive, onClick, isDark }: { iconId: strin
           <span
             className="text-[12px] font-black"
             style={{
-              color: '#ff4800', // Crimson Carrot — texte actif
+              color: '#ff4800',
               overflow: 'hidden',
               whiteSpace: 'nowrap',
               paddingLeft: isActive ? '6px' : '0px',
@@ -6732,8 +6732,8 @@ export default function App() {
             style={{
               paddingBottom: 'calc(env(safe-area-inset-bottom, 16px))',
               background: isDark
-                ? 'rgba(10, 10, 18, 0.82)'
-                : 'rgba(255, 255, 255, 0.72)',
+                ? 'rgba(10, 10, 18, 0.60)'
+                : 'rgba(255, 255, 255, 0.58)',
               backdropFilter: 'blur(28px) saturate(180%)',
               WebkitBackdropFilter: 'blur(28px) saturate(180%)',
               borderTop: isDark
