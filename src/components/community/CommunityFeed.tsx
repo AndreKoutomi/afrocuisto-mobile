@@ -509,11 +509,11 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
             <div className={`rounded-3xl overflow-hidden ${isDark ? 'bg-[#141414] border border-white/5' : 'bg-white border border-stone-100'} shadow-sm`}>
                 {/* Image Section */}
                 {post.image_url && (
-                    <div className="relative w-full overflow-hidden bg-stone-100" style={{ aspectRatio: '1/1' }}>
+                    <div className="relative w-full overflow-hidden bg-stone-100" style={{ paddingBottom: '100%' }}>
                         <img
                             src={post.image_url}
                             alt={post.title || 'Photo du plat'}
-                            className="w-full h-full object-cover cursor-zoom-in active:scale-105 transition-transform duration-500"
+                            className="absolute inset-0 w-full h-full object-cover cursor-zoom-in active:scale-105 transition-transform duration-500"
                             loading="lazy"
                             onClick={() => onZoom(post.image_url)}
                             onDoubleClick={handleDoubleTap}

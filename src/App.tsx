@@ -1745,44 +1745,69 @@ const StoreProductCard: React.FC<{
     const mName = product.merchant_id ? (allMerchants.find(m => m.id === product.merchant_id)?.name || product.brand) : product.brand;
 
     return (
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: idx * 0.04, type: 'spring', stiffness: 400, damping: 28 }}
         onClick={() => setSelectedProduct(product)}
-        className={`flex items-center gap-4 rounded-[22px] p-3 cursor-pointer active:scale-[0.98] transition-all duration-300 ${isDark ? 'bg-white/6 border border-white/8' : 'bg-white shadow-sm'}`}
-        style={isDark ? {} : { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
+        className={`flex items-center gap-4 rounded-[26px] p-3.5 cursor-pointer active:scale-[0.97] transition-all duration-300 border ${
+          isDark
+            ? 'bg-white/5 border-white/8'
+            : 'bg-white border-stone-100/80'
+        }`}
+        style={isDark ? {} : { boxShadow: '0 4px 20px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04)' }}
       >
-        {/* Image */}
-        <div className={`w-[88px] h-[88px] rounded-[16px] flex-shrink-0 overflow-hidden ${isDark ? 'bg-white/5' : 'bg-[#f4f7f5]'}`}>
+        {/* Image avec fond dégradé orange subtil */}
+        <div className={`w-[90px] h-[90px] rounded-[20px] flex-shrink-0 overflow-hidden relative ${
+          isDark ? 'bg-white/8' : 'bg-gradient-to-br from-orange-50 to-amber-50'
+        }`}>
           {product.image_url
             ? <OptimizedImage src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
             : <span className="text-4xl flex items-center justify-center w-full h-full">{product.emoji || '📦'}</span>
           }
+          {/* Badge catégorie */}
+          {product.category && (
+            <span className="absolute top-1.5 left-1.5 bg-black/30 backdrop-blur-sm text-white text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full">
+              {product.category}
+            </span>
+          )}
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h4 className={`text-[15px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-stone-800'}`}>
-              {product.name}
-            </h4>
-          </div>
-
-          <p className="text-[12px] text-stone-400 font-medium leading-snug line-clamp-2 mb-2">
-            {(product as any).description || mName}
+          {/* Marque */}
+          {mName && (
+            <p className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${
+              isDark ? 'text-[#fb5607]/80' : 'text-[#fb5607]'
+            }`}>
+              {mName}
+            </p>
+          )}
+          <h4 className={`text-[15px] font-black leading-tight mb-1 ${
+            isDark ? 'text-white' : 'text-stone-800'
+          }`}>
+            {product.name}
+          </h4>
+          <p className="text-[12px] text-stone-400 font-medium leading-snug line-clamp-1 mb-2.5">
+            {(product as any).description || ''}
           </p>
 
           <div className="flex items-center justify-between">
-            {/* Price */}
-            <span className={`text-[17px] font-black ${isDark ? 'text-white' : 'text-[#1a1a2e]'}`}>
-              {product.price.toLocaleString()} <span className="text-[11px] font-bold text-stone-400">XOF</span>
-            </span>
+            {/* Prix */}
+            <div>
+              <span className={`text-[18px] font-black ${
+                isDark ? 'text-white' : 'text-stone-900'
+              }`}>
+                {product.price.toLocaleString()}
+              </span>
+              <span className="text-[10px] font-bold text-stone-400 ml-1">XOF</span>
+            </div>
 
-            {/* Cart button */}
+            {/* Bouton panier orange */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (isAdded) return; // Prevent double click during animation
-
-                // Add to list
+                if (isAdded) return;
                 const newItem = {
                   id: `store_${product.id}_${Date.now()}`,
                   item: product.name,
@@ -1795,43 +1820,40 @@ const StoreProductCard: React.FC<{
                   isInCart: true
                 };
                 updateShoppingList([...list, newItem]);
-
-                // Trigger animation
                 setIsAdded(true);
-                setTimeout(() => setIsAdded(false), 1500); // revert back after 1.5s
+                setTimeout(() => setIsAdded(false), 1500);
               }}
-              className={`w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 flex-shrink-0 ${isAdded
-                ? 'bg-emerald-500 scale-110'
-                : 'bg-[#2563eb]'
-                }`}
+              className={`h-[38px] px-4 rounded-[14px] flex items-center gap-1.5 font-black text-[11px] uppercase tracking-wide transition-all duration-300 active:scale-90 flex-shrink-0 ${
+                isAdded
+                  ? 'bg-emerald-500 text-white scale-105'
+                  : isDark
+                    ? 'bg-[#fb5607] text-white shadow-lg shadow-[#fb5607]/30'
+                    : 'bg-[#fb5607] text-white shadow-lg shadow-[#fb5607]/25'
+              }`}
             >
               <AnimatePresence mode="wait">
                 {isAdded ? (
-                  <motion.div
-                    key="check"
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    exit={{ scale: 0, rotate: 180 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  <motion.div key="check" className="flex items-center gap-1"
+                    initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                   >
-                    <Check size={18} strokeWidth={3} className="text-white" />
+                    <Check size={15} strokeWidth={3} />
+                    <span>Ajouté</span>
                   </motion.div>
                 ) : (
-                  <motion.div
-                    key="bag"
-                    initial={{ scale: 0, rotate: 180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    exit={{ scale: 0, rotate: -180 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  <motion.div key="bag" className="flex items-center gap-1.5"
+                    initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                   >
-                    <ShoppingBag size={17} strokeWidth={2.5} className="text-white" />
+                    <ShoppingBag size={14} strokeWidth={2.5} />
+                    <span>Ajouter</span>
                   </motion.div>
                 )}
               </AnimatePresence>
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -5303,7 +5325,7 @@ export default function App() {
 
           {step === 'success' ? (
             <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center text-white mb-8 shadow-xl">
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 rounded-full bg-[#fb5607] flex items-center justify-center text-white mb-8 shadow-xl shadow-[#fb5607]/30">
                 <Check size={48} strokeWidth={4} />
               </motion.div>
               <h3 className={`text-2xl font-black mb-3 ${isDark ? 'text-white' : 'text-stone-900'}`}>Génial !</h3>
@@ -5369,7 +5391,7 @@ export default function App() {
                                 </span>
                                 <button
                                   onClick={() => updateQty(item.id, 1)}
-                                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 ${isDark ? 'bg-white/10 text-white' : 'bg-[#D1EEDD] text-[#2D6A4F] shadow-sm'}`}
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 ${isDark ? 'bg-white/10 text-white' : 'bg-[#fb5607]/15 text-[#fb5607] shadow-sm'}`}
                                 >
                                   <Plus size={14} strokeWidth={3} />
                                 </button>
@@ -5415,7 +5437,7 @@ export default function App() {
                           />
                         ) : (
                           <div className="flex items-center gap-3 py-2">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                            <div className="w-8 h-8 rounded-full bg-[#fb5607]/10 flex items-center justify-center text-[#fb5607]">
                               <Check size={16} />
                             </div>
                             <span className="text-sm font-bold text-stone-500 line-clamp-2">{locationText}</span>
@@ -5461,12 +5483,12 @@ export default function App() {
 
                     <div className="pt-2 pb-6 border-t border-dashed border-stone-200">
                       <h3 className={`text-[12px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
-                        <Wallet size={14} className="text-[#38b000]" /> Moyen de paiement
+                        <Wallet size={14} className="text-[#fb5607]" /> Moyen de paiement
                       </h3>
                       <div className="flex flex-col gap-3">
                         <div
                           onClick={() => setPaymentMethod('momo')}
-                          className={`p-4 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer ${paymentMethod === 'momo' ? 'border-[#38b000] bg-[#38b000]/5 shadow-sm' : (isDark ? 'border-white/5 bg-white/2' : 'border-stone-100 bg-stone-50/50')}`}
+                          className={`p-4 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer ${paymentMethod === 'momo' ? 'border-[#fb5607] bg-[#fb5607]/5 shadow-sm' : (isDark ? 'border-white/5 bg-white/2' : 'border-stone-100 bg-stone-50/50')}`}
                         >
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-xl bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/20">
@@ -5477,14 +5499,14 @@ export default function App() {
                               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-tight">MTN, Moov, Celtiis</span>
                             </div>
                           </div>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'momo' ? 'bg-[#38b000] border-[#38b000]' : 'border-stone-200'}`}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === 'momo' ? 'bg-[#fb5607] border-[#fb5607]' : 'border-stone-200'}`}>
                             {paymentMethod === 'momo' && <Check size={10} className="text-white" strokeWidth={4} />}
                           </div>
                         </div>
 
                         <div
                           onClick={() => setPaymentMethod('card')}
-                          className={`p-4 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer ${paymentMethod === 'card' ? 'border-[#38b000] bg-[#38b000]/5 shadow-sm' : (isDark ? 'border-white/5 bg-white/2' : 'border-stone-100 bg-stone-50/50')}`}
+                          className={`p-4 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer ${paymentMethod === 'card' ? 'border-[#fb5607] bg-[#fb5607]/5 shadow-sm' : (isDark ? 'border-white/5 bg-white/2' : 'border-stone-100 bg-stone-50/50')}`}
                         >
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 text-white">
@@ -5495,13 +5517,13 @@ export default function App() {
                               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-tight">Visa, Mastercard</span>
                             </div>
                           </div>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'card' ? 'bg-[#38b000] border-[#38b000]' : 'border-stone-200'}`}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === 'card' ? 'bg-[#fb5607] border-[#fb5607]' : 'border-stone-200'}`}>
                             {paymentMethod === 'card' && <Check size={10} className="text-white" strokeWidth={4} />}
                           </div>
                         </div>
                       </div>
                       <div className="mt-4 flex items-center justify-center gap-2">
-                        <ShieldCheck size={12} className="text-emerald-500" />
+                        <ShieldCheck size={12} className="text-[#fb5607]" />
                         <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Paiement sécurisé par FedaPay</span>
                       </div>
                     </div>
@@ -5524,7 +5546,8 @@ export default function App() {
                 <div className={`p-6 pb-10 ${isDark ? 'bg-black' : 'bg-white shadow-[0_-20px_40px_rgba(0,0,0,0.02)]'}`}>
                   <button
                     onClick={handlePlaceOrder}
-                    className="w-full h-16 bg-[#006837] text-white rounded-[50px] font-black text-sm uppercase tracking-[0.1em] shadow-xl shadow-green-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                    className="w-full h-16 bg-[#fb5607] text-white rounded-[50px] font-black text-sm uppercase tracking-[0.1em] active:scale-95 transition-all flex items-center justify-center gap-3"
+                    style={{ boxShadow: '0 8px 32px rgba(251,86,7,0.35)' }}
                   >
                     Valider la commande
                   </button>
@@ -5605,7 +5628,14 @@ export default function App() {
 
     const banner = activeBanners[bannerIdx % activeBanners.length];
 
-    const totalXOF = list.reduce((acc, i) => acc + (parseFloat(i.priceXOF ?? '0') || 0), 0);
+    const visibleListItems = list.filter(i => {
+      // Les ingrédients de recettes (ne commençant pas par 'store_') sont toujours visibles
+      if (!i.id.startsWith('store_')) return true;
+      // Les articles de store sont visibles uniquement s'ils ne sont pas encore facturés/dans le panier
+      return !i.isPurchased && !i.isInCart;
+    });
+
+    const totalXOF = visibleListItems.reduce((acc, i) => acc + ((parseFloat(i.priceXOF ?? '0') || 0) * (parseInt(i.quantity ?? '1') || 1)), 0);
 
     const filteredProducts = allProducts.filter(p => {
       const matchCat = selectedStoreCategory === 'Tout' || p.category === selectedStoreCategory;
@@ -5614,55 +5644,70 @@ export default function App() {
     });
 
     return (
-      <div className={`flex-1 flex flex-col pb-44 ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 8px)' : '8px' }}>
+      <div className={`flex-1 flex flex-col pb-44 ${isDark ? 'bg-[#0a0a0f]' : 'bg-[#f5f5f8]'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 8px)' : '8px' }}>
 
-        {/* ── Promo Banner ── */}
-        <div className="mx-4 mt-4 mb-2 rounded-[24px] overflow-hidden relative" style={{ background: banner.bg, minHeight: 150 }}>
-          <div className="p-7 flex items-center gap-4 relative z-10">
-            <div className="w-14 h-14 rounded-[18px] bg-white text-3xl flex-shrink-0 backdrop-blur-sm overflow-hidden border-2 border-white/20">
+        {/* ── Promo Banner — Premium ── */}
+        <div className="mx-4 mt-4 mb-2 rounded-[28px] overflow-hidden relative" style={{ background: banner.bg, minHeight: 156 }}>
+          {/* Verre dépoli overlay premium */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%, rgba(0,0,0,0.15) 100%)'
+          }} />
+          {/* Orbe décoratif */}
+          <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10 pointer-events-none" style={{ filter: 'blur(2px)' }} />
+          <div className="absolute right-8 -bottom-6 w-20 h-20 rounded-full bg-white/06 pointer-events-none" />
+          <div className="absolute left-0 bottom-0 w-24 h-24 rounded-full bg-black/08 pointer-events-none" style={{ filter: 'blur(8px)' }} />
+
+          <div className="p-6 flex items-center gap-4 relative z-10">
+            <div className="w-16 h-16 rounded-[20px] bg-white/20 backdrop-blur-sm flex-shrink-0 overflow-hidden border-2 border-white/30 shadow-xl">
               {banner.image_url ? (
                 <OptimizedImage priority={true} src={banner.image_url} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-stone-300">📦</span>
+                <span className="text-stone-300 text-3xl flex items-center justify-center w-full h-full">📦</span>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <span className="text-[9px] font-black uppercase tracking-widest text-white/60">{banner.tag}</span>
-              <p className="text-[16px] font-black text-white leading-tight">{banner.title}</p>
-              <p className="text-[11px] font-semibold text-white/75 mt-0.5 truncate">{banner.sub}</p>
+              <span className="text-[9px] font-black uppercase tracking-[0.15em] text-white/60 block mb-0.5">{banner.tag}</span>
+              <p className="text-[18px] font-black text-white leading-tight drop-shadow-sm">{banner.title}</p>
+              <p className="text-[11px] font-semibold text-white/70 mt-1 truncate">{banner.sub}</p>
             </div>
-            <button className="flex-shrink-0 bg-white/20 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-full transition-all active:scale-95">
-              {banner.buttonText || 'Boutique'}
+            <button className="flex-shrink-0 bg-white/95 text-[#fb5607] text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-full transition-all active:scale-95 shadow-lg shadow-black/15">
+              {banner.buttonText || 'Voir'}
             </button>
           </div>
-          {/* Decorative circles */}
-          <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
-          <div className="absolute -right-2 bottom-0 w-14 h-14 rounded-full bg-white/05 pointer-events-none" />
+
           {/* Dots indicator */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
             {activeBanners.map((_, i) => (
-              <div key={i} className={`rounded-full transition-all ${i === (bannerIdx % activeBanners.length) ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40'}`} />
+              <div key={i} className={`rounded-full transition-all duration-300 ${i === (bannerIdx % activeBanners.length) ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/35'}`} />
             ))}
           </div>
         </div>
 
-        {/* ── Tab Switcher ── */}
-        <div className={`mx-4 mt-3 mb-0 flex gap-1 p-1 rounded-[40px] ${isDark ? 'bg-white/5' : 'bg-white/80'} backdrop-blur-sm`}>
+        {/* ── Tab Switcher — Orange premium ── */}
+        <div className={`mx-4 mt-4 mb-0 flex gap-1 p-1.5 rounded-[40px] border ${
+          isDark
+            ? 'bg-white/5 border-white/8'
+            : 'bg-white border-stone-100/80'
+        }`} style={isDark ? {} : { boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
           {[
             { key: 'store', label: 'Boutiques', count: null },
-            { key: 'mylist', label: 'Liste de Course', count: list.length },
+            { key: 'mylist', label: 'Liste de Course', count: visibleListItems.length },
           ].map(tab => (
             <button
               key={tab.key}
               onClick={() => setStoreTab(tab.key as any)}
-              className={`flex-1 py-2.5 rounded-[40px] text-[12px] font-black transition-all flex items-center justify-center gap-1.5 ${storeTab === tab.key
-                ? 'bg-[#38b000] text-white shadow-sm shadow-[#38b000]/30'
-                : isDark ? 'text-white/50' : 'text-stone-500'
-                }`}
+              className={`flex-1 py-2.5 rounded-[32px] text-[12px] font-black transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                storeTab === tab.key
+                  ? 'bg-[#fb5607] text-white'
+                  : isDark ? 'text-white/40' : 'text-stone-400'
+              }`}
+              style={storeTab === tab.key ? { boxShadow: '0 4px 16px rgba(251,86,7,0.35)' } : {}}
             >
               {tab.label}
               {tab.count !== null && tab.count > 0 && (
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${storeTab === tab.key ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-500'}`}>
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                  storeTab === tab.key ? 'bg-white/25 text-white' : isDark ? 'bg-white/10 text-white/60' : 'bg-stone-100 text-stone-500'
+                }`}>
                   {tab.count}
                 </span>
               )}
@@ -5678,18 +5723,25 @@ export default function App() {
               className="flex-1"
             >
               {/* Sub-header */}
-              <div className="px-8 pt-7 pb-5 flex items-center justify-between">
+              <div className="px-6 pt-6 pb-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[13px] font-black text-stone-400 tracking-widest">{list.length} {t.ingredients}</p>
-                  {totalXOF > 0 && <p className="text-[13px] font-black text-[#38b000]">≈ {totalXOF.toLocaleString()} XOF</p>}
+                  <p className={`text-[12px] font-black uppercase tracking-widest ${
+                    isDark ? 'text-white/40' : 'text-stone-400'
+                  }`}>{visibleListItems.length} article{visibleListItems.length > 1 ? 's' : ''}</p>
+                  {totalXOF > 0 && (
+                    <p className="text-[15px] font-black text-[#fb5607]">≈ {totalXOF.toLocaleString()} XOF</p>
+                  )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsOrdersOpen(true)}
-                    className={`relative flex items-center justify-center w-[42px] h-[42px] rounded-full transition-all active:scale-95 shadow-md shadow-[#38b000]/10 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-stone-200 text-[#38b000]'}`}
+                    className={`relative flex items-center justify-center w-[40px] h-[40px] rounded-[14px] transition-all active:scale-95 border ${
+                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-stone-100 text-[#fb5607]'
+                    }`}
+                    style={isDark ? {} : { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
                     title="Mes Commandes"
                   >
-                    <ClipboardList size={20} />
+                    <ClipboardList size={18} />
                     {ordersCount > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white pointer-events-none">
                         {ordersCount}
@@ -5698,27 +5750,30 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => setIsCartOpen(true)}
-                    className={`relative flex items-center justify-center w-[42px] h-[42px] rounded-full transition-all active:scale-95 shadow-md shadow-[#38b000]/10 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-stone-200 text-[#38b000]'}`}
+                    className={`relative flex items-center justify-center w-[40px] h-[40px] rounded-[14px] transition-all active:scale-95 border ${
+                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-stone-100 text-[#fb5607]'
+                    }`}
+                    style={isDark ? {} : { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
                   >
-                    <ShoppingBag size={20} />
+                    <ShoppingBag size={18} />
                     {list.filter(i => i.isInCart).length > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#38b000] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white pointer-events-none">
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#fb5607] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white pointer-events-none">
                         {list.filter(i => i.isInCart).length}
                       </span>
                     )}
                   </button>
                   <button
                     onClick={() => setShowAddShoppingModal(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-[#38b000]/10 text-[#38b000] rounded-full active:scale-90 transition-all shadow-md shadow-[#111111]/10 border-[#38b000]/10 border-1"
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-[#fb5607] text-white rounded-[14px] active:scale-90 transition-all"
+                    style={{ boxShadow: '0 4px 14px rgba(251,86,7,0.35)' }}
                   >
-                    <Plus size={16} strokeWidth={3} />
+                    <Plus size={15} strokeWidth={3} />
                     <span className="text-[11px] font-black uppercase tracking-wider">Créer</span>
                   </button>
                   {isOffline && (
                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
-                      <WifiOff size={20} />
+                      <WifiOff size={18} />
                     </motion.div>
-
                   )}
                 </div>
               </div>
@@ -5732,7 +5787,8 @@ export default function App() {
                     <h3 className={`text-lg font-black mb-2 ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.noShoppingItems}</h3>
                     <p className="text-sm font-medium text-stone-400 leading-relaxed mb-8">{t.noShoppingItemsDesc}</p>
                     <button onClick={() => navigateTo('home')}
-                      className="bg-[#38b000] text-white px-8 py-3.5 rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-[#38b000]/25 active:scale-95 transition-all"
+                      className="bg-[#fb5607] text-white px-8 py-3.5 rounded-full font-black text-xs uppercase tracking-widest active:scale-95 transition-all"
+                      style={{ boxShadow: '0 6px 20px rgba(251,86,7,0.35)' }}
                     >
                       {t.discover}
                     </button>
@@ -5741,8 +5797,8 @@ export default function App() {
                   <>
                     {toBuyRecipe.length > 0 && (
                       <div className="space-y-3 pl-2 pr-2">
-                        <h3 className="text-[10px] font-black uppercase text-[#38b000] tracking-widest flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> {t.toBuy}
+                        <h3 className="text-[10px] font-black uppercase text-[#fb5607] tracking-widest flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#fb5607]" /> {t.toBuy}
                         </h3>
                         <div className="space-y-3">
                           {toBuyRecipe.map(item => (
@@ -5761,8 +5817,8 @@ export default function App() {
 
                     {toBuyStore.length > 0 && (
                       <div className="space-y-3 pl-2 pr-2">
-                        <h3 className="text-[10px] font-black uppercase text-[#38b000] tracking-widest flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> Articles du Store
+                        <h3 className="text-[10px] font-black uppercase text-[#fb5607] tracking-widest flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#fb5607]" /> Articles du Store
                         </h3>
                         <div className="space-y-3">
                           {toBuyStore.map(item => (
@@ -5787,8 +5843,8 @@ export default function App() {
 
                     {purchased.filter(i => !i.id.startsWith('store_')).length > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-[10px] font-black uppercase text-[#38b000] tracking-widest flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#38b000]" /> {t.purchased}
+                        <h3 className="text-[10px] font-black uppercase text-[#fb5607] tracking-widest flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#fb5607]" /> {t.purchased}
                         </h3>
                         <div className="space-y-3">
                           {purchased.filter(i => !i.id.startsWith('store_')).map(item => (
@@ -5818,9 +5874,9 @@ export default function App() {
                           <div className={`p-2.5 rounded-[30px] border flex items-center justify-between shadow-2xl ${isDark ? 'bg-black/80 border-white/10' : 'bg-white/90 border-stone-100'
                             } backdrop-blur-xl`}>
                             <div className="flex items-center gap-3.5 pl-3">
-                              <div className="w-12 h-12 rounded-[20px] bg-[#38b000]/10 flex items-center justify-center text-[#38b000] relative">
+                              <div className="w-12 h-12 rounded-[20px] bg-[#fb5607]/10 flex items-center justify-center text-[#fb5607] relative">
                                 <ShoppingBag size={22} />
-                                <span className="absolute -top-1 -right-1 bg-[#38b000] text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white">
+                                <span className="absolute -top-1 -right-1 bg-[#fb5607] text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white">
                                   {selectedStoreItemIds.length}
                                 </span>
                               </div>
@@ -5837,7 +5893,8 @@ export default function App() {
                                 updateShoppingList(newList);
                                 setSelectedStoreItemIds([]);
                               }}
-                              className="bg-[#38b000] text-white h-12 px-7 rounded-[20px] font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#38b000]/30 active:scale-95 transition-all flex items-center justify-center"
+                              className="bg-[#fb5607] text-white h-12 px-7 rounded-[20px] font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center"
+                              style={{ boxShadow: '0 4px 16px rgba(251,86,7,0.4)' }}
                             >
                               Confirmer
                             </button>
@@ -5862,52 +5919,45 @@ export default function App() {
             <div key="store" style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}
               className="flex-1 pb-4"
             >
-              {/* Search Bar */}
-              <div className="px-5 pt-6 pb-4">
-                <div className={`flex items-center gap-3 px-5 h-14 rounded-[50px] border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-stone-100 shadow-sm'}`}>
-                  <Search size={22} className="text-stone-300" />
+              {/* Search Bar — Premium */}
+              <div className="px-4 pt-5 pb-3">
+                <div className={`flex items-center gap-3 px-5 h-[52px] rounded-[20px] border ${
+                  isDark
+                    ? 'bg-white/6 border-white/10'
+                    : 'bg-white border-stone-100'
+                }`} style={isDark ? {} : { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                  <Search size={18} className="text-stone-300 flex-shrink-0" />
                   <input
                     type="text"
                     value={productSearchQuery}
                     onChange={(e) => setProductSearchQuery(e.target.value)}
-                    placeholder="Rechercher des produits"
-                    className="flex-1 bg-transparent border-none outline-none text-[15px] font-medium placeholder:text-stone-300"
+                    placeholder="Rechercher des produits…"
+                    className={`flex-1 bg-transparent border-none outline-none text-[14px] font-medium placeholder:text-stone-300 ${
+                      isDark ? 'text-white' : 'text-stone-800'
+                    }`}
                   />
-                  <button className="text-stone-400">
-                  </button>
+                  {productSearchQuery.length > 0 && (
+                    <button onClick={() => setProductSearchQuery('')} className="text-stone-300 active:scale-90 transition-transform">
+                      <XCircle size={18} />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Category Filter — nouveau style vertical chips */}
-              <div style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }} className="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-4 px-5">
+              {/* Category Filter — Community style pills */}
+              <div style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }} className="flex gap-2 overflow-x-auto pb-4 pt-1 no-scrollbar px-4">
                 {STORE_CATEGORIES.map(cat => {
-                  const icons: Record<string, string> = {
-                    'Tout': '🛍️',
-                    'Épices': '🌶️',
-                    'Boissons': '🥤',
-                    'Huiles': '🫙',
-                    'Féculents': '🌾',
-                    'Légumes': '🥦',
-                    'Viandes': '🥩',
-                    'Poissons': '🐟'
-                  };
                   const isActive = selectedStoreCategory === cat;
                   return (
                     <button
                       key={cat}
                       onClick={() => setSelectedStoreCategory(cat)}
-                      className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-2xl whitespace-nowrap transition-all duration-200 active:scale-95 shrink-0 ${isActive
-                        ? 'bg-[#38b000] shadow-lg shadow-[#38b000]/30'
-                        : isDark
-                          ? 'bg-white/6 border border-white/8'
-                          : 'bg-white border border-stone-100 shadow-sm'
+                      className={`px-4 py-2 rounded-2xl text-[12px] font-bold whitespace-nowrap transition-all ${isActive
+                        ? 'bg-[#fb5607] text-white shadow-lg shadow-[#fb5607]/20 scale-105'
+                        : isDark ? 'bg-white/5 text-white/40 hover:bg-white/10' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
                         }`}
                     >
-                      <span className={`text-[20px] leading-none ${isActive ? 'grayscale-0' : ''}`}>{icons[cat] || '📦'}</span>
-                      <span className={`text-[10px] font-black tracking-wide ${isActive
-                        ? 'text-white'
-                        : isDark ? 'text-white/50' : 'text-stone-500'
-                        }`}>{cat}</span>
+                      {cat}
                     </button>
                   );
                 })}
@@ -5941,10 +5991,20 @@ export default function App() {
                 )}
               </div>
 
-              {/* CTA more partners */}
-              <div className="px-5 mt-8 mb-4">
-                <div className={`p-6 rounded-[32px] text-center border-2 border-dashed ${isDark ? 'border-white/10' : 'border-stone-100'}`}>
-                  <p className="text-[12px] font-black text-stone-300 uppercase tracking-widest">Plus de partenaires africains bientôt 🚀</p>
+              {/* CTA more partners — Orange premium */}
+              <div className="px-4 mt-6 mb-4">
+                <div className={`p-6 rounded-[28px] text-center overflow-hidden relative ${
+                  isDark ? 'bg-white/5 border border-white/8' : 'bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100'
+                }`}>
+                  <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-[#fb5607]/08 pointer-events-none" />
+                  <div className="absolute -left-2 bottom-0 w-14 h-14 rounded-full bg-[#fb5607]/05 pointer-events-none" />
+                  <span className="text-2xl mb-2 block">🚀</span>
+                  <p className={`text-[13px] font-black mb-1 ${
+                    isDark ? 'text-white/80' : 'text-stone-700'
+                  }`}>Plus de partenaires africains</p>
+                  <p className={`text-[11px] font-semibold ${
+                    isDark ? 'text-white/30' : 'text-stone-400'
+                  }`}>Bientôt disponibles dans votre région</p>
                 </div>
               </div>
             </div>
