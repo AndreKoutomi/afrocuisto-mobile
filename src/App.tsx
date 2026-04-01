@@ -5159,7 +5159,10 @@ export default function App() {
         const newList = (currentUser?.shoppingList || []).map(i => {
           if (i.id === id) {
             const currentQ = parseInt(i.quantity || '1');
-            const newQ = Math.max(1, currentQ + delta);
+            const newQ = currentQ + delta;
+            if (newQ <= 0) {
+              return { ...i, isInCart: false };
+            }
             return { ...i, quantity: String(newQ) };
           }
           return i;
@@ -5362,7 +5365,9 @@ export default function App() {
                               <h4 className={`text-[16px] font-black truncate ${isDark ? 'text-white' : 'text-[#1A1A1A]'}`}>{item.item}</h4>
                               <button
                                 onClick={() => {
-                                  const newList = (currentUser?.shoppingList || []).filter(i => i.id !== item.id);
+                                  const newList = (currentUser?.shoppingList || []).map(i =>
+                                    i.id === item.id ? { ...i, isInCart: false } : i
+                                  );
                                   updateShoppingList(newList);
                                 }}
                                 className="text-stone-300 hover:text-rose-500 transition-colors"
@@ -5720,7 +5725,7 @@ export default function App() {
           {/* ════════════ MA LISTE ════════════ */}
           {storeTab === 'mylist' && (
             <div key="mylist" style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}
-              className="flex-1"
+              className="flex-1 overflow-y-auto"
             >
               {/* Sub-header */}
               <div className="px-6 pt-6 pb-4 flex items-center justify-between">
