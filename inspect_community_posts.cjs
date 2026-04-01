@@ -11,18 +11,18 @@ async function checkAll() {
         return;
     }
     console.log('Fetched', posts.length, 'posts');
+    console.log(JSON.stringify(posts, null, 2));
 
     if (posts.length > 0) {
         const postIds = posts.map(p => p.id);
-        console.log('--- Checking post_likes for dummy user ---');
-        const { data: likes, error: lError } = await supabase
+        console.log('--- Checking post_likes total count ---');
+        const { data: allLikes, error: alError } = await supabase
             .from('post_likes')
             .select('post_id')
-            .eq('user_id', '00000000-0000-0000-0000-000000000000')
             .in('post_id', postIds);
         
-        if (lError) console.error('Error fetching likes:', lError.message);
-        else console.log('Fetched likes:', likes.length);
+        if (alError) console.error('Error fetching total likes:', alError.message);
+        else console.log('Fetched total likes:', allLikes.length);
 
         const userIds = posts.map(p => p.user_id).filter(Boolean);
         console.log('--- Checking user_profiles for authors ---');
@@ -33,6 +33,18 @@ async function checkAll() {
         
         if (prError) console.error('Error fetching profiles:', prError.message);
         else console.log('Fetched profiles:', profiles.length);
+
+        console.log('--- Checking post_comments for the same posts ---');
+        const { data: comments, error: cError } = await supabase
+            .from('post_comments')
+            .select('*')
+            .in('post_id', postIds);
+        
+        if (cError) console.error('Error fetching comments:', cError.message);
+        else {
+            console.log('Fetched', comments.length, 'comments');
+            console.log(JSON.stringify(comments, null, 2));
+        }
     }
 }
 checkAll();

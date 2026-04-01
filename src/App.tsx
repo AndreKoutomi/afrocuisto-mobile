@@ -1501,6 +1501,13 @@ const ShoppingItemRow: React.FC<{
   const [editPrice, setEditPrice] = useState(item.priceXOF ?? '');
   const [isEditing, setIsEditing] = useState(false);
 
+  // Synchronisation des états locaux avec les props si elles changent depuis l'extérieur
+  useEffect(() => {
+    setEditQty(item.quantity ?? '');
+    setEditUnit(item.unit ?? 'g');
+    setEditPrice(item.priceXOF ?? '');
+  }, [item.quantity, item.unit, item.priceXOF]);
+
   const isStoreItem = item.id.startsWith('store_');
 
   const save = () => {
@@ -2025,13 +2032,22 @@ export default function App() {
         unitSystem: existingLocal?.settings?.unitSystem || remoteProfile?.settings?.unitSystem || 'metric',
       };
 
+      // Merging strategy: Prefer local state if it's more recent or the cloud is missing data
+      const finalShoppingList = (remoteProfile?.shoppingList?.length >= (existingLocal?.shoppingList?.length || 0))
+        ? remoteProfile.shoppingList
+        : (existingLocal?.shoppingList || []);
+
+      const finalFavorites = (remoteProfile?.favorites?.length >= (existingLocal?.favorites?.length || 0))
+        ? remoteProfile.favorites
+        : (existingLocal?.favorites || []);
+
       const userObj: User = {
         id: targetUser.id,
         name: remoteProfile?.name || targetUser.user_metadata?.full_name || existingLocal?.name || targetUser.email?.split('@')[0] || "User",
         email: targetUser.email || sessionUser.email!,
         phone: remoteProfile?.phone || targetUser.phone || sessionUser.phone || existingLocal?.phone || '',
-        favorites: remoteProfile?.favorites || existingLocal?.favorites || [],
-        shoppingList: remoteProfile?.shoppingList || existingLocal?.shoppingList || [],
+        favorites: finalFavorites,
+        shoppingList: finalShoppingList,
         savedPosts: remoteProfile?.savedPosts || existingLocal?.savedPosts || currentUser?.savedPosts || [],
         following: remoteProfile?.following || existingLocal?.following || currentUser?.following || [],
         joinedDate: existingLocal?.joinedDate || new Date(targetUser.created_at || Date.now()).toLocaleDateString(),
@@ -3109,9 +3125,12 @@ export default function App() {
 
   const updateShoppingList = (newList: ShoppingItem[]) => {
     if (!currentUser) return;
-    const updatedUser = dbService.updateShoppingList(currentUser.id, newList);
+    // On s'assure d'avoir une copie profonde pour éviter les mutations directes
+    const shoppingListCopy = JSON.parse(JSON.stringify(newList));
+    const updatedUser = dbService.updateShoppingList(currentUser.id, shoppingListCopy);
     if (updatedUser) {
-      setCurrentUser({ ...updatedUser });
+      // Forcer un nouvel objet currentUser pour déclencher le re-rendu de TOUTE l'application
+      setCurrentUser({ ...updatedUser, shoppingList: [...updatedUser.shoppingList] });
       // Sync to cloud for persistence
       dbService.syncUserToCloud(updatedUser);
     }
@@ -3391,7 +3410,7 @@ export default function App() {
                           position: 'absolute', right: '-35px', top: '50%', transform: 'translateY(-50%)',
                           width: '130px', height: '130px', borderRadius: '50%',
                           boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
-                          overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
+                          overflow: 'hidden', border: isDark ? '6px solid #111111' : '6px solid #ffffff'
                         }}>
                           <OptimizedImage priority={true} src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
@@ -3443,7 +3462,7 @@ export default function App() {
                           position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)',
                           width: '130px', height: '130px', borderRadius: '50%',
                           boxShadow: '0 12px 30px rgba(0,0,0,0.2)', backgroundColor: '#ddd',
-                          overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
+                          overflow: 'hidden', border: isDark ? '6px solid #111111' : '6px solid #ffffff'
                         }}>
                           <OptimizedImage src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
@@ -3608,7 +3627,7 @@ export default function App() {
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setSelectedRecipe(recipe)}
                       style={{
-                        background: isDark ? '#1f2937' : '#fff',
+                        background: isDark ? '#111111' : '#fff',
                         borderRadius: '18px',
                         boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.2)' : '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
                         border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)',
@@ -3816,7 +3835,7 @@ export default function App() {
                           onClick={() => setSelectedRecipe(recipe)}
                           style={{
                             minWidth: '280px', height: '150px',
-                            background: isDark ? '#1f2937' : '#ffffff',
+                            background: isDark ? '#111111' : '#ffffff',
                             borderRadius: '24px',
                             padding: '24px 110px 24px 24px',
                             position: 'relative',
@@ -3827,7 +3846,7 @@ export default function App() {
                         >
                           <h3 style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#ffffff' : '#111827', margin: '0 0 8px', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
                           <p style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#9ca3af' : '#4b5563', margin: '0 0 16px' }}>
-                            Spécialité <span style={{ fontWeight: 800, color: isDark ? '#e5e7eb' : '#1f2937' }}>{recipe.region || "Chef"}</span>
+                            Spécialité <span style={{ fontWeight: 800, color: isDark ? '#e5e7eb' : '#111111' }}>{recipe.region || "Chef"}</span>
                           </p>
                           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                             <span style={{ fontSize: 20, fontWeight: 900, color: isDark ? '#ffffff' : '#111827' }}>{recipe.prepTime}</span>
@@ -3839,7 +3858,7 @@ export default function App() {
                             position: 'absolute', right: '-35px', top: '50%', transform: 'translateY(-50%)',
                             width: '130px', height: '130px', borderRadius: '50%',
                             boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
-                            overflow: 'hidden', border: isDark ? '6px solid #1f2937' : '6px solid #ffffff'
+                            overflow: 'hidden', border: isDark ? '6px solid #111111' : '6px solid #ffffff'
                           }}>
                             <OptimizedImage src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
@@ -5590,8 +5609,10 @@ export default function App() {
     const list = currentUser?.shoppingList || [];
     const purchased = list.filter(i => i.isPurchased);
     const toBuy = list.filter(i => !i.isPurchased);
+    // On sépare les ingrédients (recettes) des articles du Store
     const toBuyRecipe = toBuy.filter(i => !i.id.startsWith('store_'));
-    const toBuyStore = toBuy.filter(i => i.id.startsWith('store_') && !i.isInCart);
+    // Les articles du Store sont montrés même s'ils sont déjà dans le panier (mais pas encore payés)
+    const toBuyStore = toBuy.filter(i => i.id.startsWith('store_'));
 
     // Integrated Ads from CMS
     const shoppingAds = dynamicSections.filter((s: any) => s.type === 'advertising' && s.config?.page === 'shopping');
@@ -5634,10 +5655,8 @@ export default function App() {
     const banner = activeBanners[bannerIdx % activeBanners.length];
 
     const visibleListItems = list.filter(i => {
-      // Les ingrédients de recettes (ne commençant pas par 'store_') sont toujours visibles
-      if (!i.id.startsWith('store_')) return true;
-      // Les articles de store sont visibles uniquement s'ils ne sont pas encore facturés/dans le panier
-      return !i.isPurchased && !i.isInCart;
+      // Tous les articles non achetés sont visibles dans la liste de courses
+      return !i.isPurchased;
     });
 
     const totalXOF = visibleListItems.reduce((acc, i) => acc + ((parseFloat(i.priceXOF ?? '0') || 0) * (parseInt(i.quantity ?? '1') || 1)), 0);

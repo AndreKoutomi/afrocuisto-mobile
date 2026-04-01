@@ -197,7 +197,7 @@ const FullScreenCreatePostForm: React.FC<{
                 <div className="flex items-center gap-3 px-4 py-4">
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607]/80 to-[#ff9a6c]/60 p-[2px] shrink-0">
                         <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-black overflow-hidden ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
-                            {currentUser?.avatar
+                            {false && currentUser?.avatar
                                 ? <OptimizedImage src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
                                 : getInitials(currentUser?.name)
                             }
@@ -433,7 +433,7 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
                     <div className="relative">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607] to-[#ff9a6c] p-[1.5px]">
                             <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
-                                {post.author_avatar
+                                {false && post.author_avatar
                                     ? <OptimizedImage src={post.author_avatar} className="w-full h-full object-cover" alt="" />
                                     : getInitials(post.author_name)
                                 }
@@ -719,7 +719,7 @@ export const CommunityFeed = ({
                     >
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607] to-[#ff9a6c] p-[1.5px] shrink-0">
                             <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-black overflow-hidden ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
-                                {currentUser.avatar
+                                {false && currentUser.avatar
                                     ? <OptimizedImage src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
                                     : getInitials(currentUser.name)
                                 }

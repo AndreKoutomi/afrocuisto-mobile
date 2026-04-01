@@ -597,12 +597,9 @@ export const dbService = {
     async syncUserToCloud(user: User): Promise<void> {
         try {
             if (!supabase) return;
-            // 1. Update Supabase Auth display name
-            await supabase.auth.updateUser({
-                data: { full_name: user.name }
-            });
-            // 2. Upsert a user_profiles row for custom fields
-            const { error } = await supabase
+            
+            // 1. Upsert la ligne de profil d'abord (Données réelles)
+            const { error: upsertError } = await supabase
                 .from('user_profiles')
                 .upsert([{
                     id: user.id,
@@ -621,8 +618,17 @@ export const dbService = {
                     avatar: user.avatar || null,
                     is_admin: user.is_admin ?? false
                 }], { onConflict: 'id' });
-            if (error) {
-                console.warn('user_profiles upsert failed:', error.message);
+
+            if (upsertError) {
+                console.warn('user_profiles upsert failed:', upsertError.message);
+            }
+
+            // 2. Mettre à jour Supabase Auth seulement si nécessaire (déclenche onAuthStateChange)
+            const { data: { user: curAuthUser } } = await supabase.auth.getUser();
+            if (curAuthUser?.user_metadata?.full_name !== user.name) {
+                await supabase.auth.updateUser({
+                    data: { full_name: user.name }
+                });
             }
         } catch (err) {
             console.error('syncUserToCloud error:', err);
@@ -985,8 +991,9 @@ export const dbService = {
             if (error) throw error;
             if (!posts || posts.length === 0) return [];
 
-            // Récupérer les profils séparément
+            // Récupérer les profils séparément (jointure manuelle pour robustesse)
             const userIds = [...new Set(posts.map((p: any) => p.user_id).filter(Boolean))];
+            const postIds = posts.map((p: any) => p.id);
             let profilesMap: Record<string, { name: string; avatar?: string }> = {};
 
             if (userIds.length > 0) {
@@ -999,10 +1006,21 @@ export const dbService = {
                 }
             }
 
+            // Récupérer les VRAIS compteurs (en cas de désynchronisation de la colonne counters)
+            const [commentsRes, likesRes] = await Promise.all([
+                supabase.from('post_comments').select('post_id').in('post_id', postIds),
+                supabase.from('post_likes').select('post_id').in('post_id', postIds)
+            ]);
+
+            const commentsCountMap: Record<string, number> = {};
+            commentsRes.data?.forEach(c => { commentsCountMap[c.post_id] = (commentsCountMap[c.post_id] || 0) + 1; });
+
+            const likesCountMap: Record<string, number> = {};
+            likesRes.data?.forEach(l => { likesCountMap[l.post_id] = (likesCountMap[l.post_id] || 0) + 1; });
+
             // Récupérer les likes de l'utilisateur connecté
             let userLikes: string[] = [];
             if (currentUserId) {
-                const postIds = posts.map((p: any) => p.id);
                 const { data: likes } = await supabase
                     .from('post_likes')
                     .select('post_id')
@@ -1021,8 +1039,8 @@ export const dbService = {
                 image_url: p.image_url,
                 category: p.category,
                 created_at: p.created_at,
-                likes_count: p.likes_count || 0,
-                comments_count: p.comments_count || 0,
+                likes_count: likesCountMap[p.id] || p.likes_count || 0,
+                comments_count: commentsCountMap[p.id] || p.comments_count || 0,
                 views_count: p.views_count || 0,
                 is_liked: userLikes.includes(p.id)
             }));
