@@ -1063,7 +1063,7 @@ export const dbService = {
                 if (likes) userLikes = likes.map((l: any) => l.post_id);
             }
 
-            return posts.map((p: any) => ({
+            const finalPosts = posts.map((p: any) => ({
                 id: p.id,
                 user_id: p.user_id,
                 author_name: profilesMap[p.user_id]?.name || 'Utilisateur',
@@ -1078,8 +1078,23 @@ export const dbService = {
                 views_count: p.views_count || 0,
                 is_liked: userLikes.includes(p.id)
             }));
+            
+            // Offline Cache: Only cache the first page
+            if (page === 0) {
+                localStorage.setItem('afrocuisto_community_posts_cache', JSON.stringify(finalPosts));
+            }
+            return finalPosts;
         } catch (err) {
             console.error('Error fetching community posts:', err);
+            // Fallback to cache
+            if (page === 0) {
+                try {
+                    const cached = localStorage.getItem('afrocuisto_community_posts_cache');
+                    if (cached) return JSON.parse(cached);
+                } catch (e) {
+                   // cache read failed
+                }
+            }
             return [];
         }
     },
@@ -1218,26 +1233,47 @@ export const dbService = {
     },
 
     async getComments(postId: string): Promise<PostComment[]> {
-        if (!supabase) return [];
-        const { data, error } = await supabase
-            .from('post_comments')
-            .select(`
-                *,
-                author:user_profiles ( name )
-            `)
-            .eq('post_id', postId)
-            .order('created_at', { ascending: true });
+        const cacheKey = `afrocuisto_comments_cache_${postId}`;
+        if (!supabase) {
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) return JSON.parse(cached);
+            } catch(e) {}
+            return [];
+        }
+        
+        try {
+            const { data, error } = await supabase
+                .from('post_comments')
+                .select(`
+                    *,
+                    author:user_profiles ( name )
+                `)
+                .eq('post_id', postId)
+                .order('created_at', { ascending: true });
 
-        if (error) return [];
-        return (data || []).map(c => ({
-            id: c.id,
-            post_id: c.post_id,
-            user_id: c.user_id,
-            author_name: c.author?.name || 'Utilisateur',
-            author_avatar: c.author?.avatar,
-            content: c.content,
-            created_at: c.created_at
-        }));
+            if (error) throw error;
+            
+            const mapped = (data || []).map(c => ({
+                id: c.id,
+                post_id: c.post_id,
+                user_id: c.user_id,
+                author_name: c.author?.name || 'Utilisateur',
+                author_avatar: c.author?.avatar,
+                content: c.content,
+                created_at: c.created_at
+            }));
+
+            localStorage.setItem(cacheKey, JSON.stringify(mapped));
+            return mapped;
+        } catch (err) {
+            console.error('getComments error:', err);
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) return JSON.parse(cached);
+            } catch(e) {}
+            return [];
+        }
     },
 
     async addComment(postId: string, userId: string, content: string): Promise<PostComment | null> {
