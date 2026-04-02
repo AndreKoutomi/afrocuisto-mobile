@@ -593,8 +593,42 @@ export const dbService = {
                 return { success: false, error: `EmailJS Error: ${text}` };
             }
             return { success: true };
-        } catch (err) {
-            return { success: false, error: `Email Error: ${(err).message}` };
+        } catch (err: any) {
+            return { success: false, error: `Email Error: ${err.message}` };
+        }
+    },
+
+    // --- OTP Cross-Device Email Sending ---
+    async sendEmail(toEmail: string, toName: string, otpCode: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_k3w11sm';
+            const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_huya44j';
+            const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '5bxF5hiV8eLRjESo4';
+
+            const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service_id: serviceId,
+                    template_id: templateId,
+                    user_id: publicKey,
+                    template_params: {
+                        to_name: toName || toEmail.split('@')[0],
+                        to_email: toEmail,
+                        message: "Alerte de sécurité AfroCuisto. Quelqu'un essaye de se connecter à votre compte depuis un nouvel appareil. Utilisez le code ci-dessous pour approuver la connexion et déconnecter l'appareil précédent.",
+                        otp_code: otpCode,
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`EmailJS Error: ${text}`);
+            }
+            return { success: true };
+        } catch (err: any) {
+            console.error('Cross-device OTP email failed:', err);
+            throw err;
         }
     },
 
@@ -871,53 +905,7 @@ export const dbService = {
         }
     },
 
-    async sendEmail(to_email: string, to_name: string, otp_code: string): Promise<boolean> {
-        try {
-            // Using EmailJS REST API (Free service)
-            const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_afrocuisto';
-            const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_otp';
-            const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'user_dummy_key';
 
-            // If we have dummy keys, we just simulate success in console
-            if (publicKey === 'user_dummy_key') {
-                console.log(`[SIMULATION] Code OTP pour ${to_email}: ${otp_code}`);
-                return true;
-            }
-
-            const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    service_id: serviceId,
-                    template_id: templateId,
-                    user_id: publicKey,
-                    template_params: {
-                        to_email,
-                        user_email: to_email, // Fallback if template uses user_email
-                        email: to_email, // Fallback if template uses email
-                        to_name,
-                        otp_code,
-                        app_name: 'AfroCuisto'
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                const text = await response.text();
-                // Check if EmailJS blocked it due to spam protections (testing the same email repeatedly)
-                if (text.toLowerCase().includes("limit") || text.toLowerCase().includes("spam")) {
-                    throw new Error("ERR_SPAM");
-                }
-                throw new Error("EmailJS Error: " + text);
-            }
-
-            return true;
-        } catch (err: any) {
-            console.error('Email sending failed:', err.message);
-            // Re-throw so the UI can adapt (e.g., bypass OTP for spam)
-            throw err;
-        }
-    },
 
     // --- Order Management ---
     async createOrder(orderData: any): Promise<{ data: any; error: any }> {
