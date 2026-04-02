@@ -2593,6 +2593,12 @@ export default function App() {
   const juicesRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLElement>(null);
 
+  const scrollToTop = () => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const [communityPage, setCommunityPage] = useState(0);
   const [hasMoreCommunityPosts, setHasMoreCommunityPosts] = useState(true);
 
@@ -3384,10 +3390,14 @@ export default function App() {
           backdropFilter: 'blur(20px)',
           borderBottom: isDark ? '1px solid #ffffff10' : '1px solid #00000005'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <motion.div 
+            whileTap={{ scale: 0.94 }}
+            onClick={() => { scrollToTop(); syncRecipes(); syncSections(); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+          >
             <OptimizedImage src="/icon.png" alt="AfroCuisto Logo" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
             <span style={{ fontSize: '22px', fontWeight: 900, color: isDark ? '#ffffff' : '#111827', letterSpacing: '-0.02em' }}>AfroCuisto</span>
-          </div>
+          </motion.div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             {isOffline && (
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
@@ -3808,7 +3818,7 @@ export default function App() {
                             {recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}
                           </span>
                         </div>
-                        {/* Rating + region + difficulty */}
+                        {/* Rating + region */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                           <Star size={11} style={{ color: '#f59e0b', fill: '#f59e0b', flexShrink: 0 }} />
                           <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#fff' : '#374151' }}>{ratingNum}</span>
@@ -3816,14 +3826,26 @@ export default function App() {
                           <span style={{ fontSize: '11px', fontWeight: 500, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '90px' }}>
                             {recipe.region || recipe.category || 'Africain'}
                           </span>
-                          <span style={{ fontSize: '10px', color: '#d1d5db' }}>·</span>
-                          <DifficultyBadge difficulty={recipe.difficulty} t={t} isDark={isDark} />
                         </div>
                       </div>
 
-                      {/* Right: chevron only */}
-                      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                        <ChevronRight size={16} style={{ color: '#d1d5db' }} />
+                      {/* Right: Difficulty, Fav & Chevron */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
+                        <DifficultyBadge difficulty={recipe.difficulty} t={t} isDark={isDark} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
+                                className="active:scale-90 transition-transform"
+                                style={{ 
+                                  width: '26px', height: '26px', borderRadius: '50%',
+                                  backgroundColor: isFav ? '#ef4444' : (isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none'
+                                 }}
+                              >
+                                <Heart size={13} style={{ color: isFav ? '#fff' : (isDark ? '#9ca3af' : '#6b7280'), fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2} />
+                            </button>
+                            <ChevronRight size={16} style={{ color: '#d1d5db' }} />
+                        </div>
                       </div>
                     </motion.div>
                   );
@@ -3855,9 +3877,13 @@ export default function App() {
         backdropFilter: 'blur(20px)',
         borderBottom: isDark ? '1px solid #ffffff10' : '1px solid #00000005'
       }}>
-        <h1 className={`text-2xl font-black shrink-0 ${isDark ? 'text-white' : 'text-stone-900'} tracking-tight`}>
+        <motion.h1 
+          whileTap={{ scale: 0.94 }}
+          onClick={() => { scrollToTop(); syncRecipes(); syncSections(); }}
+          className={`text-2xl font-black shrink-0 ${isDark ? 'text-white' : 'text-stone-900'} tracking-tight cursor-pointer`}
+        >
           {selectedCategory || t.explorer}
-        </h1>
+        </motion.h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           {isOffline && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
@@ -4156,9 +4182,22 @@ export default function App() {
                               <span style={{ fontSize: '11px', fontWeight: 500, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.region || recipe.category || 'Africain'}</span>
                             </div>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
                             <DifficultyBadge difficulty={recipe.difficulty} t={t} isDark={isDark} />
-                            <ChevronRight size={16} style={{ color: '#d1d5db' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
+                                    className="active:scale-90 transition-transform"
+                                    style={{ 
+                                      width: '26px', height: '26px', borderRadius: '50%',
+                                      backgroundColor: isFav ? '#ef4444' : (isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none'
+                                     }}
+                                  >
+                                    <Heart size={13} style={{ color: isFav ? '#fff' : (isDark ? '#9ca3af' : '#6b7280'), fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2} />
+                                </button>
+                                <ChevronRight size={16} style={{ color: '#d1d5db' }} />
+                            </div>
                           </div>
                         </motion.div>
                       );
@@ -4346,9 +4385,13 @@ export default function App() {
                   <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
                 </button>
               )}
-              <h1 className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>
+              <motion.h1 
+                whileTap={{ scale: 0.94 }}
+                onClick={() => { scrollToTop(); refreshCommunity(); }}
+                className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'} cursor-pointer`}
+              >
                 {showSavedPosts ? "Enregistrés" : t.community}
-              </h1>
+              </motion.h1>
             </div>
             {currentUser && !showSavedPosts && (
               <button
@@ -5833,7 +5876,12 @@ export default function App() {
               <p className="text-[18px] font-black text-white leading-tight drop-shadow-sm">{banner.title}</p>
               <p className="text-[11px] font-semibold text-white/70 mt-1 truncate">{banner.sub}</p>
             </div>
-            <button className="flex-shrink-0 bg-white/95 text-[#fb5607] text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-full transition-all active:scale-95 shadow-lg shadow-black/15">
+            <button
+              onClick={() => {
+                if (banner.product) setSelectedProduct(banner.product);
+              }}
+              className="flex-shrink-0 bg-white/95 text-[#fb5607] text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-full transition-all active:scale-95 shadow-lg shadow-black/15"
+            >
               {banner.buttonText || 'Voir'}
             </button>
           </div>

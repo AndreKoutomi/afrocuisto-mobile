@@ -11,7 +11,8 @@
  * ============================================================================
  */
 
-import React, { useMemo, useState } from 'react'; // Importation des outils de base de React
+import React, { useMemo, useState, useRef } from 'react'; // Importation des outils de base de React
+import { Camera, Image as ImageIcon, X, UploadCloud } from 'lucide-react'; // Importation des icônes
 
 // Définition de la structure des données envoyées par le formulaire
 export interface DishSuggestionPayload {
@@ -23,6 +24,7 @@ export interface DishSuggestionPayload {
     cooking_time?: string; // Temps de cuisson (optionnel)
     submitter_name?: string; // Nom de celui qui envoie
     submitter_email?: string; // Email de celui qui envoie
+    image?: string; // Image en base64 (optionnel)
 }
 
 // Propriétés acceptées par le composant (ici une fonction de soumission)
@@ -66,7 +68,12 @@ const DishSuggestionForm: React.FC<DishSuggestionFormProps> = ({ onSubmit }) => 
         cooking_time: '',
         submitter_name: '',
         submitter_email: '',
+        image: '',
     });
+
+    // État pour la prévisualisation de l'image
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // État pour savoir si l'envoi est en cours (pour désactiver le bouton)
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,6 +90,30 @@ const DishSuggestionForm: React.FC<DishSuggestionFormProps> = ({ onSubmit }) => 
     // Fonction pour mettre à jour la mémoire du formulaire quand on tape au clavier
     const handleChange = (field: keyof DishSuggestionPayload, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    // Gestion de l'image
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                alert("L'image est trop lourde (max 5Mo)");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setImagePreview(base64String);
+                setFormData(prev => ({ ...prev, image: base64String }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeImage = () => {
+        setImagePreview(null);
+        setFormData(prev => ({ ...prev, image: '' }));
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     // Fonction déclenchée quand on clique sur "Envoyer"
@@ -102,6 +133,7 @@ const DishSuggestionForm: React.FC<DishSuggestionFormProps> = ({ onSubmit }) => 
                 cooking_time: formData.cooking_time?.trim() || undefined,
                 submitter_name: formData.submitter_name?.trim() || undefined,
                 submitter_email: formData.submitter_email?.trim() || undefined,
+                image: formData.image || undefined,
             });
 
             // Si l'envoi a réussi, on vide le formulaire
@@ -115,7 +147,9 @@ const DishSuggestionForm: React.FC<DishSuggestionFormProps> = ({ onSubmit }) => 
                     cooking_time: '',
                     submitter_name: '',
                     submitter_email: '',
+                    image: '',
                 });
+                setImagePreview(null);
             }
         } finally {
             setIsSubmitting(false); // Fin du chargement
@@ -137,6 +171,50 @@ const DishSuggestionForm: React.FC<DishSuggestionFormProps> = ({ onSubmit }) => 
                     placeholder="Ex: Amiwo au poulet fumé"
                     required
                 />
+            </div>
+
+            {/* Champ d'ajout d'image - Premium */}
+            <div>
+                <label className={labelClassName}>Photo du plat (Optionnel)</label>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    accept="image/*"
+                    className="hidden"
+                    id="dish-image-upload"
+                />
+                
+                {imagePreview ? (
+                    <div className="relative group overflow-hidden rounded-2xl border-4 border-white shadow-xl aspect-video bg-stone-100">
+                        <img 
+                            src={imagePreview} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                        />
+                        <button
+                            type="button"
+                            onClick={removeImage}
+                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <X size={16} strokeWidth={3} />
+                        </button>
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors pointer-events-none" />
+                    </div>
+                ) : (
+                    <label
+                        htmlFor="dish-image-upload"
+                        className="flex flex-col items-center justify-center w-full aspect-video rounded-3xl border-2 border-dashed border-stone-200 bg-stone-50/50 hover:bg-stone-50 hover:border-[#fb5607]/40 transition-all cursor-pointer group"
+                    >
+                        <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-stone-100 flex items-center justify-center text-stone-400 group-hover:text-[#fb5607] group-hover:scale-110 transition-all mb-3 text-2xl">
+                            <Camera size={26} strokeWidth={1.5} />
+                        </div>
+                        <p className="text-[11px] font-black text-stone-400 uppercase tracking-widest group-hover:text-stone-600 transition-colors">
+                            Choisir une photo
+                        </p>
+                        <p className="text-[9px] text-stone-300 mt-1 font-bold">Formats acceptés : JPG, PNG (Max 5Mo)</p>
+                    </label>
+                )}
             </div>
 
             {/* Sélections de Région et Catégorie en deux colonnes */}

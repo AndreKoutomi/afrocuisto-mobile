@@ -645,6 +645,7 @@ export const dbService = {
                 cooking_time: dish.cooking_time?.trim() || null,
                 submitter_name: dish.submitter_name?.trim() || null,
                 submitter_email: dish.submitter_email?.trim() || null,
+                image: dish.image || null,
             };
 
             const { error: insertError } = await supabase.from('dish_suggestions').insert([fullPayload]);

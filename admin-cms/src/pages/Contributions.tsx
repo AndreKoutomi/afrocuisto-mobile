@@ -16,6 +16,7 @@ interface DishSuggestion {
     cooking_time?: string;
     submitter_name?: string;
     submitter_email?: string;
+    image?: string;
     status: 'pending' | 'approved' | 'rejected';
     created_at: string;
 }
@@ -185,6 +186,19 @@ export function Contributions() {
                     <div className="grid-form-layout" style={{ padding: '24px 40px 40px', display: 'grid', gridTemplateColumns: '1fr 360px', gap: 40 }}>
                         {/* Colonne Gauche : Contenu */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                            {selectedSuggestion.image && (
+                                <section>
+                                    <h4 style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: '#9ca3af', marginBottom: 12, letterSpacing: '0.05em' }}>Photo suggérée</h4>
+                                    <div style={{ position: 'relative', borderRadius: 32, overflow: 'hidden', border: '1px solid #f0f0f0', boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}>
+                                        <img 
+                                            src={selectedSuggestion.image} 
+                                            alt="Suggestion" 
+                                            style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block' }} 
+                                        />
+                                    </div>
+                                </section>
+                            )}
+                            
                             <section>
                                 <h4 style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: '#9ca3af', marginBottom: 12, letterSpacing: '0.05em' }}>Description du plat</h4>
                                 <p style={{ fontSize: 16, lineHeight: 1.8, color: '#374151', margin: 0 }}>{parsed.mainDescription || 'Aucune description fournie.'}</p>
@@ -318,8 +332,12 @@ export function Contributions() {
                             onMouseEnter={(e) => e.currentTarget.style.borderColor = '#fb560744'}
                             onMouseLeave={(e) => e.currentTarget.style.borderColor = '#f0f0f0'}
                         >
-                            <div style={{ width: 48, height: 48, borderRadius: 16, background: '#fb560710', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fb5607', flexShrink: 0 }}>
-                                <Utensils size={24} />
+                            <div style={{ width: 48, height: 48, borderRadius: 16, background: '#fb560710', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fb5607', flexShrink: 0, overflow: 'hidden' }}>
+                                {suggestion.image ? (
+                                    <img src={suggestion.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <Utensils size={24} />
+                                )}
                             </div>
 
                             <div style={{ flex: 1, minWidth: 0 }}>
