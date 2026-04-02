@@ -436,21 +436,6 @@ export const dbService = {
         }
     },
 
-    async signInWithFacebook() {
-        if (!supabase) throw new Error('Serveur indisponible');
-        const redirectTo = window.location.origin || 'http://localhost:3000';
-        const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: 'facebook',
-            options: {
-                redirectTo,
-                skipBrowserRedirect: false,
-            }
-        });
-        if (error) throw error;
-        if (data?.url) {
-            window.location.href = data.url;
-        }
-    },
 
     // ── User Management (Local Sync Fallback for Favorites/Settings) ────────
     getUsers: (): User[] => {
