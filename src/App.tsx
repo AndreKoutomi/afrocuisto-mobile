@@ -1884,6 +1884,7 @@ export default function App() {
   const [crossDeviceSentOtp, setCrossDeviceSentOtp] = useState('');
   const [crossDeviceOtpInput, setCrossDeviceOtpInput] = useState('');
   const [crossDevicePendingEmail, setCrossDevicePendingEmail] = useState('');
+  const [crossDevicePendingIdentifier, setCrossDevicePendingIdentifier] = useState('');
   const [crossDevicePendingPassword, setCrossDevicePendingPassword] = useState('');
   const [showEvictionPopup, setShowEvictionPopup] = useState(false);
 
@@ -2948,8 +2949,8 @@ export default function App() {
         const { hasConflict } = await dbService.checkActiveSession(userId, deviceId);
 
         if (hasConflict) {
-          // Another device is active — sign out immediately and require OTP
-          await dbService.supabase?.auth.signOut({ scope: 'global' });
+          // Uniquement déconnecter localement pour l'appareil B, sans perturber la session de l'appareil A
+          await dbService.supabase?.auth.signOut({ scope: 'local' });
 
           // Send OTP to the email
           const email = signInData?.user?.email || identifier;
@@ -2962,6 +2963,7 @@ export default function App() {
           }
           setCrossDeviceSentOtp(otp);
           setCrossDevicePendingEmail(email);
+          setCrossDevicePendingIdentifier(identifier);
           setCrossDevicePendingPassword(password);
           setCrossDeviceOtpInput('');
           setCrossDeviceStep(true);
@@ -3003,7 +3005,13 @@ export default function App() {
     setAuthError(null);
     try {
       // Re-authenticate now that identity is confirmed
-      const signInData = await dbService.signIn(crossDevicePendingEmail, crossDevicePendingPassword);
+      let signInData: any;
+      if (dbService.isPhoneNumber(crossDevicePendingIdentifier)) {
+        signInData = await dbService.signInWithPhonePassword(dbService.formatPhone(crossDevicePendingIdentifier), crossDevicePendingPassword);
+      } else {
+        signInData = await dbService.signIn(crossDevicePendingIdentifier, crossDevicePendingPassword);
+      }
+      
       const userId = signInData?.user?.id;
       if (userId) {
         const deviceId = dbService.getOrCreateDeviceId();
@@ -3014,6 +3022,7 @@ export default function App() {
       setCrossDeviceStep(false);
       setCrossDeviceSentOtp('');
       setCrossDevicePendingEmail('');
+      setCrossDevicePendingIdentifier('');
       setCrossDevicePendingPassword('');
       setCrossDeviceOtpInput('');
     } catch (err: any) {
@@ -6730,7 +6739,7 @@ export default function App() {
 
   // --- Return JSX ---
 
-  if (!currentUser) return (
+  if (!currentUser || crossDeviceStep) return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
