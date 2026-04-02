@@ -2064,6 +2064,15 @@ export default function App() {
         avatar: remoteProfile?.avatar || existingLocal?.avatar || currentUser?.avatar
       };
 
+      if (dbService.supabase) {
+        const { data: { session: currentSession } } = await dbService.supabase.auth.getSession();
+        if (!currentSession) {
+          console.warn("Session killed locally during updateUserObject async phase. Aborting user object hydration.");
+          setIsSyncing(false);
+          return;
+        }
+      }
+
       setCurrentUser(userObj);
       dbService.setCurrentUser(userObj);
       setHasLoadedAtLeastOnce(true);
