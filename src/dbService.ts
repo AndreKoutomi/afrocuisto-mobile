@@ -298,9 +298,9 @@ export const dbService = {
         return /^\+?[0-9]{7,15}$/.test(cleaned);
     },
 
-    async signOut() {
+    async signOut(scope: 'local' | 'global' | 'others' = 'global') {
         if (!supabase) return;
-        const { error } = await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut({ scope });
         if (error) throw error;
     },
 

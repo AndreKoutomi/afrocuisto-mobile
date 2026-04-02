@@ -1880,12 +1880,12 @@ export default function App() {
   const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]; // Références pour les cases OTP
   const [phoneCountry, setPhoneCountry] = useState('+229'); // Indicatif pays pour l'inscription
 
-  // ── Cross-device session state ────────────────────────────────────────────
   const [crossDeviceStep, setCrossDeviceStep] = useState(false); // true = showing cross-device OTP screen
   const [crossDeviceSentOtp, setCrossDeviceSentOtp] = useState('');
   const [crossDeviceOtpInput, setCrossDeviceOtpInput] = useState('');
   const [crossDevicePendingEmail, setCrossDevicePendingEmail] = useState('');
   const [crossDevicePendingPassword, setCrossDevicePendingPassword] = useState('');
+  const [showEvictionPopup, setShowEvictionPopup] = useState(false);
 
   const [jumpToPostId, setJumpToPostId] = useState<string | null>(null);
   const [showSavedPosts, setShowSavedPosts] = useState(false);
@@ -2152,13 +2152,18 @@ export default function App() {
         const { hasConflict } = await dbService.checkActiveSession(currentUser.id, deviceId);
         if (hasConflict) {
           console.warn('Session évincée par un autre appareil. Déconnexion...');
-          // Clear local session but do NOT call signOut globally (the other device is legitimate)
-          dbService.setCurrentUser(null);
-          setCurrentUser(null);
-          setAuthMode('login');
-          setAuthStep('form');
-          setAuthError("Votre compte a été connecté sur un autre appareil. Vous avez été déconnecté.");
-          showAlert("⚠️ Session terminée. Votre compte a été connecté sur un autre appareil.", "error");
+          setShowEvictionPopup(true);
+          
+          setTimeout(() => {
+            // Uniquement supprimer la session localement pour ne pas déconnecter le nouvel appareil
+            dbService.signOut('local').catch(() => {});
+            dbService.setCurrentUser(null);
+            setCurrentUser(null);
+            setAuthMode('login');
+            setAuthStep('form');
+            setAuthError("Votre compte a été connecté sur un autre appareil. Vous avez été déconnecté.");
+            setShowEvictionPopup(false);
+          }, 3500);
         }
       } catch (err) {
         // Silently ignore
@@ -7159,6 +7164,35 @@ export default function App() {
             onClose={() => setIsAdminDashboardOpen(false)}
             t={t}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showEvictionPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={`fixed inset-0 z-[9999] flex items-center justify-center p-6 ${isDark ? 'bg-black/80' : 'bg-white/80'} backdrop-blur-xl`}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className={`w-full max-w-sm rounded-[32px] p-8 text-center shadow-2xl ${isDark ? 'bg-[#111111] border border-white/10' : 'bg-white border border-stone-200'}`}
+            >
+              <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 animate-pulse ${isDark ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
+                <ShieldAlert size={40} className="text-amber-500" />
+              </div>
+              <h3 className={`text-2xl font-black mb-3 tracking-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>Session expirée</h3>
+              <p className={`text-sm font-medium leading-relaxed mb-6 ${isDark ? 'text-white/60' : 'text-stone-500'}`}>
+                Votre compte a été connecté sur un autre appareil. Déconnexion de cet appareil en cours...
+              </p>
+              <div className="flex justify-center">
+                 <Loader size={24} className="text-[#fb5607] animate-spin" />
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
