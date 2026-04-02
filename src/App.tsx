@@ -1880,6 +1880,13 @@ export default function App() {
   const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]; // Références pour les cases OTP
   const [phoneCountry, setPhoneCountry] = useState('+229'); // Indicatif pays pour l'inscription
 
+  // ── Cross-device session state ────────────────────────────────────────────
+  const [crossDeviceStep, setCrossDeviceStep] = useState(false); // true = showing cross-device OTP screen
+  const [crossDeviceSentOtp, setCrossDeviceSentOtp] = useState('');
+  const [crossDeviceOtpInput, setCrossDeviceOtpInput] = useState('');
+  const [crossDevicePendingEmail, setCrossDevicePendingEmail] = useState('');
+  const [crossDevicePendingPassword, setCrossDevicePendingPassword] = useState('');
+
   const [jumpToPostId, setJumpToPostId] = useState<string | null>(null);
   const [showSavedPosts, setShowSavedPosts] = useState(false);
 
@@ -2063,6 +2070,13 @@ export default function App() {
       if (!remoteProfile && targetUser.id) {
         await dbService.syncUserToCloud(userObj);
       }
+
+      // Register this device as the active session (silent — no conflict check here,
+      // since this path is for session restoration, not a new login from another device)
+      if (targetUser.id) {
+        const deviceId = dbService.getOrCreateDeviceId();
+        await dbService.registerActiveSession(targetUser.id, deviceId);
+      }
     } catch (err) {
       console.error('Error syncing user object:', err);
     } finally {
@@ -2115,7 +2129,7 @@ export default function App() {
     const checkBanStatus = async () => {
       try {
         const { data: { user }, error } = await dbService.supabase!.auth.getUser();
-        if (error) return; // Ignore simple network errors here 
+        if (error) return;
 
         if (user?.user_metadata?.banned) {
           console.warn("L'utilisateur a été banni pendant la session. Éjection en cours...");
@@ -2130,20 +2144,50 @@ export default function App() {
       }
     };
 
-    // 1. Polling toutes les 30 secondes
-    const interval = setInterval(checkBanStatus, 30000);
+    // Check if our device is still the active session (eviction detection)
+    const checkDeviceEviction = async () => {
+      try {
+        if (!currentUser?.id) return;
+        const deviceId = dbService.getOrCreateDeviceId();
+        const { hasConflict } = await dbService.checkActiveSession(currentUser.id, deviceId);
+        if (hasConflict) {
+          console.warn('Session évincée par un autre appareil. Déconnexion...');
+          // Clear local session but do NOT call signOut globally (the other device is legitimate)
+          dbService.setCurrentUser(null);
+          setCurrentUser(null);
+          setAuthMode('login');
+          setAuthStep('form');
+          setAuthError("Votre compte a été connecté sur un autre appareil. Vous avez été déconnecté.");
+          showAlert("⚠️ Session terminée. Votre compte a été connecté sur un autre appareil.", "error");
+        }
+      } catch (err) {
+        // Silently ignore
+      }
+    };
 
-    // 2. Vérification au retour de l'application au premier plan (Foreground / Visibility)
+    // 1. Ban polling toutes les 30 secondes
+    const interval = setInterval(() => {
+      checkBanStatus();
+      checkDeviceEviction();
+    }, 30000);
+
+    // 2. Vérification au retour de l'application au premier plan
     let appStateListener: any;
 
     if (Capacitor.isNativePlatform()) {
       CapacitorApp.addListener('appStateChange', ({ isActive }) => {
-        if (isActive) checkBanStatus();
+        if (isActive) {
+          checkBanStatus();
+          checkDeviceEviction();
+        }
       }).then(listener => { appStateListener = listener; });
     }
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') checkBanStatus();
+      if (document.visibilityState === 'visible') {
+        checkBanStatus();
+        checkDeviceEviction();
+      }
     };
 
     if (!Capacitor.isNativePlatform()) {
@@ -2832,6 +2876,11 @@ export default function App() {
     const currentDarkMode = isDark;
     localStorage.setItem('afrocuisto_dark_mode', String(currentDarkMode));
 
+    // 1b. Clear the active device session record
+    if (currentUser?.id) {
+      await dbService.clearActiveSession(currentUser.id);
+    }
+
     // 2. Déconnexion immédiate de l'UI (Etat local)
     setCurrentUser(null);
     dbService.setCurrentUser(null);
@@ -2861,24 +2910,23 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      const identifier = authFormData.email.trim(); // "email" field doubles as phone field
+      const identifier = authFormData.email.trim();
       const password = authFormData.password;
 
+      // 1. Sign in with Supabase
+      let signInData: any;
       if (dbService.isPhoneNumber(identifier)) {
-        // Phone + password login (no OTP)
         const phone = dbService.formatPhone(identifier);
-        await dbService.signInWithPhonePassword(phone, password);
+        signInData = await dbService.signInWithPhonePassword(phone, password);
       } else {
-        // Email + password login
         try {
-          await dbService.signIn(identifier, password);
+          signInData = await dbService.signIn(identifier, password);
         } catch (err: any) {
           if (err.message && err.message.includes("Email not confirmed")) {
             console.log("Legacy unconfirmed account detected. Auto-confirming via admin API...");
             const confirmed = await dbService.adminForceConfirmEmail(identifier);
             if (confirmed) {
-              // Retry login!
-              await dbService.signIn(identifier, password);
+              signInData = await dbService.signIn(identifier, password);
             } else {
               throw err;
             }
@@ -2887,6 +2935,39 @@ export default function App() {
           }
         }
       }
+
+      // 2. Check for cross-device conflict
+      const userId = signInData?.user?.id;
+      if (userId) {
+        const deviceId = dbService.getOrCreateDeviceId();
+        const { hasConflict } = await dbService.checkActiveSession(userId, deviceId);
+
+        if (hasConflict) {
+          // Another device is active — sign out immediately and require OTP
+          await dbService.supabase?.auth.signOut({ scope: 'global' });
+
+          // Send OTP to the email
+          const email = signInData?.user?.email || identifier;
+          const otp = Math.floor(1000 + Math.random() * 9000).toString();
+          const userName = signInData?.user?.user_metadata?.full_name || identifier;
+          try {
+            await dbService.sendEmail(email, userName, otp);
+          } catch (emailErr) {
+            console.warn('OTP email failed, proceeding anyway for dev');
+          }
+          setCrossDeviceSentOtp(otp);
+          setCrossDevicePendingEmail(email);
+          setCrossDevicePendingPassword(password);
+          setCrossDeviceOtpInput('');
+          setCrossDeviceStep(true);
+          setAuthError(null);
+          return; // Exit early — UI now shows cross-device OTP
+        }
+
+        // No conflict — register this device as active
+        await dbService.registerActiveSession(userId, deviceId);
+      }
+
     } catch (err: any) {
       console.error("Login catch error:", err);
       let msg = err.message || "Identifiants incorrects";
@@ -2901,6 +2982,53 @@ export default function App() {
       }
       setAuthError(msg);
       showAlert(msg, "error");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  /** Verify the cross-device OTP, then re-authenticate and register the new device */
+  const handleVerifyCrossDeviceOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (crossDeviceOtpInput !== crossDeviceSentOtp) {
+      setAuthError("Code OTP incorrect. Vérifiez vos emails.");
+      return;
+    }
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      // Re-authenticate now that identity is confirmed
+      const signInData = await dbService.signIn(crossDevicePendingEmail, crossDevicePendingPassword);
+      const userId = signInData?.user?.id;
+      if (userId) {
+        const deviceId = dbService.getOrCreateDeviceId();
+        // Register this device — overwrites the previous device
+        await dbService.registerActiveSession(userId, deviceId);
+      }
+      // Clean up cross-device state
+      setCrossDeviceStep(false);
+      setCrossDeviceSentOtp('');
+      setCrossDevicePendingEmail('');
+      setCrossDevicePendingPassword('');
+      setCrossDeviceOtpInput('');
+    } catch (err: any) {
+      setAuthError(err.message || "Erreur lors de la vérification.");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  /** Resend cross-device OTP */
+  const handleResendCrossDeviceOtp = async () => {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      await dbService.sendEmail(crossDevicePendingEmail, crossDevicePendingEmail, otp);
+      setCrossDeviceSentOtp(otp);
+      showAlert("Un nouveau code a été envoyé.", "success");
+    } catch (err: any) {
+      setAuthError(err.message);
     } finally {
       setIsAuthLoading(false);
     }
@@ -6604,7 +6732,108 @@ export default function App() {
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       className={`h-screen max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-white'}`}
     >
-      {renderAuth()}
+      {crossDeviceStep ? (
+        // ── Cross-device OTP interstitial ──
+        <div className={`flex-1 flex flex-col min-h-screen relative overflow-hidden ${isDark ? 'bg-[#000000]' : 'bg-white'}`} style={{ isolation: 'isolate' }}>
+          {/* Decorative accent */}
+          <div className="absolute top-0 right-0 pointer-events-none select-none" style={{ width: 220, height: 220, overflow: 'hidden' }}>
+            <div className="absolute rounded-full" style={{ width: 110, height: 110, top: 20, right: -20, background: 'linear-gradient(135deg,#fb5607 0%,#e04e00 100%)', boxShadow: '0 8px 32px rgba(251,86,7,0.35)' }} />
+          </div>
+
+          <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar px-7 pb-10 w-full max-w-md mx-auto relative z-10"
+            style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 32px)' : '56px' }}>
+
+            <button
+              onClick={() => { setCrossDeviceStep(false); setCrossDeviceOtpInput(''); setAuthError(null); }}
+              className={`w-10 h-10 rounded-full flex items-center justify-center mb-6 border transition-colors ${isDark ? 'bg-white/8 border-white/10 text-white/60 hover:bg-white/14' : 'bg-stone-100 border-stone-200/60 text-stone-500 hover:bg-stone-200'}`}
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            {/* Icon */}
+            <div className={`w-14 h-14 rounded-[20px] flex items-center justify-center mb-5 ${isDark ? 'bg-amber-500/15 border border-amber-500/25' : 'bg-amber-50 border border-amber-200'}`}>
+              <ShieldAlert size={26} className="text-amber-500" />
+            </div>
+
+            <h1 className={`text-[24px] font-black tracking-tight leading-tight mb-2 ${isDark ? 'text-white' : 'text-stone-900'}`}>
+              Nouvelle connexion détectée
+            </h1>
+            <p className={`text-[13px] font-medium leading-relaxed mb-8 ${isDark ? 'text-white/45' : 'text-stone-500'}`}>
+              Votre compte est déjà connecté sur un autre appareil. Pour continuer, entrez le code envoyé à{' '}
+              <span className="text-[#fb5607] font-bold">{crossDevicePendingEmail}</span>.
+            </p>
+
+            <form onSubmit={handleVerifyCrossDeviceOtp}>
+              {/* 4-digit OTP boxes */}
+              <div className="flex gap-3 justify-center mb-6">
+                {[0, 1, 2, 3].map(i => (
+                  <input
+                    key={i}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={crossDeviceOtpInput[i] || ''}
+                    onChange={e => {
+                      if (!/^\d*$/.test(e.target.value)) return;
+                      const digits = crossDeviceOtpInput.split('');
+                      while (digits.length < 4) digits.push('');
+                      digits[i] = e.target.value.slice(-1);
+                      setCrossDeviceOtpInput(digits.join(''));
+                      setAuthError(null);
+                      // Auto-focus next
+                      if (e.target.value && i < 3) {
+                        const next = e.target.parentElement?.children[i + 1] as HTMLInputElement;
+                        next?.focus();
+                      }
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Backspace' && !crossDeviceOtpInput[i] && i > 0) {
+                        const prev = (e.target as HTMLElement).parentElement?.children[i - 1] as HTMLInputElement;
+                        prev?.focus();
+                      }
+                    }}
+                    className={`w-[62px] h-[70px] text-center text-[28px] font-black rounded-[16px] border-2 focus:outline-none transition-all ${
+                      crossDeviceOtpInput[i]
+                        ? (isDark ? 'border-amber-500/70 bg-amber-500/15 text-white' : 'border-amber-500 bg-amber-50 text-stone-900')
+                        : (isDark ? 'border-white/12 bg-white/5 text-white focus:border-amber-500/50' : 'border-stone-200 bg-stone-50 text-stone-900 focus:border-amber-500/60 focus:bg-white')
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {authError && (
+                <div className={`rounded-[12px] border flex items-start gap-2.5 p-3 mb-4 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                  <AlertCircle size={14} className="text-rose-500 mt-0.5 shrink-0" />
+                  <p className="text-[12px] font-semibold text-rose-600 leading-snug">{authError}</p>
+                </div>
+              )}
+
+              <p className={`text-center text-[12.5px] font-medium mb-5 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
+                Code non reçu ?{' '}
+                <button type="button" onClick={handleResendCrossDeviceOtp} disabled={isAuthLoading} className="text-[#fb5607] font-bold hover:underline disabled:opacity-50">
+                  Renvoyer
+                </button>
+              </p>
+
+              <motion.button
+                type="submit"
+                disabled={isAuthLoading || crossDeviceOtpInput.length < 4}
+                whileTap={{ scale: 0.97 }}
+                className={`w-full py-4 rounded-[16px] font-black text-[14px] flex justify-center items-center gap-2 transition-all ${
+                  crossDeviceOtpInput.length === 4 && !isAuthLoading
+                    ? 'bg-[#fb5607] text-white'
+                    : (isDark ? 'bg-white/8 text-white/25' : 'bg-stone-100 text-stone-300')
+                }`}
+                style={crossDeviceOtpInput.length === 4 && !isAuthLoading ? { boxShadow: '0 10px 28px rgba(251,86,7,0.30)' } : {}}
+              >
+                {isAuthLoading
+                  ? <><Loader size={18} className="animate-spin" /><span>Vérification…</span></>
+                  : <><ShieldCheck size={18} /><span>Confirmer et se connecter</span></>}
+              </motion.button>
+            </form>
+          </div>
+        </div>
+      ) : renderAuth()}
       <ModernAlertComponent
         show={alertConfig.show}
         message={alertConfig.message}

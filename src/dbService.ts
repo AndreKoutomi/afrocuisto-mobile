@@ -304,6 +304,67 @@ export const dbService = {
         if (error) throw error;
     },
 
+    // ── Single-Device Session Management ────────────────────────────────────
+    /** Generate or retrieve a persistent unique device ID for this browser/device */
+    getOrCreateDeviceId(): string {
+        const DEVICE_KEY = 'afrocuisto_device_id';
+        let deviceId = localStorage.getItem(DEVICE_KEY);
+        if (!deviceId) {
+            deviceId = `dev_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+            localStorage.setItem(DEVICE_KEY, deviceId);
+        }
+        return deviceId;
+    },
+
+    /** Register this device as the authoritative active session for the user */
+    async registerActiveSession(userId: string, deviceId: string): Promise<void> {
+        try {
+            if (!supabase) return;
+            await supabase
+                .from('user_active_sessions')
+                .upsert([{
+                    user_id: userId,
+                    device_id: deviceId,
+                    updated_at: new Date().toISOString()
+                }], { onConflict: 'user_id' });
+        } catch (err) {
+            console.warn('registerActiveSession error:', err);
+        }
+    },
+
+    /** Returns whether another device has claimed this user's session */
+    async checkActiveSession(userId: string, deviceId: string): Promise<{ hasConflict: boolean; existingDeviceId: string | null }> {
+        try {
+            if (!supabase) return { hasConflict: false, existingDeviceId: null };
+            const { data, error } = await supabase
+                .from('user_active_sessions')
+                .select('device_id')
+                .eq('user_id', userId)
+                .maybeSingle();
+            if (error || !data) return { hasConflict: false, existingDeviceId: null };
+            return {
+                hasConflict: data.device_id !== deviceId,
+                existingDeviceId: data.device_id
+            };
+        } catch (err) {
+            console.warn('checkActiveSession error:', err);
+            return { hasConflict: false, existingDeviceId: null };
+        }
+    },
+
+    /** Remove active session record on logout or account deletion */
+    async clearActiveSession(userId: string): Promise<void> {
+        try {
+            if (!supabase) return;
+            await supabase
+                .from('user_active_sessions')
+                .delete()
+                .eq('user_id', userId);
+        } catch (err) {
+            console.warn('clearActiveSession error:', err);
+        }
+    },
+
     // ── Phone Auth (SMS OTP via Supabase) ───────────────────────────────────
     /** Normalize a phone number to E.164 format (e.g. +22901234567) */
     formatPhone(raw: string): string {
