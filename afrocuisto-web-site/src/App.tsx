@@ -739,7 +739,7 @@ export default function App() {
               <div className="flex gap-4">
                 {[
                   { Icon: Instagram, href: "https://www.instagram.com/afrocuisto229/" },
-                  { Icon: Facebook, href: "https://www.facebook.com/profile.php?id=61576480304371&sk=directory_names" },
+                  { Icon: Facebook, href: "https://www.facebook.com/profile.php?id=61576480304371" },
                   { Icon: Twitter, href: "#" }
                 ].map((social, i) => (
                   <a
@@ -798,7 +798,6 @@ export default function App() {
             <p>© 2026 AfroCuisto. Tous droits réservés.</p>
             <div className="flex gap-8">
               <span>Cotonou, Bénin</span>
-              <span>Paris, France</span>
             </div>
           </div>
         </div>
