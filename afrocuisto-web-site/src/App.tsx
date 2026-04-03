@@ -7,6 +7,7 @@ import {
   FileText, Cookie, ShieldAlert, Heart, Languages
 } from "lucide-react";
 import React, { useRef, useState, useEffect } from "react";
+import emailjs from 'emailjs-com';
 
 /* ─────────────────── TRANSLATIONS ─────────────────── */
 
@@ -477,22 +478,38 @@ export default function App() {
     setLoading(true);
     setErrorMsg(null);
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // 📝 INSTRUCTIONS EMAILJS (DEUX TEMPLATES NÉCESSAIRES)
+    // ─────────────────────────────────────────────────────────────────────────
+    const SERVICE_ID = 'service_oi4g3g9'; // Votre Service ID actuel
+    const TEMPLATE_ID = 'template_ax92ky9'; // Template pour l'Utilisateur
+    const PUBLIC_KEY = '5bxF5hiV8eLRjESo4'; // Votre Public Key ici
+    // ─────────────────────────────────────────────────────────────────────────
+
     try {
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, lang }),
-      });
+      if (TEMPLATE_ID === 'YOUR_TEMPLATE_ID') {
+        throw new Error("Configuration EmailJS manquante. Veuillez insérer votre Template ID.");
+      }
 
-      const data = await response.json();
+      // Envoi de l'email de Bienvenue pour l'Utilisateur
+      const result = await emailjs.send(
+        SERVICE_ID, 
+        TEMPLATE_ID, 
+        {
+          user_email: email, // L'email de la personne qui s'inscrit
+          language: lang,
+          date: new Date().toLocaleDateString()
+        }, 
+        PUBLIC_KEY
+      );
 
-      if (response.ok) {
+      if (result.status === 200) {
         setSubmitted(true);
       } else {
-        setErrorMsg(data.error || "Erreur lors de l'inscription");
+        throw new Error("Échec de l'envoi.");
       }
-    } catch (err) {
-      setErrorMsg("Connexion impossible au serveur. Réessayez plus tard.");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Erreur lors de l'inscription. Vérifiez votre configuration EmailJS.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -615,9 +632,9 @@ export default function App() {
             >
               <div className="px-6 py-6 flex flex-col gap-4">
                 {navLinks.map((l) => (
-                  <a 
-                    key={l.href} 
-                    href={l.href} 
+                  <a
+                    key={l.href}
+                    href={l.href}
                     onClick={(e) => {
                       e.preventDefault();
                       setMenuOpen(false);
@@ -628,7 +645,7 @@ export default function App() {
                           element.scrollIntoView({ behavior: "smooth" });
                         }, 100);
                       }
-                    }} 
+                    }}
                     className={`text-xl font-black uppercase tracking-tight ${l.highlight ? "text-[#FF4800]" : "text-[#1a1a1a]/70"}`}
                   >
                     {l.href === "#features" ? t.nav.features : l.href === "#app" ? t.nav.app : l.href === "#faq" ? t.nav.faq : t.nav.beta}
@@ -948,8 +965,8 @@ export default function App() {
                     placeholder={t.waitlist.placeholder}
                     className="flex-1 px-6 py-4 rounded-[18px] bg-white text-[#1a1a1a] placeholder:text-black/30 font-medium text-base focus:outline-none focus:ring-4 focus:ring-white/50 transition-all disabled:opacity-50"
                   />
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={loading}
                     className="px-8 py-4 bg-[#1a1a1a] hover:bg-black active:scale-95 text-white rounded-[18px] font-black text-sm uppercase tracking-wide transition-all whitespace-nowrap shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed min-w-[160px]"
                   >
@@ -1049,8 +1066,8 @@ export default function App() {
                     key={item}
                     className="hover:text-[#FF4800] cursor-pointer transition-colors"
                     onClick={() => {
-                        const originalKey = item === "Privacy" || item === "Privacidad" ? "Confidentialité" : item === "Terms" || item === "Condiciones" ? "Conditions" : item;
-                        setActiveModal(originalKey);
+                      const originalKey = item === "Privacy" || item === "Privacidad" ? "Confidentialité" : item === "Terms" || item === "Condiciones" ? "Conditions" : item;
+                      setActiveModal(originalKey);
                     }}
                   >
                     {item}
