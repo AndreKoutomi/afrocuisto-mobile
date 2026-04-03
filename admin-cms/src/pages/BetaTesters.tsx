@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { supabase, supabaseAdmin } from '../lib/supabase';
+import { useEffect, useState, useRef } from 'react';
+import { supabaseAdmin } from '../lib/supabase';
 import {
-    Mail, Search, RefreshCw, Sparkles, Calendar, Globe, Trash2, Users
+    Mail, Search, RefreshCw, Sparkles, Calendar, Globe, Trash2, Users, MoreVertical, Copy, Check
 } from 'lucide-react';
 
 interface BetaTester {
@@ -16,9 +16,19 @@ export function BetaTesters() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         fetchTesters();
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setActiveMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     async function fetchTesters() {
@@ -46,9 +56,22 @@ export function BetaTesters() {
             const { error: delError } = await supabaseAdmin.from('waitlist').delete().eq('id', id);
             if (delError) throw delError;
             fetchTesters();
+            setActiveMenu(null);
         } catch (err: any) {
             alert('Erreur suppression: ' + err.message);
         }
+    };
+
+    const generateDownloadLink = (tester: BetaTester) => {
+        // Lien direct vers le build dans la branche Production sur GitHub
+        const githubBuildUrl = "https://github.com/AndreKoutomi/AfroCuisto/raw/Production/AfroCuisto.apk";
+        const message = `Félicitations 🥘 ! Voici votre accès privilégié pour tester l'application AfroCuisto : ${githubBuildUrl}`;
+        
+        navigator.clipboard.writeText(message).then(() => {
+            setCopiedId(tester.id);
+            setTimeout(() => setCopiedId(null), 2000);
+            setActiveMenu(null);
+        });
     };
 
     const filtered = testers.filter(t => {
@@ -57,7 +80,7 @@ export function BetaTesters() {
     });
 
     return (
-        <div style={{ width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box', position: 'relative' }}>
             {/* ── Header ── */}
             <div className="flex-responsive" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}>
                 <div>
@@ -103,7 +126,7 @@ export function BetaTesters() {
             {/* ── Content ── */}
             {loading ? (
                 <div style={{ padding: '80px', textAlign: 'center', color: '#9ca3af' }}>
-                    <RefreshCw size={32} className="animate-spin" style={{ margin: '0 auto 16px' }} />
+                    <RefreshCw size={32} className="spinning" style={{ margin: '0 auto 16px' }} />
                     <p>Chargement des inscrits...</p>
                 </div>
             ) : filtered.length === 0 ? (
@@ -113,7 +136,7 @@ export function BetaTesters() {
                     <p style={{ color: '#9ca3af' }}>Attendez que les premiers utilisateurs s'inscrivent sur le site.</p>
                 </div>
             ) : (
-                <div style={{ background: '#fff', borderRadius: '28px', border: '1px solid #f0f0f0', overflow: 'hidden' }}>
+                <div style={{ background: '#fff', borderRadius: '28px', border: '1px solid #f0f0f0', overflow: 'visible' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 180px 80px', gap: '12px', padding: '14px 24px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
                         {["Email", "Langue", "Date d'inscription", "Action"].map(h => (
                             <span key={h} style={{ fontSize: '10px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase' }}>{h}</span>
@@ -130,6 +153,7 @@ export function BetaTesters() {
                                 padding: '18px 24px',
                                 alignItems: 'center',
                                 borderBottom: idx === filtered.length - 1 ? 'none' : '1px solid #f9fafb',
+                                position: 'relative'
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -146,12 +170,52 @@ export function BetaTesters() {
                                 <Calendar size={14} />
                                 <span style={{ fontSize: '13px' }}>{new Date(tester.created_at).toLocaleDateString('fr-FR', { dateStyle: 'medium' })}</span>
                             </div>
-                            <button
-                                onClick={() => deleteTester(tester.id)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '8px' }}
-                            >
-                                <Trash2 size={18} />
-                            </button>
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setActiveMenu(activeMenu === tester.id ? null : tester.id)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '8px' }}
+                                >
+                                    <MoreVertical size={18} />
+                                </button>
+
+                                {activeMenu === tester.id && (
+                                    <div 
+                                        ref={menuRef}
+                                        style={{
+                                            position: 'absolute', right: 0, top: '40px', background: '#fff',
+                                            borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                                            border: '1px solid #f0f0f0', zIndex: 100, width: '220px', padding: '8px'
+                                        }}
+                                    >
+                                        <button 
+                                            onClick={() => generateDownloadLink(tester)}
+                                            style={{
+                                                width: '100%', padding: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+                                                border: 'none', background: 'none', cursor: 'pointer', borderRadius: '8px',
+                                                fontSize: '13px', fontWeight: 600, color: '#374151', textAlign: 'left',
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                        >
+                                            {copiedId === tester.id ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+                                            {copiedId === tester.id ? 'Lien copié !' : 'Générer lien app'}
+                                        </button>
+                                        <div style={{ height: '1px', background: '#f0f0f0', margin: '4px 0' }} />
+                                        <button 
+                                            onClick={() => deleteTester(tester.id)}
+                                            style={{
+                                                width: '100%', padding: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+                                                border: 'none', background: 'none', cursor: 'pointer', borderRadius: '8px',
+                                                fontSize: '13px', fontWeight: 600, color: '#ef4444', textAlign: 'left',
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                        >
+                                            <Trash2 size={14} /> Supprimer
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
