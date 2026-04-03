@@ -98,6 +98,7 @@ import { NotifDetail } from './components/NotifDetail';
 import { Geolocation } from '@capacitor/geolocation';
 import { PushNotifications, PushNotificationSchema, Token, ActionPerformed } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Share } from '@capacitor/share';
 
 // --- Constants & Config ---
 const springTransition = { type: 'spring', stiffness: 700, damping: 36, mass: 0.35 };
@@ -115,7 +116,309 @@ const getInitials = (name: string | undefined | null) => {
   return name.substring(0, 2).toUpperCase();
 };
 
+// --- Native-style Share Sheet Component ---
+const ShareSheet = ({ isOpen, onClose, recipe, t, isDark, showAlert }: any) => {
+  const [search, setSearch] = useState('');
+  const [message, setMessage] = useState('');
+  const [sentProfiles, setSentProfiles] = useState<number[]>([]);
+  const [isCopied, setIsCopied] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSearch('');
+      setMessage('');
+      setSentProfiles([]);
+      setIsCopied(false);
+    }
+  }, [isOpen]);
+
+  if (!recipe) return null;
+
+  const shareUrl = `https://afrocuisto.app/recette/${recipe.id}`;
+  const shareTitle = `AfroCuisto — ${recipe.name}`;
+  const shareText = message.trim()
+    ? `${message.trim()}\n\n${recipe.name} sur AfroCuisto 🍛`
+    : `Découvre la recette "${recipe.name}" sur AfroCuisto, l'app culinaire africaine ! 🍛`;
+
+  const mockProfiles = [
+    { id: 1, name: 'Joyce', username: 'mlle_ahoue', avatar: 'https://i.pravatar.cc/150?u=ahoue99' },
+    { id: 2, name: 'Maman Mika', username: 'chezmaman', avatar: 'https://i.pravatar.cc/150?u=mika88' },
+    { id: 3, name: 'Melvine', username: 'deo.melane', avatar: 'https://i.pravatar.cc/150?u=melv77' },
+    { id: 4, name: 'Zoé ✨', username: 'zoecal7', avatar: 'https://i.pravatar.cc/150?u=zoe55' },
+    { id: 5, name: 'Rich M.', username: 'nono_rich', avatar: 'https://i.pravatar.cc/150?u=rich44' },
+  ];
+
+  const filteredProfiles = search.trim()
+    ? mockProfiles.filter(p =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.username.toLowerCase().includes(search.toLowerCase())
+      )
+    : mockProfiles;
+
+  const handleProfileSend = (profile: typeof mockProfiles[0]) => {
+    if (sentProfiles.includes(profile.id)) return;
+    setSentProfiles(prev => [...prev, profile.id]);
+    showAlert(`Recette envoyée à ${profile.name} ! 🎉`, 'success');
+  };
+
+  // Primary action: uses Capacitor Share on native Android/iOS (shows ALL installed apps)
+  // Falls back to Web Share API on browser, then clipboard
+  const handleNativeShare = async () => {
+    const isNative = Capacitor.isNativePlatform();
+    try {
+      if (isNative) {
+        // Capacitor Share — triggers the real Android/iOS share sheet
+        await Share.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+          dialogTitle: 'Partager cette recette',
+        });
+        onClose();
+      } else if (navigator.share) {
+        // Web Share API fallback (mobile browsers)
+        await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
+        onClose();
+      } else {
+        // Desktop fallback: copy to clipboard
+        await handleCopyLink();
+      }
+    } catch (err: any) {
+      // AbortError = user cancelled the share dialog → keep sheet open
+      if (err?.name !== 'AbortError') {
+        await handleCopyLink();
+      }
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setIsCopied(true);
+      showAlert('Lien copié dans le presse-papiers !', 'success');
+      setTimeout(() => setIsCopied(false), 2500);
+    } catch {
+      showAlert('Impossible de copier le lien.', 'error');
+    }
+  };
+
+  const handleWhatsApp = () => {
+    const waText = `${shareText}\n${shareUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, '_blank');
+    onClose();
+  };
+
+  const handleSMS = () => {
+    window.open(`sms:?body=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`, '_blank');
+    onClose();
+  };
+
+  const quickActions = [
+    {
+      id: 'share',
+      label: 'Partager',
+      color: isDark ? 'bg-white/10' : 'bg-stone-200',
+      textColor: isDark ? 'text-white' : 'text-stone-800',
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <polyline points="16 6 12 2 8 6"/>
+          <line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+      ),
+      action: handleNativeShare,
+    },
+    {
+      id: 'whatsapp',
+      label: 'WhatsApp',
+      color: 'bg-emerald-500',
+      textColor: 'text-white',
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+      ),
+      action: handleWhatsApp,
+    },
+    {
+      id: 'sms',
+      label: 'SMS',
+      color: 'bg-blue-500',
+      textColor: 'text-white',
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      ),
+      action: handleSMS,
+    },
+    {
+      id: 'copy',
+      label: isCopied ? 'Copié !' : 'Lien',
+      color: isCopied ? 'bg-emerald-500' : (isDark ? 'bg-white/10' : 'bg-stone-200'),
+      textColor: isCopied ? 'text-white' : (isDark ? 'text-white' : 'text-stone-800'),
+      icon: isCopied ? (
+        <Check size={22} />
+      ) : (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+      ),
+      action: handleCopyLink,
+    },
+  ];
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[5000] flex items-end justify-center">
+          {/* Overlay — NO blur so the sheet content stays sharp */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/40"
+          />
+
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            className={`relative w-full max-w-lg rounded-t-[28px] flex flex-col overflow-hidden ${isDark ? 'bg-[#1c1c1e]' : 'bg-[#f2f2f7]'}`}
+            style={{ maxHeight: '80vh' }}
+          >
+            {/* Handle */}
+            <div className="w-full pt-2.5 pb-2 flex justify-center flex-shrink-0">
+              <div className={`w-9 h-1 rounded-full ${isDark ? 'bg-white/20' : 'bg-stone-300'}`} />
+            </div>
+
+            {/* Search */}
+            <div className="px-4 pb-2 flex-shrink-0">
+              <div className={`flex items-center gap-2.5 px-3 py-2 rounded-xl ${isDark ? 'bg-white/8' : 'bg-white'}`}>
+                <Search size={15} className={isDark ? 'text-white/30' : 'text-stone-400'} />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Rechercher"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className={`flex-1 text-[15px] outline-none bg-transparent ${isDark ? 'text-white placeholder:text-white/25' : 'text-stone-900 placeholder:text-stone-400'}`}
+                />
+                {search ? (
+                  <button onClick={() => setSearch('')}>
+                    <XCircle size={15} className={isDark ? 'text-white/30' : 'text-stone-400'} />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Recipe preview card + message field */}
+            <div className="px-4 pb-3 flex-shrink-0">
+              <div className={`rounded-2xl overflow-hidden ${isDark ? 'bg-white/8 border border-white/5' : 'bg-white border border-stone-200/50'}`}>
+                <div className="px-4 pt-3 pb-1">
+                  <input
+                    type="text"
+                    placeholder="Ajouter un message..."
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    className={`w-full text-[15px] outline-none bg-transparent ${isDark ? 'text-white placeholder:text-white/25' : 'text-stone-900 placeholder:text-stone-400'}`}
+                  />
+                </div>
+                <div className="px-3 pb-3">
+                  <div className={`flex items-center gap-3 p-2.5 rounded-xl ${isDark ? 'bg-white/5' : 'bg-stone-50'}`}>
+                    <OptimizedImage
+                      src={recipe.image}
+                      className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
+                      alt={recipe.name}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[13px] font-semibold truncate leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>{recipe.name}</p>
+                      <p className={`text-[11px] mt-0.5 truncate ${isDark ? 'text-white/35' : 'text-stone-400'}`}>
+                        afrocuisto.app · {recipe.region}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Scrollable: profiles + action buttons */}
+            <div className="flex-1 overflow-y-auto no-scrollbar">
+
+              {/* Profile list */}
+              <div>
+                {filteredProfiles.map(profile => {
+                  const isSent = sentProfiles.includes(profile.id);
+                  return (
+                    <div key={profile.id} className={`flex items-center gap-3 px-5 py-2.5 transition-colors ${isDark ? 'active:bg-white/5' : 'active:bg-black/3'}`}>
+                      <img src={profile.avatar} className="w-12 h-12 rounded-full object-cover flex-shrink-0" alt={profile.name} />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-[15px] font-semibold ${isDark ? 'text-white' : 'text-stone-900'}`}>{profile.name}</p>
+                        <p className={`text-[13px] ${isDark ? 'text-white/35' : 'text-stone-400'}`}>@{profile.username}</p>
+                      </div>
+                      <button
+                        onClick={() => handleProfileSend(profile)}
+                        className={`min-w-[80px] py-1.5 px-4 rounded-full text-[14px] font-semibold transition-all active:scale-95 ${
+                          isSent
+                            ? isDark ? 'bg-white/10 text-white/40' : 'bg-stone-100 text-stone-400'
+                            : isDark ? 'bg-white text-black' : 'bg-stone-900 text-white'
+                        }`}
+                      >
+                        {isSent ? 'Envoyé' : 'Envoyer'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Separator */}
+              <div className={`mx-5 my-2 h-px ${isDark ? 'bg-white/8' : 'bg-stone-200'}`} />
+
+              {/* Quick action buttons */}
+              <div className="flex gap-1 px-3 py-4 justify-around">
+                {quickActions.map(action => (
+                  <button
+                    key={action.id}
+                    onClick={action.action}
+                    className="flex flex-col items-center gap-2 flex-1 active:scale-90 transition-transform"
+                  >
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${action.color} ${action.textColor}`}>
+                      {action.icon}
+                    </div>
+                    <span className={`text-[11px] font-medium text-center leading-tight max-w-[60px] ${isDark ? 'text-white/50' : 'text-stone-500'}`}>
+                      {action.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* "More options" button — triggers native share directly */}
+              {typeof navigator !== 'undefined' && !navigator.share && (
+                <div className="px-5 pb-5">
+                  <button
+                    onClick={handleNativeShare}
+                    className={`w-full py-3.5 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.98] ${isDark ? 'bg-white/8 text-white' : 'bg-white text-stone-900 border border-stone-200'}`}
+                  >
+                    Plus d'options…
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 // --- Sub-Components & Helpers ---
+
+
 
 // Petit badge pour afficher la difficulté d'une recette avec une couleur spécifique
 const DifficultyBadge = ({ difficulty, t, isDark }: { difficulty: Difficulty; t: any; isDark?: boolean }) => {
@@ -2512,6 +2815,7 @@ export default function App() {
   }, []);
 
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState('home');
 
@@ -4847,7 +5151,7 @@ export default function App() {
   // (prevents React from unmounting/remounting when parent state like currentUser changes)
   const RecipeDetailRef = useRef<React.FC<any>>(null);
   if (!RecipeDetailRef.current) {
-    RecipeDetailRef.current = ({ recipe, allRecipes, currentUser, toggleFavorite, goBack, detailScrollRef, t, updateShoppingList, showAlert: showAlertProp, setSelectedRecipe: setRecipeProp }: {
+    RecipeDetailRef.current = ({ recipe, allRecipes, currentUser, toggleFavorite, goBack, detailScrollRef, t, updateShoppingList, showAlert: showAlertProp, setSelectedRecipe: setRecipeProp, onShare }: {
       recipe: Recipe;
       allRecipes: Recipe[];
       currentUser: User | null;
@@ -4858,6 +5162,7 @@ export default function App() {
       updateShoppingList: (newList: ShoppingItem[]) => void;
       showAlert: (msg: string, type?: any) => void;
       setSelectedRecipe: (r: Recipe) => void;
+      onShare: () => void;
     }) => {
       const [selectedIngs, setSelectedIngs] = useState<number[]>([]);
       const [isAdded, setIsAdded] = useState(false);
@@ -4904,23 +5209,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={async () => {
-                const shareData = {
-                  title: `AfroCuisto - ${recipe.name}`,
-                  text: `Découvrez la recette de ${recipe.name} sur AfroCuisto !`,
-                  url: window.location.origin + `/?recipe=${recipe.id}`
-                };
-                try {
-                  if (navigator.share) {
-                    await navigator.share(shareData);
-                  } else {
-                    await navigator.clipboard.writeText(shareData.text + " " + shareData.url);
-                    showAlertProp('Lien copié dans le presse-papiers !');
-                  }
-                } catch (err) {
-                  console.log('Partage annulé ou erreur', err);
-                }
-              }}
+              onClick={onShare}
               className="w-[42px] h-[42px] bg-white rounded-full flex items-center justify-center shadow-sm text-[#fb5607] transition-transform active:scale-95 pointer-events-auto shrink-0"
             >
               <Share2 size={18} strokeWidth={2.5} />
@@ -7064,6 +7353,7 @@ export default function App() {
             updateShoppingList={updateShoppingList}
             showAlert={showAlert}
             setSelectedRecipe={setSelectedRecipe}
+            onShare={() => setIsShareSheetOpen(true)}
           />
         )}
       </AnimatePresence>
@@ -7239,7 +7529,14 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-
+      <ShareSheet 
+        isOpen={isShareSheetOpen} 
+        onClose={() => setIsShareSheetOpen(false)} 
+        recipe={selectedRecipe} 
+        t={t} 
+        isDark={isDark} 
+        showAlert={showAlert} 
+      />
     </motion.div>
   );
 }
