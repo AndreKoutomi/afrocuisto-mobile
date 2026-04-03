@@ -77,7 +77,7 @@ const TRANSLATIONS = {
       items: [
         { q: "L'application est-elle gratuite ?", a: "Oui, la version de base est 100% gratuite avec des centaines de recettes et l'accès communautaire." },
         { q: "Faut-il une connexion internet ?", a: "Non. Vos recettes favorites et votre liste de marché sont accessibles hors-ligne." },
-        { q: "Sur quels appareils l'app est-elle disponible ?", a: "AfroCuisto sera disponible sur iOS (App Store) et Android (Google Play)." },
+        { q: "Sur quels appareils l'app est-elle disponible ?", a: "AfroCuisto sera disponible sur Android (Google Play) et bientôt sur IOS (Apple Store)." },
         { q: "Quand sera-t-elle disponible ?", a: "Un accès Beta fermé est prévu prochainement. Inscrivez-vous sur la liste d'attente." }
       ]
     },
@@ -497,13 +497,13 @@ export default function App() {
 
       // Envoi de l'email de Bienvenue pour l'Utilisateur
       const result = await emailjs.send(
-        SERVICE_ID, 
-        TEMPLATE_ID, 
+        SERVICE_ID,
+        TEMPLATE_ID,
         {
           user_email: email, // L'email de la personne qui s'inscrit
           language: lang,
           date: new Date().toLocaleDateString()
-        }, 
+        },
         PUBLIC_KEY
       );
 
@@ -528,7 +528,7 @@ export default function App() {
   ];
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-[#FDFCF9] text-[#1a1a1a] overflow-x-hidden selection:bg-[#FF4800]/20 font-['Montserrat']">
+    <div ref={containerRef} className="min-h-screen bg-[#FDFCF9] text-[#1a1a1a] overflow-x-hidden selection:bg-[#FF4800]/20">
 
       {/* ── MODALS ── */}
       <AnimatePresence>
@@ -699,7 +699,7 @@ export default function App() {
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF4800]/15 border border-[#FF4800]/30 rounded-full text-[#FF4800] text-xs font-black uppercase tracking-widest mb-8">
                   <Sparkles size={12} /> {t.hero.badge}
                 </div>
-                <h1 className="text-[clamp(3rem,8vw,6.5rem)] font-black leading-[0.88] tracking-tighter text-[#1a1a1a]">
+                <h1 className="text-[clamp(3rem,8vw,6.5rem)] font-display font-black leading-[0.88] tracking-tight text-[#1a1a1a]">
                   {t.hero.title}<br />
                   <span className="relative inline-block">
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF4800] via-[#FF7900] to-[#FFB600]">{t.hero.titleSpan}</span>
@@ -773,7 +773,7 @@ export default function App() {
             <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-xs font-black uppercase tracking-widest text-[#FF4800]">
               {t.features.badge}
             </motion.p>
-            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-5xl md:text-7xl font-black tracking-tighter leading-none">
+            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-5xl md:text-7xl font-display font-black tracking-tight leading-none">
               {t.features.title}
             </motion.h2>
           </div>
@@ -791,7 +791,7 @@ export default function App() {
                   {f.icon} {t.features.items[i].badge}
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-5xl md:text-6xl font-black tracking-tighter leading-none text-[#1a1a1a]">{t.features.items[i].title}</h3>
+                  <h3 className="text-5xl md:text-6xl font-display font-black tracking-tight leading-none text-[#1a1a1a]">{t.features.items[i].title}</h3>
                   <p className="text-xl text-[#1a1a1a]/40 font-bold">{t.features.items[i].subtitle}</p>
                 </div>
                 <p className="text-xl text-[#1a1a1a]/60 font-medium leading-relaxed">{t.features.items[i].description}</p>
@@ -856,7 +856,7 @@ export default function App() {
             >
               <div className="space-y-6">
                 <p className="text-xs font-black uppercase tracking-widest text-[#FF4800]">{t.offline.badge}</p>
-                <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none text-[#1a1a1a]">
+                <h2 className="text-5xl md:text-7xl font-black tracking-tight leading-none text-[#1a1a1a]">
                   {t.offline.title}<span className="text-[#1a1a1a]/20 italic">{t.offline.italic}</span>
                 </h2>
                 <p className="text-xl text-[#1a1a1a]/60 font-medium leading-relaxed max-w-2xl mx-auto">
@@ -884,7 +884,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center space-y-4 mb-16">
             <p className="text-xs font-black uppercase tracking-widest text-[#FF4800]">Avis Beta</p>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-[#1a1a1a]">Ce que disent nos testeurs.</h2>
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-[#1a1a1a]">Ce que disent nos testeurs.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {REVIEWS.map((r, i) => (
@@ -922,7 +922,7 @@ export default function App() {
         <div className="max-w-3xl mx-auto space-y-12">
           <div className="text-center space-y-4">
             <p className="text-xs font-black uppercase tracking-widest text-[#FF4800]">{t.faq.badge}</p>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tighter">{t.faq.title}</h2>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight">{t.faq.title}</h2>
           </div>
           <div className="space-y-3">
             {t.faq.items.map((faq, i) => (
