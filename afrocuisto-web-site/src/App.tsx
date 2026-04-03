@@ -1,7 +1,7 @@
 import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
 import {
   Menu, X, Clock, Users, ChefHat, ArrowRight, Play,
-  Instagram, Facebook, Twitter, BookOpen, ShoppingBasket,
+  Instagram, Facebook, BookOpen, ShoppingBasket,
   Download, Globe, Sparkles, Smartphone, WifiOff,
   ShieldCheck, Zap, CheckCircle2, Star, ChevronDown, Mail,
   FileText, Cookie, ShieldAlert, Heart, Languages
@@ -488,10 +488,6 @@ export default function App() {
     // ─────────────────────────────────────────────────────────────────────────
 
     try {
-      if (TEMPLATE_ID === 'YOUR_TEMPLATE_ID') {
-        throw new Error("Configuration EmailJS manquante. Veuillez insérer votre Template ID.");
-      }
-
       // 3. Sauvegarde dans Supabase (pour affichage dans l'Admin)
       try {
         await supabase.from('waitlist').insert([{ email, lang }]);
@@ -1027,8 +1023,7 @@ export default function App() {
               <div className="flex gap-4">
                 {[
                   { Icon: Instagram, href: "https://www.instagram.com/afrocuisto229/" },
-                  { Icon: Facebook, href: "https://www.facebook.com/profile.php?id=61576480304371" },
-                  { Icon: Twitter, href: "#" }
+                  { Icon: Facebook, href: "https://www.facebook.com/profile.php?id=61576480304371" }
                 ].map((social, i) => (
                   <a
                     key={i}
