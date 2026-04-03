@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bug, ChevronDown, Send, CheckCircle2, Loader2, XCircle, AlertCircle, Smartphone, Tag } from 'lucide-react';
+import { Bug, ChevronDown, Send, CheckCircle2, Loader2, XCircle, AlertCircle, Smartphone, Tag, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { dbService } from '../dbService';
 import { BugSeverity, BugCategory } from '../types';
 import { Capacitor } from '@capacitor/core';
@@ -37,12 +37,13 @@ export const BugReportForm: React.FC<BugReportFormProps> = ({ currentUser, isDar
     steps_to_reproduce: '',
     severity: '' as BugSeverity | '',
     category: '' as BugCategory | '',
+    screenshot: null as string | null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const isValid = form.title.trim().length >= 5 &&
-    form.description.trim().length >= 10 &&
+  const isValid = form.title.trim().length >= 3 &&
+    form.description.trim().length >= 5 &&
     form.severity !== '' &&
     form.category !== '';
 
@@ -62,6 +63,7 @@ export const BugReportForm: React.FC<BugReportFormProps> = ({ currentUser, isDar
       category: form.category as BugCategory,
       device_info: getDeviceInfo(),
       app_version: '1.0.1',
+      screenshot: form.screenshot || undefined,
     });
 
     setIsSubmitting(false);
@@ -73,8 +75,26 @@ export const BugReportForm: React.FC<BugReportFormProps> = ({ currentUser, isDar
   };
 
   const handleReset = () => {
-    setForm({ title: '', description: '', steps_to_reproduce: '', severity: '', category: '' });
+    setForm({ title: '', description: '', steps_to_reproduce: '', severity: '', category: '', screenshot: null });
     setSubmitted(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showAlert('L\'image est trop volumineuse (max 5 Mo)', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setForm(f => ({ ...f, screenshot: base64 }));
+    };
+    reader.readAsDataURL(file);
   };
 
   // ── Success screen ──────────────────────────────────────────────────────────
@@ -227,6 +247,42 @@ export const BugReportForm: React.FC<BugReportFormProps> = ({ currentUser, isDar
             isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-[#fb5607]/40' : 'bg-white border-stone-200 text-stone-800 placeholder:text-stone-300 focus:border-[#fb5607]/40'
           }`}
         />
+      </div>
+
+      {/* Screenshot (optional) */}
+      <div>
+        <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block ${isDark ? 'text-white/40' : 'text-stone-400'}`}>
+          Capture d'écran <span className="opacity-50">(optionnel)</span>
+        </label>
+        
+        {form.screenshot ? (
+          <div className="relative w-full h-40 rounded-2xl overflow-hidden border border-[#fb5607]/30">
+            <img src={form.screenshot} alt="Capture" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, screenshot: null }))}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white hover:bg-rose-500 transition-colors"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ) : (
+          <label className={`w-full py-6 px-5 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all hover:bg-[#fb5607]/5 ${
+            isDark ? 'border-white/10 text-white/50' : 'border-stone-200 text-stone-400'
+          }`}>
+            <ImageIcon size={24} className="opacity-50" />
+            <div className="text-center">
+              <p className="text-[13px] font-bold">Ajouter une capture d'écran</p>
+              <p className="text-[11px] mt-1 opacity-70">PNG, JPG jusqu'à 5 Mo</p>
+            </div>
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={handleFileChange} 
+            />
+          </label>
+        )}
       </div>
 
       {/* Submit */}

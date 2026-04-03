@@ -1516,6 +1516,7 @@ export const dbService = {
         category: string;
         device_info?: string;
         app_version?: string;
+        screenshot?: string;
     }): Promise<{ success: boolean; error?: string }> {
         try {
             if (!supabase) return { success: false, error: 'Serveur indisponible' };
