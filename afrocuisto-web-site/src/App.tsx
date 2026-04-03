@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import React, { useRef, useState, useEffect } from "react";
 import emailjs from 'emailjs-com';
+import { supabase } from './lib/supabase';
 
 /* ─────────────────── TRANSLATIONS ─────────────────── */
 
@@ -489,6 +490,13 @@ export default function App() {
     try {
       if (TEMPLATE_ID === 'YOUR_TEMPLATE_ID') {
         throw new Error("Configuration EmailJS manquante. Veuillez insérer votre Template ID.");
+      }
+
+      // 3. Sauvegarde dans Supabase (pour affichage dans l'Admin)
+      try {
+        await supabase.from('waitlist').insert([{ email, lang }]);
+      } catch (dbErr) {
+        console.warn('DB Insert failed, but email will still be sent:', dbErr);
       }
 
       // Envoi de l'email de Bienvenue pour l'Utilisateur

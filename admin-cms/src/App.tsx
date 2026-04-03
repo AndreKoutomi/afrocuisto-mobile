@@ -23,6 +23,7 @@ import { SectionForm } from './pages/SectionForm';
 import { Feedback } from './pages/Feedback';
 import { Contributions } from './pages/Contributions';
 import { UsersPage } from './pages/Users';
+import { BetaTesters } from './pages/BetaTesters';
 import { Transactions } from './pages/Transactions';
 import { Notifications } from './pages/Notifications';
 import { Merchants } from './pages/Merchants';
@@ -58,6 +59,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
     if (location.pathname.startsWith('/recipes/create')) return 'Nouvelle Recette';
     if (location.pathname.startsWith('/recipes/edit')) return 'Modifier la Recette';
     if (location.pathname === '/users') return 'Utilisateurs App (Clients)';
+    if (location.pathname === '/beta-testers') return 'Inscriptions Waitlist (Bêta Testers)';
     if (location.pathname === '/transactions') return 'Transactions';
     if (location.pathname === '/notifications') return 'Notifications Push';
     if (location.pathname === '/merchants') return 'Partenaires Marchands';
@@ -71,6 +73,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
     if (location.pathname.startsWith('/recipes')) return 'Pages / Recettes';
     if (location.pathname.startsWith('/sections')) return 'Pages / Sections';
     if (location.pathname.startsWith('/users')) return 'Pages / Clients App';
+    if (location.pathname.startsWith('/beta-testers')) return 'Pages / Bêta Testers';
     if (location.pathname.startsWith('/transactions')) return 'Pages / Transactions';
     if (location.pathname.startsWith('/contributions')) return 'Pages / Contributions';
     if (location.pathname.startsWith('/notifications')) return 'Pages / Notifications';
@@ -220,6 +223,7 @@ function App() {
                 <Route path="/sections/create" element={<SectionForm />} />
                 <Route path="/sections/edit/:id" element={<SectionForm />} />
                 <Route path="/users" element={<UsersPage />} />
+                <Route path="/beta-testers" element={<BetaTesters />} />
                 <Route path="/transactions" element={<Transactions />} />
                 <Route path="/feedback" element={<Feedback />} />
                 <Route path="/contributions" element={<Contributions />} />
