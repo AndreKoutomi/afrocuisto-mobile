@@ -63,8 +63,8 @@ export function BetaTesters() {
     };
 
     const generateDownloadLink = (tester: BetaTester) => {
-        // Lien direct vers le build dans la branche Production sur GitHub
-        const githubBuildUrl = "https://github.com/AndreKoutomi/AfroCuisto/raw/Production/AfroCuisto.apk";
+        // Lien direct vers le build dans la branche production sur GitHub (version 1.0.0)
+        const githubBuildUrl = "https://github.com/AndreKoutomi/AfroCuisto/raw/production/AfroCuisto%201.0.0.apk";
         const message = `Félicitations 🥘 ! Voici votre accès privilégié pour tester l'application AfroCuisto : ${githubBuildUrl}`;
         
         navigator.clipboard.writeText(message).then(() => {
