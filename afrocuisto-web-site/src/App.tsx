@@ -469,9 +469,34 @@ export default function App() {
   const heroY = useTransform(heroProgress, [0, 1], ["0%", "30%"]);
   const heroOpacity = useTransform(heroProgress, [0, 0.8], [1, 0]);
 
-  const handleWaitlist = (e: React.FormEvent<HTMLFormElement>) => {
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleWaitlist = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const response = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, lang }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSubmitted(true);
+      } else {
+        setErrorMsg(data.error || "Erreur lors de l'inscription");
+      }
+    } catch (err) {
+      setErrorMsg("Connexion impossible au serveur. Réessayez plus tard.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const navLinks = [
@@ -907,19 +932,39 @@ export default function App() {
 
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}>
             {!submitted ? (
-              <form onSubmit={handleWaitlist} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto p-2 bg-black/10 border border-white/20 rounded-[24px] backdrop-blur-sm">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder={t.waitlist.placeholder}
-                  className="flex-1 px-6 py-4 rounded-[18px] bg-white text-[#1a1a1a] placeholder:text-black/30 font-medium text-base focus:outline-none focus:ring-4 focus:ring-white/50 transition-all"
-                />
-                <button type="submit" className="px-8 py-4 bg-[#1a1a1a] hover:bg-black active:scale-95 text-white rounded-[18px] font-black text-sm uppercase tracking-wide transition-all whitespace-nowrap shadow-xl flex items-center justify-center gap-2">
-                  {t.waitlist.submit} <ArrowRight size={16} />
-                </button>
-              </form>
+              <div className="max-w-xl mx-auto space-y-4">
+                {errorMsg && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-100 text-xs font-black uppercase tracking-widest text-center">
+                    <ShieldAlert size={14} className="inline mr-2" /> {errorMsg}
+                  </motion.div>
+                )}
+                <form onSubmit={handleWaitlist} className="flex flex-col sm:flex-row gap-3 p-2 bg-black/10 border border-white/20 rounded-[24px] backdrop-blur-sm">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={loading}
+                    placeholder={t.waitlist.placeholder}
+                    className="flex-1 px-6 py-4 rounded-[18px] bg-white text-[#1a1a1a] placeholder:text-black/30 font-medium text-base focus:outline-none focus:ring-4 focus:ring-white/50 transition-all disabled:opacity-50"
+                  />
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="px-8 py-4 bg-[#1a1a1a] hover:bg-black active:scale-95 text-white rounded-[18px] font-black text-sm uppercase tracking-wide transition-all whitespace-nowrap shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed min-w-[160px]"
+                  >
+                    {loading ? (
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                        <Zap size={16} />
+                      </motion.div>
+                    ) : (
+                      <>
+                        {t.waitlist.submit} <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
             ) : (
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="inline-flex items-center gap-3 px-10 py-5 bg-white/20 border border-white/40 rounded-2xl text-white font-black text-lg">
                 <CheckCircle2 size={24} /> {t.waitlist.success}
