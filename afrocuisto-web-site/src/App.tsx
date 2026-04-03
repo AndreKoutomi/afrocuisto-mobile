@@ -3,7 +3,7 @@ import {
   Menu, X, Clock, Users, ChefHat, ArrowRight, Play,
   Instagram, Facebook, BookOpen, ShoppingBasket,
   Download, Globe, Sparkles, Smartphone, WifiOff,
-  ShieldCheck, Zap, CheckCircle2, Star, ChevronDown, Mail,
+  ShieldCheck, Zap, CheckCircle2, Star, ChevronDown, ChevronUp, Mail,
   FileText, Cookie, ShieldAlert, Heart, Languages
 } from "lucide-react";
 import React, { useRef, useState, useEffect } from "react";
@@ -430,6 +430,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [showTopButton, setShowTopButton] = useState(false);
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
   // ScrollSpy Logic
@@ -454,6 +455,7 @@ export default function App() {
     // Special case for Hero (top)
     const handleScroll = () => {
       if (window.scrollY < 100) setActiveSection("#");
+      setShowTopButton(window.scrollY > 500);
     };
     window.addEventListener("scroll", handleScroll);
 
@@ -1125,6 +1127,22 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      <AnimatePresence>
+        {showTopButton && (
+          <motion.button
+            initial={{ opacity: 0, y: 20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.8 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-8 right-8 z-[150] w-14 h-14 bg-[#FF4800] text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-[#FF4800]/40 hover:bg-[#FF6A00] transition-colors"
+          >
+            <ChevronUp size={28} />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
