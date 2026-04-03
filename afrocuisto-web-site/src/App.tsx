@@ -425,11 +425,43 @@ export default function App() {
   const t = TRANSLATIONS[lang];
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState("#");
   const heroRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+
+  // ScrollSpy Logic
+  useEffect(() => {
+    const sections = ["#", "#features", "#app", "#faq", "#waitlist"];
+    const observerOptions = { root: null, rootMargin: "-40% 0px -40% 0px", threshold: 0 };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection("#" + entry.target.id);
+        }
+      });
+    }, observerOptions);
+
+    sections.forEach((id) => {
+      if (id === "#") return;
+      const el = document.getElementById(id.replace("#", ""));
+      if (el) observer.observe(el);
+    });
+
+    // Special case for Hero (top)
+    const handleScroll = () => {
+      if (window.scrollY < 100) setActiveSection("#");
+    };
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   const legalContent: Record<string, { title: string; subtitle: string; content: React.ReactNode; icon: any }> = {
     Confidentialité: {
@@ -601,7 +633,12 @@ export default function App() {
                   {t.nav.beta}
                 </a>
               ) : (
-                <a key={l.href} href={l.href} className="text-sm font-bold text-[#1a1a1a]/50 hover:text-[#FF4800] transition-colors uppercase tracking-wide">
+                <a
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setActiveSection(l.href)}
+                  className={`text-sm font-bold transition-colors uppercase tracking-wide ${activeSection === l.href ? "text-[#FF4800]" : "text-[#1a1a1a]/50 hover:text-[#FF4800]"}`}
+                >
                   {l.href === "#features" ? t.nav.features : l.href === "#app" ? t.nav.app : t.nav.faq}
                 </a>
               )
@@ -650,7 +687,7 @@ export default function App() {
                         }, 100);
                       }
                     }}
-                    className={`text-xl font-black uppercase tracking-tight ${l.highlight ? "text-[#FF4800]" : "text-[#1a1a1a]/70"}`}
+                    className={`text-xl font-black uppercase tracking-tight ${activeSection === l.href ? "text-[#FF4800]" : "text-[#1a1a1a]/70"}`}
                   >
                     {l.href === "#features" ? t.nav.features : l.href === "#app" ? t.nav.app : l.href === "#faq" ? t.nav.faq : t.nav.beta}
                   </a>
