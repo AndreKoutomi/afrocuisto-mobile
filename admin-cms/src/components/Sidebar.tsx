@@ -108,6 +108,14 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }:
                 <span className="nav-label">Utilisateurs & Social</span>
 
                 <NavLink
+                    to="/beta-testers"
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <Sparkles size={20} style={{ marginRight: '8px' }} color="#fb5607" />
+                    <span>Beta Testers</span>
+                </NavLink>
+
+                <NavLink
                     to="/users"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >

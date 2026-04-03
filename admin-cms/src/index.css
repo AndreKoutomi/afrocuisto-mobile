@@ -1076,3 +1076,7 @@ textarea.form-control {
   width: 100% !important;
   max-height: 95vh !important;
 }
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
