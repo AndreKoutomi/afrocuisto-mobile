@@ -1502,5 +1502,82 @@ export const dbService = {
         } catch (err) {
             return false;
         }
-    }
+    },
+
+    // ── Bug Reports ─────────────────────────────────────────────────────────
+    async submitBugReport(report: {
+        user_id?: string;
+        user_name: string;
+        user_email: string;
+        title: string;
+        description: string;
+        steps_to_reproduce?: string;
+        severity: string;
+        category: string;
+        device_info?: string;
+        app_version?: string;
+    }): Promise<{ success: boolean; error?: string }> {
+        try {
+            if (!supabase) return { success: false, error: 'Serveur indisponible' };
+            const { error } = await supabase.from('bug_reports').insert([{
+                ...report,
+                status: 'Nouveau',
+                created_at: new Date().toISOString(),
+            }]);
+            if (error) {
+                // Table may not exist yet — queue locally for later
+                if (error.code === '42P01') {
+                    const pending = JSON.parse(localStorage.getItem('afrocuisto_pending_bugs') || '[]');
+                    pending.push({ ...report, status: 'Nouveau', created_at: new Date().toISOString() });
+                    localStorage.setItem('afrocuisto_pending_bugs', JSON.stringify(pending));
+                    return { success: true }; // Saved locally
+                }
+                return { success: false, error: error.message };
+            }
+            return { success: true };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    },
+
+    async adminGetAllBugReports(): Promise<any[]> {
+        try {
+            if (!supabase) return [];
+            const { data, error } = await supabase
+                .from('bug_reports')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) {
+                if (error.code === '42P01') return [];
+                throw error;
+            }
+            return data || [];
+        } catch (err) {
+            console.error('adminGetAllBugReports error:', err);
+            return [];
+        }
+    },
+
+    async adminUpdateBugStatus(id: string, status: string): Promise<boolean> {
+        try {
+            if (!supabase) return false;
+            const { error } = await supabase
+                .from('bug_reports')
+                .update({ status, updated_at: new Date().toISOString() })
+                .eq('id', id);
+            return !error;
+        } catch (err) {
+            return false;
+        }
+    },
+
+    async adminDeleteBugReport(id: string): Promise<boolean> {
+        try {
+            if (!supabase) return false;
+            const { error } = await supabase.from('bug_reports').delete().eq('id', id);
+            return !error;
+        } catch (err) {
+            return false;
+        }
+    },
 };

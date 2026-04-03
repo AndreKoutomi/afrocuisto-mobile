@@ -14,6 +14,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { OptimizedImage } from './components/OptimizedImage';
 import DishSuggestionForm from './components/DishSuggestionForm';
+import { BugReportForm } from './components/BugReportForm';
 import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { motion, AnimatePresence } from 'motion/react';
 import { CommunityFeed } from './components/community/CommunityFeed';
@@ -83,7 +84,8 @@ import {
   Maximize2,
   ClipboardList,
   Calendar,
-  ShieldAlert
+  ShieldAlert,
+  Bug
 } from 'lucide-react';
 import { recipes } from './data';
 import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product, CommunityPost, PostComment, PostCategory } from './types';
@@ -1427,6 +1429,19 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
               <ChevronRight size={16} className="text-stone-400" />
             </button>
 
+            <button
+              onClick={() => setProfileSubView('bugReport')}
+              className="w-full flex items-center justify-between p-4 bg-rose-50 rounded-2xl border border-rose-100 active:bg-rose-100 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+                  <Bug size={18} />
+                </div>
+                <span className="font-bold text-stone-700 text-sm">Signaler un bug</span>
+              </div>
+              <ChevronRight size={16} className="text-stone-400" />
+            </button>
+
             {/* Sync Status Indicator */}
             {(isSyncing || !hasLoadedAtLeastOnce) && (
               <div className="flex justify-center mt-6">
@@ -1472,6 +1487,14 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
               />
             </div>
           </div>
+        );
+      case 'bugReport':
+        return (
+          <BugReportForm
+            currentUser={currentUser}
+            isDark={settings?.darkMode ?? false}
+            showAlert={showAlert}
+          />
         );
       case 'security':
         return (
