@@ -1,23 +1,276 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
 import {
   Menu, X, Clock, Users, ChefHat, ArrowRight, Play,
   Instagram, Facebook, Twitter, BookOpen, ShoppingBasket,
   Download, Globe, Sparkles, Smartphone, WifiOff,
   ShieldCheck, Zap, CheckCircle2, Star, ChevronDown, Mail,
-  FileText, Cookie, ShieldAlert, Heart
+  FileText, Cookie, ShieldAlert, Heart, Languages
 } from "lucide-react";
 import React, { useRef, useState, useEffect } from "react";
+
+/* ─────────────────── TRANSLATIONS ─────────────────── */
+
+type Language = "FR" | "EN" | "ES";
+
+const TRANSLATIONS = {
+  FR: {
+    nav: { features: "Fonctionnalités", app: "L'Application", faq: "FAQ", beta: "Accès Bêta" },
+    hero: {
+      badge: "Bêta Test Bientôt Disponible",
+      title: "La Cuisine",
+      titleSpan: "Béninoise",
+      titleSuffix: "Réinventée.",
+      desc: "Recettes guidées, liste de marché intelligente et communauté passionnée — tout ce dont vous avez besoin pour sublimer votre cuisine africaine.",
+      waitlist: "Rejoindre la Liste d'attente",
+      discover: "Découvrir",
+      scroll: "Défiler",
+      stats: ["Recettes Béninoises", "Régions Couvertes", "Authenticité"]
+    },
+    features: {
+      badge: "Fonctionnalités",
+      title: "Tout ce dont vous avez besoin.",
+      items: [
+        {
+          badge: "Découverte",
+          title: "Recettes Interactives",
+          subtitle: "Explorez l'Héritage Béninois",
+          description: "Plongez dans des centaines de recettes authentiques classées par région, difficulté et temps. Suivez chaque étape guidée et cochez votre progression en temps réel.",
+          perks: ["Étapes guidées avec minuteries", "Classement par région"]
+        },
+        {
+          badge: "Communauté",
+          title: "Partagez vos Plats",
+          subtitle: "Une Communauté de Chefs",
+          description: "Rejoignez des milliers de passionnés. Partagez vos propres variantes de recettes, échangez des astuces et participez à la préservation de notre art culinaire.",
+          perks: ["Partage de photos de plats", "Commentaires et astuces"]
+        },
+        {
+          badge: "Pratique",
+          title: "Liste de Marché",
+          subtitle: "Budget Maîtrisé en XOF",
+          description: "Estimez le coût total de vos ingrédients avant même de quitter la maison. Gérez votre budget, partagez votre liste et ne ratez plus jamais un ingrédient.",
+          perks: ["Estimation des prix en XOF", "Partage de liste en un tap"]
+        }
+      ]
+    },
+    offline: {
+      badge: "Conçue pour la réalité",
+      title: "Mobile & ",
+      italic: "Offline.",
+      desc: "Que vous soyez dans une cuisine enfumée de Cotonou ou au marché de Dantokpa sans signal, AfroCuisto reste toujours à vos côtés.",
+      cards: [
+        { title: "Mode Hors-Ligne", desc: "Plats & listes sans internet." },
+        { title: "Natif Mobile", desc: "Usage à une main." },
+        { title: "Sécurisé", desc: "Données protégées." },
+        { title: "Ultra Rapide", desc: "Instantané." }
+      ]
+    },
+    reviews: {
+      badge: "Avis Beta",
+      title: "Ce que disent nos testeurs."
+    },
+    faq: {
+      badge: "Questions Fréquentes",
+      title: "Tout ce qu'il faut savoir.",
+      items: [
+        { q: "L'application est-elle gratuite ?", a: "Oui, la version de base est 100% gratuite avec des centaines de recettes et l'accès communautaire." },
+        { q: "Faut-il une connexion internet ?", a: "Non. Vos recettes favorites et votre liste de marché sont accessibles hors-ligne." },
+        { q: "Sur quels appareils l'app est-elle disponible ?", a: "AfroCuisto sera disponible sur iOS (App Store) et Android (Google Play)." },
+        { q: "Quand sera-t-elle disponible ?", a: "Un accès Beta fermé est prévu prochainement. Inscrivez-vous sur la liste d'attente." }
+      ]
+    },
+    waitlist: {
+      badge: "Accès Bêta Exclusif",
+      title: "Rejoignez le ",
+      titleBr: "mouvement.",
+      desc: "Soyez parmi les premiers à taster AfroCuisto. Entrez votre email pour un accès prioritaire au lancement Beta.",
+      placeholder: "votre@email.com",
+      submit: "M'inscrire",
+      success: "Vous êtes sur la liste ! 🎉",
+      noSpam: "Pas de spam. Jamais. Promis.",
+      soon: "Bientôt"
+    },
+    footer: {
+      desc: "Développé avec passion pour préserver et célébrer l'héritage culinaire de l'Afrique de l'Ouest. 🌍",
+      app: "L'Application",
+      legal: "Légal",
+      rights: "© 2026 AfroCuisto. Tous droits réservés."
+    }
+  },
+  EN: {
+    nav: { features: "Features", app: "The App", faq: "FAQ", beta: "Beta Access" },
+    hero: {
+      badge: "Beta Test Coming Soon",
+      title: "Beninese",
+      titleSpan: "Cuisine",
+      titleSuffix: "Reinvented.",
+      desc: "Guided recipes, smart market lists, and a passionate community — everything you need to elevate your African cooking.",
+      waitlist: "Join the Waitlist",
+      discover: "Discover",
+      scroll: "Scroll",
+      stats: ["Beninese Recipes", "Regions Covered", "Authenticity"]
+    },
+    features: {
+      badge: "Features",
+      title: "Everything you need.",
+      items: [
+        {
+          badge: "Discovery",
+          title: "Interactive Recipes",
+          subtitle: "Explore Beninese Heritage",
+          description: "Dive into hundreds of authentic recipes sorted by region, difficulty, and time. Follow each guided step and track your progress in real-time.",
+          perks: ["Guided steps with timers", "Sort by region"]
+        },
+        {
+          badge: "Community",
+          title: "Share your Dishes",
+          subtitle: "A Community of Chefs",
+          description: "Join thousands of enthusiasts. Share your own recipe variants, exchange tips, and participate in preserving our culinary art.",
+          perks: ["Share dish photos", "Comments and tips"]
+        },
+        {
+          badge: "Practical",
+          title: "Market List",
+          subtitle: "Budget Managed in XOF",
+          description: "Estimate the total cost of your ingredients before even leaving home. Manage your budget, share your list, and never miss an ingredient again.",
+          perks: ["Price estimation in XOF", "One-tap list sharing"]
+        }
+      ]
+    },
+    offline: {
+      badge: "Built for reality",
+      title: "Mobile & ",
+      italic: "Offline.",
+      desc: "Whether you're in a smokey kitchen in Cotonou or at Dantokpa market without signal, AfroCuisto is always by your side.",
+      cards: [
+        { title: "Offline Mode", desc: "Dishes & lists without internet." },
+        { title: "Mobile Native", desc: "One-handed usage." },
+        { title: "Secure", desc: "Protected data." },
+        { title: "Ultra Fast", desc: "Instantaneous." }
+      ]
+    },
+    reviews: {
+      badge: "Beta Reviews",
+      title: "What our testers say."
+    },
+    faq: {
+      badge: "Frequently Asked Questions",
+      title: "Everything you need to know.",
+      items: [
+        { q: "Is the app free?", a: "Yes, the basic version is 100% free with hundreds of recipes and community access." },
+        { q: "Do I need internet?", a: "No. Your favorite recipes and market list are accessible offline." },
+        { q: "Which devices are supported?", a: "AfroCuisto will be available on iOS (App Store) and Android (Google Play)." },
+        { q: "When will it be available?", a: "A closed Beta access is coming soon. Subscribe to the waitlist to be first." }
+      ]
+    },
+    waitlist: {
+      badge: "Exclusive Beta Access",
+      title: "Join the ",
+      titleBr: "movement.",
+      desc: "Be among the first to taste AfroCuisto. Enter your email for priority access to the Beta launch.",
+      placeholder: "your@email.com",
+      submit: "Subscribe",
+      success: "You're on the list! 🎉",
+      noSpam: "No spam. Ever. Promise.",
+      soon: "Soon"
+    },
+    footer: {
+      desc: "Developed with passion to preserve and celebrate the culinary heritage of West Africa. 🌍",
+      app: "The Application",
+      legal: "Legal",
+      rights: "© 2026 AfroCuisto. All rights reserved."
+    }
+  },
+  ES: {
+    nav: { features: "Funcionalidades", app: "La Aplicación", faq: "FAQ", beta: "Acceso Beta" },
+    hero: {
+      badge: "Prueba Beta Próximamente",
+      title: "La Cocina",
+      titleSpan: "Beninesa",
+      titleSuffix: "Reinventada.",
+      desc: "Recetas guiadas, listas de mercado inteligentes y una comunidad apasionada: todo lo que necesitas para sublimar tu cocina africana.",
+      waitlist: "Unirse a la lista",
+      discover: "Descubrir",
+      scroll: "Desplazar",
+      stats: ["Recetas Beninesas", "Regiones Cubiertas", "Autenticidad"]
+    },
+    features: {
+      badge: "Funcionalidades",
+      title: "Todo lo que necesitas.",
+      items: [
+        {
+          badge: "Descubrimiento",
+          title: "Recetas Interactivas",
+          subtitle: "Explora el Patrimonio Beninés",
+          description: "Sumérgete en cientos de recetas auténticas clasificadas por región, dificultad y tiempo. Sigue cada paso guiado y marca tu progreso en tiempo real.",
+          perks: ["Pasos guiados con temporizadores", "Clasificación por región"]
+        },
+        {
+          badge: "Comunidad",
+          title: "Comparte tus Platos",
+          subtitle: "Una Comunidad de Chefs",
+          description: "Únete a miles de apasionados. Comparte tus propias variantes de recetas, intercambia consejos y participa en la preservación de nuestro arte culinario.",
+          perks: ["Compartir fotos de platos", "Comentarios y consejos"]
+        },
+        {
+          badge: "Práctico",
+          title: "Lista de Mercado",
+          subtitle: "Presupuesto en XOF",
+          description: "Estima el costo total de vos ingredientes antes de salir de casa. Gestiona tu presupuesto, comparte tu lista y no pierdas nunca un ingrediente.",
+          perks: ["Estimación de precios en XOF", "Compartir lista con un toque"]
+        }
+      ]
+    },
+    offline: {
+      badge: "Diseñado para la realidad",
+      title: "Móvil & ",
+      italic: "Offline.",
+      desc: "Ya sea que estés en una cocina en Cotonú o en el mercado de Dantokpa sin señal, AfroCuisto siempre está a tu lado.",
+      cards: [
+        { title: "Modo Offline", desc: "Platos y listas sin internet." },
+        { title: "Nativo Móvil", desc: "Uso con una mano." },
+        { title: "Seguro", desc: "Datos protegidos." },
+        { title: "Ultra Rápido", desc: "Instantáneo." }
+      ]
+    },
+    reviews: {
+      badge: "Opiniones Beta",
+      title: "Lo que dicen nuestros probadores."
+    },
+    faq: {
+      badge: "Preguntas Frecuentes",
+      title: "Todo lo que necesitas saber.",
+      items: [
+        { q: "¿La aplicación es gratuita?", a: "Sí, la versión básica es 100% gratuita con cientos de recetas y acceso comunitario." },
+        { q: "¿Necesito internet?", a: "No. Tus recetas favoritas y tu lista de compra están disponibles offline." },
+        { q: "¿En qué dispositivos está disponible?", a: "AfroCuisto estará disponible en iOS (App Store) y Android (Google Play)." },
+        { q: "¿Cuándo estará disponible?", a: "Próximamente habrá un acceso Beta cerrado. Inscríbete en la lista de espera." }
+      ]
+    },
+    waitlist: {
+      badge: "Acceso Beta Exclusivo",
+      title: "Únete al ",
+      titleBr: "movimiento.",
+      desc: "Sé de los primeros en probar AfroCuisto. Introduce tu email para acceso prioritario al lanzamiento Beta.",
+      placeholder: "tu@email.com",
+      submit: "Inscribirse",
+      success: "¡Estás en la lista! 🎉",
+      noSpam: "Sin spam. Nunca. Prometido.",
+      soon: "Pronto"
+    },
+    footer: {
+      desc: "Desarrollado con pasión para preservar y celebrar el patrimonio culinario de África Occidental. 🌍",
+      app: "La Aplicación",
+      legal: "Legal",
+      rights: "© 2026 AfroCuisto. Todos los derechos reservados."
+    }
+  }
+};
 
 /* ─────────────────── DATA ─────────────────── */
 
 const STATS = [
   { value: "200+", label: "Recettes Béninoises" },
-  { value: "2k+", label: "Chefs & Passionnés" },
   { value: "4", label: "Régions Couvertes" },
   { value: "100%", label: "Authenticité" },
 ];
@@ -104,26 +357,30 @@ const Pixel9Mockup = () => (
       transition: { type: "spring", stiffness: 400, damping: 25 }
     }}
     className="relative inline-block select-none"
-    style={{ filter: "drop-shadow(0 60px 80px rgba(255,72,0,0.25))" }}
+    style={{
+      willChange: "transform, opacity",
+      filter: "drop-shadow(0 30px 40px rgba(255,72,0,0.15))"
+    }}
   >
     <motion.img
       animate={{
-        y: [0, -12, 0],
+        y: [0, -8, 0],
       }}
       transition={{
-        duration: 5,
+        duration: 4,
         repeat: Infinity,
         ease: "easeInOut"
       }}
       src="/assets/app-mockup-full.png"
       alt="AfroCuisto App"
-      style={{ width: 320, display: "block" }}
+      className="block w-[320px] h-auto pointer-events-none mix-blend-multiply"
+      style={{ willChange: "transform" }}
     />
   </motion.div>
 );
 
 /* ─────────────────── FAQ ITEM ─────────────────── */
-type FAQItemProps = { q: string; a: string; index: number };
+type FAQItemProps = { q: string; a: string; index: number; key?: any };
 const FAQItem = ({ q, a, index }: FAQItemProps) => {
   const [open, setOpen] = useState(false);
   return (
@@ -162,6 +419,9 @@ const FAQItem = ({ q, a, index }: FAQItemProps) => {
 
 /* ─────────────────── MAIN APP ─────────────────── */
 export default function App() {
+  const [lang, setLang] = useState<Language>("FR");
+  const t = TRANSLATIONS[lang];
+
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -171,115 +431,32 @@ export default function App() {
 
   const legalContent: Record<string, { title: string; subtitle: string; content: React.ReactNode; icon: any }> = {
     Confidentialité: {
-      title: "Confidentialité",
-      subtitle: "Protection de vos données culinaires",
+      title: lang === "EN" ? "Privacy" : lang === "ES" ? "Privacidad" : "Confidentialité",
+      subtitle: lang === "EN" ? "Protecting your culinary data" : lang === "ES" ? "Protección de sus datos" : "Protection de vos données culinaires",
       icon: <ShieldCheck className="text-[#FF4800]" />,
       content: (
         <div className="space-y-6 text-[#1a1a1a]/70">
-          <p>Chez <strong>AfroCuisto</strong>, nous considérons que votre héritage culinaire et vos habitudes de cuisine sont précieux. Votre vie privée est au cœur de notre développement.</p>
-          <section className="space-y-3">
-            <h4 className="text-[#1a1a1a] font-black text-sm uppercase">Données Collectées</h4>
-            <p className="text-sm">Nous collectons uniquement votre adresse email pour la liste d'attente et, plus tard, vos préférences alimentaires (régions préférées, allergies) pour personnaliser votre expérience.</p>
-          </section>
-          <section className="space-y-3">
-            <h4 className="text-[#1a1a1a] font-black text-sm uppercase">Utilisation et Partage</h4>
-            <p className="text-sm">Vos données ne sont jamais vendues. Elles servent à synchroniser votre liste de marché en temps réel et à vous proposer des recettes adaptées aux produits disponibles dans votre région.</p>
-          </section>
-          <section className="space-y-3">
-            <h4 className="text-[#1a1a1a] font-black text-sm uppercase">Vos Droits</h4>
-            <p className="text-sm">Vous disposez d'un droit total d'accès, de modification et de suppression de vos données directement depuis les réglages de l'application.</p>
-          </section>
+          <p>{lang === "EN" ? "At AfroCuisto, we consider your culinary heritage and cooking habits precious. Your privacy is at the heart of our development." : lang === "ES" ? "En AfroCuisto, consideramos que su patrimonio culinario y sus hábitos son preciosos. Su privacidad es fundamental." : "Chez AfroCuisto, nous considérons que votre héritage culinaire et vos habitudes de cuisine sont précieux. Votre vie privée est au cœur de notre développement."}</p>
         </div>
       ),
     },
     Conditions: {
-      title: "Conditions",
-      subtitle: "Règles d'utilisation de l'app",
+      title: lang === "EN" ? "Terms" : lang === "ES" ? "Condiciones" : "Conditions",
+      subtitle: lang === "EN" ? "Rules for using the app" : lang === "ES" ? "Reglas de uso" : "Règles d'utilisation de l'app",
       icon: <FileText className="text-[#FF4800]" />,
       content: (
         <div className="space-y-6 text-[#1a1a1a]/70">
-          <p>L'utilisation d'AfroCuisto implique l'acceptation de nos principes de partage et de respect de l'art culinaire.</p>
-          <ul className="space-y-4">
-            <li className="flex gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#FF4800] mt-2 shrink-0" />
-              <p className="text-sm"><strong>Usage Personnel :</strong> L'application est destinée à un usage privé pour sublimer vos repas quotidiens.</p>
-            </li>
-            <li className="flex gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#FF4800] mt-2 shrink-0" />
-              <p className="text-sm"><strong>Contenu :</strong> Les recettes sont le fruit d'un travail de recherche patrimoniale. Toute reproduction commerciale est interdite sans accord.</p>
-            </li>
-            <li className="flex gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#FF4800] mt-2 shrink-0" />
-              <p className="text-sm"><strong>Bêta :</strong> En tant que testeur, vous comprenez que certaines fonctionnalités peuvent évoluer rapidement.</p>
-            </li>
-          </ul>
-        </div>
-      ),
-    },
-    Cookies: {
-      title: "Cookies",
-      subtitle: "Améliorer votre navigation",
-      icon: <Cookie className="text-[#FF4800]" />,
-      content: (
-        <div className="space-y-6 text-[#1a1a1a]/70">
-          <p>Nous utilisons des traceurs légers pour rendre votre expérience plus fluide.</p>
-          <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100">
-            <h4 className="font-bold text-[#1a1a1a] mb-1">Session & Préférences</h4>
-            <p className="text-xs">Mémorise votre progression dans une recette (étape 4 sur 10) pour que vous puissiez reprendre là où vous vous êtes arrêté.</p>
-          </div>
-          <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100">
-            <h4 className="font-bold text-[#1a1a1a] mb-1">Performance</h4>
-            <p className="text-xs">Nous aide à identifier si une page charge lentement au marché de Dantokpa afin d'optimiser le mode hors-ligne.</p>
-          </div>
+          <p>{lang === "EN" ? "Using AfroCuisto implies acceptance of our principles of sharing and respect for culinary art." : lang === "ES" ? "El uso de AfroCuisto implica la aceptación de nuestros principios de intercambio y respeto culinario." : "L'utilisation d'AfroCuisto implique l'acceptation de nos principes de partage et de respect de l'art culinaire."}</p>
         </div>
       ),
     },
     Contact: {
       title: "Contact",
-      subtitle: "Parlons cuisine ensemble",
+      subtitle: lang === "EN" ? "Let's talk cooking together" : lang === "ES" ? "Hablemos de cocina" : "Parlons cuisine ensemble",
       icon: <Mail className="text-[#FF4800]" />,
       content: (
-        <div className="space-y-8">
-          <div className="space-y-4">
-            <p className="text-[#1a1a1a]/70 text-center">Une suggestion de recette ou un bug à signaler ? Notre équipe est disponible pour vous.</p>
-            <div className="grid grid-cols-1 gap-3">
-              <a href="mailto:contact@afrocuisto.app" className="flex items-center gap-4 p-5 bg-white border border-stone-200 rounded-3xl hover:border-[#FF4800] hover:shadow-xl transition-all group">
-                <div className="w-12 h-12 rounded-2xl bg-[#FF4800]/10 flex items-center justify-center text-[#FF4800] group-hover:bg-[#FF4800] group-hover:text-white transition-colors">
-                  <Mail size={24} />
-                </div>
-                <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-[#1a1a1a]/40">Email</p>
-                  <p className="font-black text-[#1a1a1a]">hello@afrocuisto.app</p>
-                </div>
-              </a>
-              <div className="flex items-center gap-4 p-5 bg-white border border-stone-200 rounded-3xl">
-                <div className="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-[#1a1a1a]/40">
-                  <Globe size={24} />
-                </div>
-                <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-[#1a1a1a]/40">Localisation</p>
-                  <p className="font-black text-[#1a1a1a]">Cotonou & Paris</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-center gap-4">
-            {[
-              { Icon: Instagram, href: "https://www.instagram.com/afrocuisto229/" },
-              { Icon: Facebook, href: "https://www.facebook.com/profile.php?id=61576480304371" },
-              { Icon: Twitter, href: "#" }
-            ].map((social, i) => (
-              <a
-                key={i}
-                href={social.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-12 h-12 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-center text-[#1a1a1a]/40 hover:text-[#FF4800] transition-all"
-              >
-                <social.Icon size={20} />
-              </a>
-            ))}
-          </div>
+        <div className="space-y-4">
+          <p className="text-[#1a1a1a]/70 text-center">{lang === "EN" ? "A recipe suggestion or a bug to report? Our team is available for you." : lang === "ES" ? "¿Una sugerencia de receta o un error? Nuestro equipo está disponible." : "Une suggestion de recette ou un bug à signaler ? Notre équipe est disponible pour vous."}</p>
         </div>
       ),
     },
@@ -375,14 +552,27 @@ export default function App() {
             {navLinks.map((l) =>
               l.highlight ? (
                 <a key={l.href} href={l.href} className="px-5 py-2.5 bg-[#FF4800] text-white rounded-full text-sm font-black uppercase tracking-wide hover:bg-[#FF6A00] transition-colors shadow-lg shadow-[#FF4800]/30">
-                  {l.label}
+                  {t.nav.beta}
                 </a>
               ) : (
                 <a key={l.href} href={l.href} className="text-sm font-bold text-[#1a1a1a]/50 hover:text-[#FF4800] transition-colors uppercase tracking-wide">
-                  {l.label}
+                  {l.href === "#features" ? t.nav.features : l.href === "#app" ? t.nav.app : t.nav.faq}
                 </a>
               )
             )}
+
+            {/* Language Selector */}
+            <div className="flex items-center gap-1 bg-black/5 p-1 rounded-full border border-black/5">
+              {(["FR", "EN", "ES"] as Language[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black transition-all ${lang === l ? "bg-white text-[#FF4800] shadow-sm" : "text-[#1a1a1a]/40 hover:text-[#1a1a1a]"}`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
           </nav>
 
           <button onClick={() => setMenuOpen(!menuOpen)} className="lg:hidden w-10 h-10 rounded-full bg-black/8 flex items-center justify-center">
@@ -400,10 +590,44 @@ export default function App() {
             >
               <div className="px-6 py-6 flex flex-col gap-4">
                 {navLinks.map((l) => (
-                  <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)} className={`text-lg font-bold ${l.highlight ? "text-[#FF4800]" : "text-[#1a1a1a]/70"}`}>
-                    {l.label}
+                  <a 
+                    key={l.href} 
+                    href={l.href} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setMenuOpen(false);
+                      const targetId = l.href.replace("#", "");
+                      const element = document.getElementById(targetId);
+                      if (element) {
+                        setTimeout(() => {
+                          element.scrollIntoView({ behavior: "smooth" });
+                        }, 100);
+                      }
+                    }} 
+                    className={`text-xl font-black uppercase tracking-tight ${l.highlight ? "text-[#FF4800]" : "text-[#1a1a1a]/70"}`}
+                  >
+                    {l.href === "#features" ? t.nav.features : l.href === "#app" ? t.nav.app : l.href === "#faq" ? t.nav.faq : t.nav.beta}
                   </a>
                 ))}
+
+                {/* Mobile Language Selector */}
+                <div className="pt-6 mt-6 border-t border-black/5 flex items-center gap-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-[#1a1a1a]/30">Language</p>
+                  <div className="flex items-center gap-2">
+                    {(["FR", "EN", "ES"] as Language[]).map((l) => (
+                      <button
+                        key={l}
+                        onClick={() => {
+                          setLang(l);
+                          setMenuOpen(false);
+                        }}
+                        className={`w-10 h-10 rounded-xl font-black text-xs transition-all border ${lang === l ? "bg-[#FF4800] border-[#FF4800] text-white shadow-lg shadow-[#FF4800]/20" : "bg-white border-stone-200 text-[#1a1a1a]/40 hover:border-[#FF4800]/30"}`}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -420,44 +644,44 @@ export default function App() {
           <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.3) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.3) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
         </div>
 
-        <motion.div style={{ y: heroY, opacity: heroOpacity }} className="relative z-10 max-w-7xl mx-auto px-6 md:px-10 pt-28 pb-20 w-full">
+        <motion.div style={{ y: heroY, opacity: heroOpacity, willChange: "transform, opacity" }} className="relative z-10 max-w-7xl mx-auto px-6 md:px-10 pt-28 pb-20 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 xl:gap-24 items-center">
 
             {/* Left */}
             <div className="space-y-10">
               <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF4800]/15 border border-[#FF4800]/30 rounded-full text-[#FF4800] text-xs font-black uppercase tracking-widest mb-8">
-                  <Sparkles size={12} /> Bêta Test Bientôt Disponible
+                  <Sparkles size={12} /> {t.hero.badge}
                 </div>
                 <h1 className="text-[clamp(3rem,8vw,6.5rem)] font-black leading-[0.88] tracking-tighter text-[#1a1a1a]">
-                  La Cuisine<br />
+                  {t.hero.title}<br />
                   <span className="relative inline-block">
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF4800] via-[#FF7900] to-[#FFB600]">Béninoise</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF4800] via-[#FF7900] to-[#FFB600]">{t.hero.titleSpan}</span>
                   </span>
                   <br />
-                  <span className="text-[#1a1a1a]/20">Réinventée.</span>
+                  <span className="text-[#1a1a1a]/20">{t.hero.titleSuffix}</span>
                 </h1>
               </motion.div>
 
               <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.8 }} className="text-xl md:text-2xl text-[#1a1a1a]/60 font-medium leading-relaxed max-w-xl">
-                Recettes guidées, liste de marché intelligente et communauté passionnée — tout ce dont vous avez besoin pour sublimer votre cuisine africaine.
+                {t.hero.desc}
               </motion.p>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.8 }} className="flex flex-wrap gap-4">
                 <a href="#waitlist" className="flex items-center gap-3 px-8 py-4 bg-[#FF4800] hover:bg-[#FF6A00] text-white rounded-2xl font-black text-sm uppercase tracking-wide transition-all hover:scale-105 shadow-2xl shadow-[#FF4800]/30">
-                  <Download size={18} /> Rejoindre la Waitlist
+                  <Download size={18} /> {t.hero.waitlist}
                 </a>
                 <a href="#features" className="flex items-center gap-3 px-8 py-4 bg-[#1a1a1a]/8 hover:bg-[#1a1a1a]/12 text-[#1a1a1a] rounded-2xl font-black text-sm uppercase tracking-wide transition-all border border-[#1a1a1a]/10">
-                  Découvrir <ArrowRight size={16} />
+                  {t.hero.discover} <ArrowRight size={16} />
                 </a>
               </motion.div>
 
               {/* Stats */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }} className="pt-4 grid grid-cols-4 gap-4 border-t border-[#1a1a1a]/10">
-                {STATS.map((s) => (
-                  <div key={s.label} className="space-y-1">
+                {STATS.map((s, idx) => (
+                  <div key={idx} className="space-y-1">
                     <p className="text-2xl md:text-3xl font-black text-[#FF4800]">{s.value}</p>
-                    <p className="text-[10px] font-bold text-[#1a1a1a]/40 uppercase leading-tight">{s.label}</p>
+                    <p className="text-[10px] font-bold text-[#1a1a1a]/40 uppercase leading-tight">{t.hero.stats[idx]}</p>
                   </div>
                 ))}
               </motion.div>
@@ -470,15 +694,15 @@ export default function App() {
               transition={{ delay: 0.15, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
               className="relative flex justify-center lg:justify-end"
             >
-              {/* Glow */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-[#FF4800]/20 rounded-full blur-[100px]" />
-
               <div className="relative">
+                {/* Glow Optimized */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[radial-gradient(circle,rgba(255,72,0,0.2)_0%,transparent_70%)] pointer-events-none" />
 
                 <motion.div
-                  animate={{ y: [0, 10, 0] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  animate={{ y: [0, 8, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                   className="absolute -bottom-6 -left-4 lg:-left-12 bg-white text-[#1a1a1a] px-5 py-2.5 rounded-2xl font-black text-xs shadow-2xl -rotate-3 z-20 flex items-center gap-2"
+                  style={{ willChange: "transform" }}
                 >
                   <span className="text-lg">🏆</span> +200 Recettes
                 </motion.div>
@@ -501,10 +725,10 @@ export default function App() {
         <div className="max-w-7xl mx-auto space-y-40">
           <div className="text-center space-y-4 max-w-3xl mx-auto">
             <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-xs font-black uppercase tracking-widest text-[#FF4800]">
-              Fonctionnalités
+              {t.features.badge}
             </motion.p>
             <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-5xl md:text-7xl font-black tracking-tighter leading-none">
-              Tout ce dont vous avez besoin.
+              {t.features.title}
             </motion.h2>
           </div>
 
@@ -518,15 +742,15 @@ export default function App() {
                 className="space-y-8"
               >
                 <div className={`inline-flex items-center gap-3 px-4 py-2 rounded-full text-white text-xs font-black uppercase bg-gradient-to-r ${f.color}`}>
-                  {f.icon} {f.badge}
+                  {f.icon} {t.features.items[i].badge}
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-5xl md:text-6xl font-black tracking-tighter leading-none text-[#1a1a1a]">{f.title}</h3>
-                  <p className="text-xl text-[#1a1a1a]/40 font-bold">{f.subtitle}</p>
+                  <h3 className="text-5xl md:text-6xl font-black tracking-tighter leading-none text-[#1a1a1a]">{t.features.items[i].title}</h3>
+                  <p className="text-xl text-[#1a1a1a]/40 font-bold">{t.features.items[i].subtitle}</p>
                 </div>
-                <p className="text-xl text-[#1a1a1a]/60 font-medium leading-relaxed">{f.description}</p>
+                <p className="text-xl text-[#1a1a1a]/60 font-medium leading-relaxed">{t.features.items[i].description}</p>
                 <ul className="space-y-3">
-                  {f.perks.map((p) => (
+                  {t.features.items[i].perks.map((p) => (
                     <li key={p} className="flex items-center gap-3 text-sm font-bold text-[#1a1a1a]/70">
                       <CheckCircle2 size={18} className="text-[#FF4800] shrink-0" /> {p}
                     </li>
@@ -547,29 +771,26 @@ export default function App() {
                 }}
                 className="relative flex justify-center items-center perspective-1000"
               >
-                {/* Subtle Glow */}
-                <div className={`absolute w-72 h-72 bg-gradient-to-br ${f.color} opacity-20 blur-[100px] rounded-full`} />
+                <div className="relative z-10">
+                  {/* Subtle Glow Optimized */}
+                  <div className={`absolute -inset-10 bg-[radial-gradient(circle,rgba(0,0,0,0.1)_0%,transparent_70%)] opacity-20 pointer-events-none`} />
 
-                <motion.div
-                  whileHover={{
-                    scale: 1.03,
-                    y: -10
-                  }}
-                  animate={{
-                    y: [0, -8, 0],
-                  }}
-                  transition={{
-                    y: { duration: 5, repeat: Infinity, ease: "easeInOut", delay: i * 0.3 },
-                    scale: { type: "spring", stiffness: 300, damping: 20 }
-                  }}
-                  className="relative z-10"
-                >
                   <motion.img
                     src={f.image}
                     alt={f.title}
-                    className="max-h-[600px] w-auto rounded-[30px] drop-shadow-[0_40px_60px_rgba(0,0,0,0.12)] transition-shadow duration-500"
+                    whileHover={{ scale: 1.02 }}
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{
+                      y: { duration: 4, repeat: Infinity, ease: "easeInOut", delay: i * 0.2 },
+                      scale: { type: "spring", stiffness: 300, damping: 20 }
+                    }}
+                    className="max-h-[600px] w-auto rounded-[40px] mix-blend-multiply pointer-events-none select-none"
+                    style={{
+                      willChange: "transform",
+                      filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.12))"
+                    }}
                   />
-                </motion.div>
+                </div>
               </motion.div>
             </div>
           ))}
@@ -588,23 +809,20 @@ export default function App() {
               className="space-y-12 text-center"
             >
               <div className="space-y-6">
-                <p className="text-xs font-black uppercase tracking-widest text-[#FF4800]">Conçue pour la réalité</p>
+                <p className="text-xs font-black uppercase tracking-widest text-[#FF4800]">{t.offline.badge}</p>
                 <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none text-[#1a1a1a]">
-                  Mobile & <span className="text-[#1a1a1a]/20 italic">Offline.</span>
+                  {t.offline.title}<span className="text-[#1a1a1a]/20 italic">{t.offline.italic}</span>
                 </h2>
                 <p className="text-xl text-[#1a1a1a]/60 font-medium leading-relaxed max-w-2xl mx-auto">
-                  Que vous soyez dans une cuisine enfumée de Cotonou ou au marché de Dantokpa sans signal, AfroCuisto reste toujours à vos côtés.
+                  {t.offline.desc}
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                {[
-                  { icon: <WifiOff size={22} className="text-[#FF4800]" />, title: "Mode Hors-Ligne", desc: "Plats & listes sans internet." },
-                  { icon: <Smartphone size={22} className="text-[#FF4800]" />, title: "Natif Mobile", desc: "Usage à une main." },
-                  { icon: <ShieldCheck size={22} className="text-[#FF4800]" />, title: "Sécurisé", desc: "Données protégées." },
-                  { icon: <Zap size={22} className="text-[#FF4800]" />, title: "Ultra Rapide", desc: "Instantané." },
-                ].map((item) => (
-                  <div key={item.title} className="p-6 rounded-2xl bg-white border border-stone-200 hover:border-[#FF4800]/30 hover:shadow-md transition-all space-y-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#FF4800]/10 flex items-center justify-center mx-auto">{item.icon}</div>
+                {t.offline.cards.map((item, idx) => (
+                  <div key={idx} className="p-6 rounded-2xl bg-white border border-stone-200 hover:border-[#FF4800]/30 hover:shadow-md transition-all space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#FF4800]/10 flex items-center justify-center mx-auto">
+                      {idx === 0 ? <WifiOff size={22} className="text-[#FF4800]" /> : idx === 1 ? <Smartphone size={22} className="text-[#FF4800]" /> : idx === 2 ? <ShieldCheck size={22} className="text-[#FF4800]" /> : <Zap size={22} className="text-[#FF4800]" />}
+                    </div>
                     <h4 className="font-black text-sm uppercase text-[#1a1a1a]">{item.title}</h4>
                     <p className="text-[#1a1a1a]/50 text-xs font-medium">{item.desc}</p>
                   </div>
@@ -657,11 +875,11 @@ export default function App() {
       <section id="faq" className="py-32 md:py-40 px-6 md:px-10">
         <div className="max-w-3xl mx-auto space-y-12">
           <div className="text-center space-y-4">
-            <p className="text-xs font-black uppercase tracking-widest text-[#FF4800]">Questions Fréquentes</p>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tighter">Tout ce qu'il faut savoir.</h2>
+            <p className="text-xs font-black uppercase tracking-widest text-[#FF4800]">{t.faq.badge}</p>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter">{t.faq.title}</h2>
           </div>
           <div className="space-y-3">
-            {FAQS.map((faq, i) => (
+            {t.faq.items.map((faq, i) => (
               <FAQItem key={i} q={faq.q} a={faq.a} index={i} />
             ))}
           </div>
@@ -676,14 +894,14 @@ export default function App() {
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-12">
           <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="space-y-6">
             <div className="inline-flex items-center gap-2 px-5 py-2 bg-white/20 rounded-full text-white text-xs font-black uppercase tracking-widest">
-              <Mail size={12} /> Accès Bêta Exclusif
+              <Mail size={12} /> {t.waitlist.badge}
             </div>
             <h2 className="text-[clamp(3rem,9vw,7rem)] font-black tracking-[-0.04em] leading-[0.9] uppercase text-white">
-              Rejoignez le <br />
-              mouvement.
+              {t.waitlist.title} <br />
+              {t.waitlist.titleBr}
             </h2>
             <p className="text-xl md:text-2xl text-white/80 font-medium max-w-2xl mx-auto leading-relaxed">
-              Soyez parmi les premiers à taster AfroCuisto. Entrez votre email pour un accès prioritaire au lancement Beta.
+              {t.waitlist.desc}
             </p>
           </motion.div>
 
@@ -695,28 +913,28 @@ export default function App() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="votre@email.com"
+                  placeholder={t.waitlist.placeholder}
                   className="flex-1 px-6 py-4 rounded-[18px] bg-white text-[#1a1a1a] placeholder:text-black/30 font-medium text-base focus:outline-none focus:ring-4 focus:ring-white/50 transition-all"
                 />
                 <button type="submit" className="px-8 py-4 bg-[#1a1a1a] hover:bg-black active:scale-95 text-white rounded-[18px] font-black text-sm uppercase tracking-wide transition-all whitespace-nowrap shadow-xl flex items-center justify-center gap-2">
-                  M'inscrire <ArrowRight size={16} />
+                  {t.waitlist.submit} <ArrowRight size={16} />
                 </button>
               </form>
             ) : (
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="inline-flex items-center gap-3 px-10 py-5 bg-white/20 border border-white/40 rounded-2xl text-white font-black text-lg">
-                <CheckCircle2 size={24} /> Vous êtes sur la liste ! 🎉
+                <CheckCircle2 size={24} /> {t.waitlist.success}
               </motion.div>
             )}
-            <p className="text-xs text-white/50 font-bold uppercase tracking-widest mt-5">Pas de spam. Jamais. Promis.</p>
+            <p className="text-xs text-white/50 font-bold uppercase tracking-widest mt-5">{t.waitlist.noSpam}</p>
           </motion.div>
 
           {/* Download links */}
           <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center">
             <button className="flex items-center justify-center gap-3 px-8 py-4 border border-white/30 rounded-2xl hover:bg-white/10 transition-colors font-bold text-white/80 hover:text-white">
-              <Download size={18} /> App Store <span className="text-xs opacity-50">Bientôt</span>
+              <Download size={18} /> App Store <span className="text-xs opacity-50">{t.waitlist.soon}</span>
             </button>
             <button className="flex items-center justify-center gap-3 px-8 py-4 border border-white/30 rounded-2xl hover:bg-white/10 transition-colors font-bold text-white/80 hover:text-white">
-              <Play size={18} fill="currentColor" /> Google Play <span className="text-xs opacity-50">Bientôt</span>
+              <Play size={18} fill="currentColor" /> Google Play <span className="text-xs opacity-50">{t.waitlist.soon}</span>
             </button>
           </div>
         </div>
@@ -756,13 +974,13 @@ export default function App() {
             </div>
 
             <div className="md:col-span-3 md:col-start-7 space-y-6">
-              <h5 className="text-xs font-black uppercase tracking-widest text-[#1a1a1a]/40">L'Application</h5>
+              <h5 className="text-xs font-black uppercase tracking-widest text-[#1a1a1a]/40">{t.footer.app}</h5>
               <ul className="space-y-4 text-sm font-bold text-[#1a1a1a]/50">
                 {[
-                  { label: "Recettes", id: "recipes" },
-                  { label: "Communauté", id: "community" },
-                  { label: "Liste Marché", id: "market" },
-                  { label: "Héritage", id: "features" },
+                  { label: lang === "EN" ? "Recipes" : lang === "ES" ? "Recetas" : "Recettes", id: "recipes" },
+                  { label: lang === "EN" ? "Community" : lang === "ES" ? "Comunidad" : "Communauté", id: "community" },
+                  { label: lang === "EN" ? "Market List" : lang === "ES" ? "Lista de Mercado" : "Liste Marché", id: "market" },
+                  { label: lang === "EN" ? "Heritage" : lang === "ES" ? "Patrimonio" : "Héritage", id: "features" },
                 ].map((item) => (
                   <li
                     key={item.label}
@@ -779,13 +997,16 @@ export default function App() {
             </div>
 
             <div className="md:col-span-2 space-y-6">
-              <h5 className="text-xs font-black uppercase tracking-widest text-[#1a1a1a]/40">Légal</h5>
+              <h5 className="text-xs font-black uppercase tracking-widest text-[#1a1a1a]/40">{t.footer.legal}</h5>
               <ul className="space-y-4 text-sm font-bold text-[#1a1a1a]/50">
-                {["Confidentialité", "Conditions", "Cookies", "Contact"].map((item) => (
+                {[(lang === "EN" ? "Privacy" : lang === "ES" ? "Privacidad" : "Confidentialité"), (lang === "EN" ? "Terms" : lang === "ES" ? "Condiciones" : "Conditions"), "Cookies", "Contact"].map((item) => (
                   <li
                     key={item}
                     className="hover:text-[#FF4800] cursor-pointer transition-colors"
-                    onClick={() => setActiveModal(item)}
+                    onClick={() => {
+                        const originalKey = item === "Privacy" || item === "Privacidad" ? "Confidentialité" : item === "Terms" || item === "Condiciones" ? "Conditions" : item;
+                        setActiveModal(originalKey);
+                    }}
                   >
                     {item}
                   </li>
@@ -795,7 +1016,7 @@ export default function App() {
           </div>
 
           <div className="border-t border-stone-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold text-[#1a1a1a]/20 uppercase tracking-widest">
-            <p>© 2026 AfroCuisto. Tous droits réservés.</p>
+            <p>{t.footer.rights}</p>
             <div className="flex gap-8">
               <span>Cotonou, Bénin</span>
             </div>
