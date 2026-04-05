@@ -19,6 +19,11 @@ import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { motion, AnimatePresence } from 'motion/react';
 import { CommunityFeed } from './components/community/CommunityFeed';
 import { AdminCommunityDashboard } from './components/AdminCommunityDashboard';
+import { ExplorerView } from './components/ExplorerView';
+import { CommunityView } from './components/CommunityView';
+import { ProfileView } from './components/ProfileView';
+import { SearchView } from './components/SearchView';
+import { CommentModal } from './components/CommentModal';
 import {
   ChefHat,
   Clock,
@@ -3890,889 +3895,87 @@ export default function App() {
   };
 
   const renderExplorer = () => (
-
-    <div className="flex-1 flex flex-col pb-44">
-      {/* Immersive Search Header -> Now using Home page style button */}
-      <header style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '16px 24px',
-        paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 12px)' : '24px',
-        position: 'sticky',
-        top: 0,
-        background: isDark ? '#000000ff' : '#f3f4f6',
-        zIndex: 50,
-        backdropFilter: 'blur(20px)',
-        borderBottom: isDark ? '1px solid #ffffff10' : '1px solid #00000005'
-      }}>
-        <motion.h1 
-          whileTap={{ scale: 0.94 }}
-          onClick={() => { scrollToTop(); syncRecipes(); syncSections(); }}
-          className={`text-2xl font-black shrink-0 ${isDark ? 'text-white' : 'text-stone-900'} tracking-tight cursor-pointer`}
-        >
-          {selectedCategory || t.explorer}
-        </motion.h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {isOffline && (
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
-              <WifiOff size={22} />
-            </motion.div>
-          )}
-          {isSyncing && !isOffline && (
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }} className="text-[#fb5607]">
-              <RefreshCw size={22} />
-            </motion.div>
-          )}
-          <button onClick={() => navigateTo('favs')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <Heart size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
-          </button>
-          <button onClick={() => setIsSearchExpanded(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <Search size={24} style={{ color: isDark ? '#ffffff' : '#111827' }} />
-          </button>
-        </div>
-      </header>
-
-      {/* Dynamic Content Area */}
-      {
-        searchQuery || selectedCategory ? (
-          <div className="px-6 pt-6 grid grid-cols-2 gap-4">
-            {displayRecipes.map(recipe => (
-              <motion.div
-                key={recipe.id}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedRecipe(recipe)}
-                className="bg-white rounded-3xl overflow-hidden shadow-sm shadow-stone-200/50 flex flex-col h-full cursor-pointer hover:shadow-md transition-shadow"
-              >
-                <div className="h-32 relative flex-shrink-0">
-                  <OptimizedImage src={recipe.image} className="w-full h-full object-cover" />
-                  <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg text-white text-[10px] font-black tracking-widest">
-                    {recipe.cookTime}
-                  </div>
-                </div>
-                <div className="p-3">
-                  <h4 className="font-bold text-stone-800 text-sm leading-tight line-clamp-2 mb-1">{recipe.name}</h4>
-                  <p className="text-[10px] text-stone-400 mb-2 font-medium flex items-center gap-1"><MapPin size={10} /> {recipe.region}</p>
-                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-stone-50">
-                    <DifficultyBadge difficulty={recipe.difficulty} t={t} isDark={isDark} />
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-            {displayRecipes.length === 0 && (
-              <div className="col-span-2 py-20 text-center text-stone-400 font-medium">{t.noResults}</div>
-            )}
-          </div>
-        ) : (
-          <div className="pt-2 space-y-12 pb-10">
-
-
-
-
-            {/* Dynamic Sections from Admin CMS (Explorer) */}
-            {dynamicSections.filter((section: any) => section.config?.page === 'explorer').map((section, sidx) => {
-              let sectionRecipes: Recipe[] = [];
-
-              if (section.type === 'category') {
-                sectionRecipes = allRecipes.filter(r => r.category === section.config?.category);
-              } else if (section.type === 'region') {
-                sectionRecipes = allRecipes.filter(r => r.region?.toLowerCase().includes(section.config?.region?.toLowerCase() || ''));
-              } else if (section.type === 'quick') {
-                const maxTime = parseInt(section.config?.max_prep_time) || 30;
-                sectionRecipes = allRecipes.filter(r => (parseInt(r.prep_time) || 60) <= maxTime);
-              } else if (section.type === 'all') {
-                sectionRecipes = [...allRecipes];
-              } else if (section.type === 'advertising') {
-                const productIds = section.config?.merchant_ids || section.merchant_ids || [];
-                sectionRecipes = allProducts.filter(p => productIds.includes(p.id));
-              } else {
-                sectionRecipes = allRecipes.filter(r => section.recipe_ids?.includes(r.id));
-              }
-
-              // Apply limit only if explicitly configured — default to 200 to show all selected recipes
-              sectionRecipes = sectionRecipes.slice(0, section.config?.limit || 200);
-
-              if (sectionRecipes.length === 0) return null;
-
-              if (section.type === 'dynamic_carousel' || section.type === 'advertising' || section.type === 'banner' || section.type === 'featured') {
-                return (
-                  <FeaturedCarousel
-                    key={section.id}
-                    section={section}
-                    recipes={section.type === 'advertising' ? [] : sectionRecipes}
-                    merchants={allMerchants}
-                    products={section.type === 'advertising' ? sectionRecipes : allProducts}
-                    setSelectedRecipe={setSelectedRecipe}
-                    currentUser={currentUser}
-                    toggleFavorite={toggleFavorite}
-                    isDark={isDark}
-                  />
-                );
-              }
-              if (section.type === 'horizontal_list_v2') {
-                return (
-                  <section key={section.id} className="mb-10">
-                    {/* Section header */}
-                    <div className="px-8 flex justify-between items-end mb-4">
-                      <div className="flex flex-col">
-                        <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                        {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
-                      </div>
-                    </div>
-
-                    {/* Horizontal scroll tray v2 — styled like 'Nos suggestions' */}
-                    <div style={{ display: 'flex', overflowX: 'auto', gap: '45px', paddingBottom: '30px', paddingRight: '40px', paddingLeft: '32px', WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }} className="no-scrollbar">
-                      {sectionRecipes.map((recipe) => (
-                        <motion.div
-                          key={recipe.id}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setSelectedRecipe(recipe)}
-                          style={{
-                            minWidth: '280px', height: '150px',
-                            background: isDark ? '#111111' : '#ffffff',
-                            borderRadius: '24px',
-                            padding: '24px 110px 24px 24px',
-                            position: 'relative',
-                            boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.3)' : '0 12px 30px rgba(0,0,0,0.06)',
-                            cursor: 'pointer',
-                            flexShrink: 0
-                          }}
-                        >
-                          <h3 style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#ffffff' : '#111827', margin: '0 0 8px', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#9ca3af' : '#4b5563', margin: '0 0 16px' }}>
-                            Spécialité <span style={{ fontWeight: 800, color: isDark ? '#e5e7eb' : '#111111' }}>{recipe.region || "Chef"}</span>
-                          </p>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                            <span style={{ fontSize: 20, fontWeight: 900, color: isDark ? '#ffffff' : '#111827' }}>{recipe.prepTime}</span>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#6b7280' : '#9ca3af', textDecoration: 'line-through' }}>{parseInt(recipe.prepTime) + 15} min</span>
-                          </div>
-
-                          {/* Circular overflowing image */}
-                          <div style={{
-                            position: 'absolute', right: '-35px', top: '50%', transform: 'translateY(-50%)',
-                            width: '130px', height: '130px', borderRadius: '50%',
-                            boxShadow: '0 12px 30px rgba(0,0,0,0.25)', backgroundColor: '#ddd',
-                            overflow: 'hidden', border: isDark ? '6px solid #111111' : '6px solid #ffffff'
-                          }}>
-                            <OptimizedImage src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </section>
-                );
-              }
-
-              if (section.type === 'horizontal_list') {
-                return (
-                  <section key={section.id} className="mb-10">
-                    <div className="px-8 flex justify-between items-end mb-4">
-                      <div className="flex flex-col">
-                        <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                        {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
-                      </div>
-
-                    </div>
-                    <div className="flex gap-4 overflow-x-auto px-8 no-scrollbar pb-3" style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}>
-                      {sectionRecipes.map((recipe, ridx) => {
-                        const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-                        const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
-                        return (
-                          <motion.div
-                            key={recipe.id}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => setSelectedRecipe(recipe)}
-                            className="flex-shrink-0 cursor-pointer"
-                            style={{ width: 'min(48vw, 185px)' }}
-                          >
-                            <div style={{
-                              background: isDark ? '#111111' : '#fff', borderRadius: '20px',
-                              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
-                              overflow: 'hidden', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)',
-                            }}>
-                              <div className="relative" style={{ aspectRatio: '4 / 3' }}>
-                                <OptimizedImage src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
-
-                                <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} style={{ position: 'absolute', top: '10px', right: '10px', width: '30px', height: '30px', borderRadius: '50%', background: isFav ? '#ef4444' : 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', transition: 'all 0.2s' }}>
-                                  <Heart size={14} style={{ color: '#fff', fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
-                                </button>
-                                <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(6px)', borderRadius: '8px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
-                                  <Star size={10} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
-                                  <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#fff' : '#374151', lineHeight: 1 }}>{ratingNum}</span>
-                                </div>
-                              </div>
-                              <div style={{ padding: '12px 14px 14px' }}>
-                                <h3 style={{ fontSize: '15px', fontWeight: 800, color: isDark ? '#fff' : '#1a1a1a', lineHeight: 1.25, margin: '0 0 6px', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{recipe.name}</h3>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
-                                  <div style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', borderRadius: '20px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Clock size={10} style={{ color: isDark ? '#9ca3af' : '#6b7280' }} />
-                                    <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#9ca3af' : '#374151' }}>{recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              }
-
-              if (section.type === 'vertical_list_2') {
-                return (
-                  <section key={section.id} className="mb-10">
-                    <div className="px-8 flex justify-between items-end mb-4">
-                      <div className="flex flex-col">
-                        <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                        {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
-                      </div>
-                    </div>
-                    <div className="px-8 grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                      {sectionRecipes.map((recipe, ridx) => {
-                        const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-                        const ratingNum = (4.0 + (ridx % 5) * 0.2).toFixed(1);
-                        return (
-                          <motion.div
-                            key={recipe.id}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => setSelectedRecipe(recipe)}
-                            className="cursor-pointer"
-                          >
-                            <div className="hlist-card" style={{ borderRadius: '20px', overflow: 'hidden' }}>
-                              <div className="relative" style={{ aspectRatio: '4 / 3' }}>
-                                <OptimizedImage src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
-                                <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }} style={{ position: 'absolute', top: '8px', right: '8px', width: '28px', height: '28px', borderRadius: '50%', background: isFav ? '#ef4444' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.85)'), backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
-                                  <Heart size={13} style={{ color: isFav ? '#fff' : (isDark ? '#e5e7eb' : '#ef4444'), fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2.5} />
-                                </button>
-                                <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(6px)', borderRadius: '8px', padding: '2px 7px', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
-                                  <Star size={10} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
-                                  <span style={{ fontSize: '10px', fontWeight: 800, color: isDark ? '#fff' : '#374151', lineHeight: 1 }}>{ratingNum}</span>
-                                </div>
-                              </div>
-                              <div style={{ padding: '10px 12px 12px' }}>
-                                <h3 className="hlist-card-title" style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1.25, margin: '0 0 5px', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: isDark ? '#ffffff' : '#1a1a1a' }}>{recipe.name}</h3>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
-                                  <div className="hlist-card-badge" style={{ borderRadius: '20px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Clock size={10} className="hlist-card-clock" />
-                                    <span className="hlist-card-time" style={{ fontSize: '11px', fontWeight: 700 }}>{recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              }
-
-              // ── VERTICAL LIST (fallback Explorer) ──
-              return (
-                <section key={section.id} className="mb-10">
-                  <div className="px-8 flex justify-between items-end mb-4">
-                    <div className="flex flex-col">
-                      <h2 className="text-xl font-black text-stone-800 tracking-tight">{section.title}</h2>
-                      {section.subtitle && <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">{section.subtitle}</p>}
-                    </div>
-                  </div>
-                  <div className="px-8 flex flex-col gap-3">
-                    {sectionRecipes.map((recipe, ridx) => {
-                      const isFav = currentUser?.favorites?.includes(recipe.id) ?? false;
-                      const ratingNum = (4.0 + (ridx % 5) * 0.1).toFixed(1);
-                      return (
-                        <motion.div
-                          key={recipe.id}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setSelectedRecipe(recipe)}
-                          className="hlist-card"
-                          style={{
-                            borderRadius: '18px',
-                            display: 'flex', alignItems: 'center', gap: '14px',
-                            padding: '12px', cursor: 'pointer', overflow: 'hidden',
-                          }}
-                        >
-                          <div style={{ width: '76px', height: '76px', flexShrink: 0, borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}>
-                            <OptimizedImage src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="hlist-card-title" style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 5px', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isDark ? '#ffffff' : '#1a1a1a' }}>
-                              {recipe.name}
-                            </p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                              <Clock size={11} style={{ color: '#9ca3af', flexShrink: 0 }} />
-                              <span style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af' }}>{recipe.prepTime ? (recipe.prepTime.includes('min') ? recipe.prepTime : `${recipe.prepTime} min`) : '30 min'}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <Star size={11} style={{ color: '#f59e0b', fill: '#f59e0b', flexShrink: 0 }} />
-                              <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#fff' : '#374151' }}>{ratingNum}</span>
-                              <span style={{ fontSize: '10px', color: '#d1d5db' }}>·</span>
-                              <span style={{ fontSize: '11px', fontWeight: 500, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.region || recipe.category || 'Africain'}</span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
-                            <DifficultyBadge difficulty={recipe.difficulty} t={t} isDark={isDark} />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe.id); }}
-                                    className="active:scale-90 transition-transform"
-                                    style={{ 
-                                      width: '26px', height: '26px', borderRadius: '50%',
-                                      backgroundColor: isFav ? '#ef4444' : (isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none'
-                                     }}
-                                  >
-                                    <Heart size={13} style={{ color: isFav ? '#fff' : (isDark ? '#9ca3af' : '#6b7280'), fill: isFav ? '#fff' : 'none' }} strokeWidth={isFav ? 0 : 2} />
-                                </button>
-                                <ChevronRight size={16} style={{ color: '#d1d5db' }} />
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </section>
-              );
-            })}
-          </div >
-        )
-      }
-    </div >
-
+    <ExplorerView
+      isDark={isDark}
+      t={t}
+      selectedCategory={selectedCategory}
+      scrollToTop={scrollToTop}
+      syncRecipes={syncRecipes}
+      syncSections={syncSections}
+      isOffline={isOffline}
+      isSyncing={isSyncing}
+      navigateTo={navigateTo}
+      searchQuery={searchQuery}
+      displayRecipes={displayRecipes}
+      setSelectedRecipe={setSelectedRecipe}
+      dynamicSections={dynamicSections}
+      allRecipes={allRecipes}
+      allMerchants={allMerchants}
+      allProducts={allProducts}
+      currentUser={currentUser}
+      toggleFavorite={toggleFavorite}
+      setIsSearchExpanded={setIsSearchExpanded}
+    />
   );
 
+
   const renderCommunity = () => {
-    const handleLike = async (post: CommunityPost) => {
-      if (!currentUser) { navigateTo('profile'); return; }
-      const res = await dbService.toggleLike(post.id, currentUser.id);
-      setCommunityPosts(prev => prev.map(p => {
-        if (p.id === post.id) {
-          return {
-            ...p,
-            is_liked: res.liked,
-            likes_count: p.likes_count + res.count
-          };
-        }
-        return p;
-      }));
-    };
-
-    const handleAddComment = async (content: string) => {
-      if (!currentUser || !selectedPostForComments) return;
-      const res = await dbService.addComment(selectedPostForComments.id, currentUser.id, content);
-      if (res) {
-        setPostComments(prev => [...prev, { ...res, author_name: currentUser.name, author_avatar: currentUser.avatar }]);
-        setCommunityPosts(prev => prev.map(p => {
-          if (p.id === selectedPostForComments.id) {
-            return { ...p, comments_count: p.comments_count + 1 };
-          }
-          return p;
-        }));
-      }
-    };
-
-    const handleCreatePost = async (postData: { title?: string; content?: string; image_url?: string; category?: PostCategory }) => {
-      if (!currentUser) { navigateTo('profile'); return; }
-
-      setIsCommunityLoading(true);
-      try {
-        const res = await dbService.createPost({
-          user_id: currentUser.id,
-          author_name: currentUser.name,
-          author_avatar: currentUser.avatar,
-          title: postData.title,
-          content: postData.content,
-          image_url: postData.image_url,
-          category: postData.category
-        });
-
-        if (res) {
-          setCommunityPosts(prev => [res, ...prev]);
-          showAlert("Publication partagée avec succès !", "success");
-        } else {
-          showAlert("Erreur lors de la publication. Vérifiez votre connexion ou les permissions Supabase.", "error");
-        }
-      } catch (err: any) {
-        console.error("CreatePost error:", err);
-        showAlert(`Erreur: ${err.message || 'Échec de publication'}`, "error");
-      } finally {
-        setIsCommunityLoading(false);
-      }
-    };
-
-    const handleUpdatePost = async (postId: string, postData: { title?: string; content?: string; image_url?: string; category?: PostCategory }) => {
-      if (!currentUser) return;
-      setIsCommunityLoading(true);
-      try {
-        const success = await dbService.updateCommunityPost(postId, currentUser.id, postData);
-        if (success) {
-          setCommunityPosts(prev => prev.map(p => p.id === postId ? { ...p, ...postData } : p));
-          showAlert("Publication modifiée avec succès.", "success");
-        } else {
-          showAlert("Erreur lors de la modification.", "error");
-        }
-      } catch (err: any) {
-        console.error("UpdatePost error:", err);
-        showAlert(`Erreur: ${err.message || 'Échec de modification'}`, "error");
-      } finally {
-        setIsCommunityLoading(false);
-      }
-    };
-
-    const handleShare = async (post: CommunityPost) => {
-      const shareUrl = `${window.location.origin}/?post=${post.id}`;
-      // Partage natif si dispo (mobile via capacitor ou navigateurs modernes)
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: `Afrocuisto - Post de ${post.author_name}`,
-            text: `Regardez cette belle création sur Afrocuisto !`,
-            url: shareUrl
-          });
-          return;
-        } catch (e) { console.log('Partage annulé ou non supporté', e); }
-      }
-
-      // Fallback : Copy link!
-      navigator.clipboard.writeText(shareUrl);
-      showAlert("Lien copié dans le presse-papier !", "success");
-    };
-
-    const handleDeletePost = async (post: CommunityPost) => {
-      if (!currentUser || currentUser.id !== post.user_id) return;
-
-      if (!window.confirm("Voulez-vous vraiment supprimer définitivement cette publication ?")) return;
-
-      const success = await dbService.deleteCommunityPost(post.id, currentUser.id);
-      if (success) {
-        setCommunityPosts(prev => prev.filter(p => p.id !== post.id));
-        showAlert("Publication supprimée avec succès.", "success");
-      } else {
-        showAlert("Erreur lors de la suppression.", "error");
-      }
-    };
-
-    const handleSavePost = async (post: CommunityPost) => {
-      if (!currentUser) { navigateTo('profile'); return; }
-      const savedPosts = currentUser.savedPosts || [];
-      const isSaved = savedPosts.includes(post.id);
-      const newSavedPosts = isSaved
-        ? savedPosts.filter(id => id !== post.id)
-        : [...savedPosts, post.id];
-
-      const updatedUser = { ...currentUser, savedPosts: newSavedPosts };
-      setCurrentUser(updatedUser);
-      dbService.setCurrentUser(updatedUser);
-      dbService.syncUserToCloud(updatedUser);
-      showAlert(isSaved ? "Retiré des favoris" : "Ajouté aux favoris", "success");
-    };
-
-    const handleFollowAuthor = async (post: CommunityPost) => {
-      if (!currentUser) { navigateTo('profile'); return; }
-      const following = currentUser.following || [];
-      const isFollowing = following.includes(post.user_id);
-      const newFollowing = isFollowing
-        ? following.filter(id => id !== post.user_id)
-        : [...following, post.user_id];
-
-      const updatedUser = { ...currentUser, following: newFollowing };
-      setCurrentUser(updatedUser);
-      dbService.setCurrentUser(updatedUser);
-      dbService.syncUserToCloud(updatedUser);
-      showAlert(isFollowing ? `Vous ne suivez plus ${post.author_name}` : `Vous suivez maintenant ${post.author_name}`, "success");
-    };
-
-    const displayedCommunityPosts = showSavedPosts
-      ? communityPosts.filter(p => currentUser?.savedPosts?.includes(p.id))
-      : communityPosts;
-
     return (
-
-      <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
-        <header
-          style={{
-            padding: '16px 24px',
-            paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px',
-            paddingBottom: '16px',
-            position: 'sticky',
-            top: 0,
-            background: isDark ? '#000000ff' : '#f3f4f6',
-            zIndex: 50,
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.04)',
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {showSavedPosts && (
-                <button
-                  onClick={() => setShowSavedPosts(false)}
-                  className={`w-[42px] h-[42px] -ml-2 rounded-full flex items-center justify-center text-[#fb5607] shadow-sm transition-transform active:scale-95 shrink-0 border ${isDark ? 'bg-white/10 border-white/10 hover:bg-white/20' : 'bg-white border-stone-100 hover:bg-stone-50'}`}
-                >
-                  <ChevronLeft size={24} strokeWidth={2.5} className="mr-0.5" />
-                </button>
-              )}
-              <motion.h1 
-                whileTap={{ scale: 0.94 }}
-                onClick={() => { scrollToTop(); refreshCommunity(); }}
-                className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'} cursor-pointer`}
-              >
-                {showSavedPosts ? "Enregistrés" : t.community}
-              </motion.h1>
-            </div>
-            {currentUser && !showSavedPosts && (
-              <button
-                onClick={() => setShowSavedPosts(true)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all active:scale-95 ${isDark ? 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-600 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-stone-50'}`}
-              >
-                <Bookmark size={18} fill="none" />
-              </button>
-            )}
-          </div>
-          <p className={`text-xs font-medium mt-1 opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
-            {showSavedPosts ? "Vos publications sauvegardées" : t.communityDesc}
-          </p>
-        </header>
-
-        <div className="px-6">
-          <CommunityFeed
-            posts={displayedCommunityPosts}
-            currentUser={currentUser}
-            isLoading={isCommunityLoading}
-            t={t}
-            isDark={isDark}
-            onLike={handleLike}
-            onCommentClick={(post) => setSelectedPostForComments(post)}
-            onShare={handleShare}
-            onDeletePost={handleDeletePost}
-            onSavePost={handleSavePost}
-            onFollowAuthor={handleFollowAuthor}
-            onCreatePost={handleCreatePost}
-            onUpdatePost={handleUpdatePost}
-            onLoadMore={loadMoreCommunityPosts}
-            hasMore={hasMoreCommunityPosts}
-            jumpToPostId={jumpToPostId}
-            showSavedOnly={showSavedPosts}
-            onFormOpenChange={setIsCommunityFormOpen}
-          />
-        </div>
-
-        <CommentModal
-          isOpen={!!selectedPostForComments}
-          onClose={() => setSelectedPostForComments(null)}
-          post={selectedPostForComments}
-          comments={postComments}
-          onAddComment={handleAddComment}
-          isLoading={isCommentsLoading}
-          t={t}
-          isDark={isDark}
-        />
-      </div>
-
-    );
-  };
-
-  const renderFavorites = () => {
-    const favoriteRecipes = dbService.getFavorites(currentUser!, allRecipes);
-
-    return (
-      <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
-        <header
-          className="px-6 pb-6 flex flex-col gap-4"
-          style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '24px' }}
-        >
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-4">
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={goBack}
-                className={`p-2.5 rounded-full transition-all border ${isDark ? 'bg-white/10 text-white border-white/10' : 'bg-white text-stone-800 border-stone-200 shadow-sm'}`}
-              >
-                <ChevronLeft size={20} />
-              </motion.button>
-              <h1 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.favorites}</h1>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {isOffline && (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
-                  <WifiOff size={20} />
-                </motion.div>
-              )}
-              {isSyncing && !isOffline && (
-                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }} className="text-[#fb5607]">
-                  <RefreshCw size={18} />
-                </motion.div>
-              )}
-            </div>
-          </div>
-        </header>
-        <div className="px-6 space-y-4">
-          {favoriteRecipes.length > 0 ? (
-            favoriteRecipes.map(recipe => (
-              <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className={`p-3 rounded-[28px] flex items-center gap-4 transition-all shadow-[0_8px_20px_rgba(0,0,0,0.06)] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-white border-stone-100/50 shadow-stone-200/30'}`}>
-                <OptimizedImage src={recipe.image} className="w-16 h-16 rounded-2xl object-cover shadow-sm" />
-                <div className="flex-1 min-w-0">
-                  <h4 className={`font-bold text-sm truncate ${isDark ? 'text-white' : 'text-stone-800'}`}>{recipe.name}</h4>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <p className={`text-[10px] font-medium ${isDark ? 'text-stone-500' : 'text-stone-400'}`}>{recipe.region}</p>
-                    <div className="flex items-center gap-1 text-[10px] text-[#fb5607] font-bold">
-                      <Clock size={10} />
-                      <span>{recipe.prepTime}</span>
-                    </div>
-                  </div>
-                </div>
-                <button onClick={e => { e.stopPropagation(); toggleFavorite(recipe.id); }} className="text-rose-500 p-2 active:scale-90 transition-transform">
-                  <Heart size={20} fill="currentColor" />
-                </button>
-              </div>
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-20 h-20 bg-stone-100 rounded-full flex items-center justify-center text-stone-300 mb-6">
-                <Heart size={40} />
-              </div>
-              <h3 className="text-lg font-bold text-stone-800 mb-2">{t.noFavorites}</h3>
-              <p className="text-stone-400 text-sm max-w-[200px] leading-relaxed italic">"{t.noFavoritesDesc}"</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <CommunityView
+        communityPosts={showSavedPosts ? communityPosts.filter(p => currentUser?.savedPosts?.includes(p.id)) : communityPosts}
+        setCommunityPosts={setCommunityPosts}
+        currentUser={currentUser}
+        setCurrentUser={setCurrentUser}
+        isCommunityLoading={isCommunityLoading}
+        setIsCommunityLoading={setIsCommunityLoading}
+        t={t}
+        isDark={isDark}
+        navigateTo={navigateTo}
+        selectedPostForComments={selectedPostForComments}
+        setSelectedPostForComments={setSelectedPostForComments}
+        postComments={postComments}
+        setPostComments={setPostComments}
+        isCommentsLoading={isCommentsLoading}
+        showAlert={showAlert}
+        loadMoreCommunityPosts={loadMoreCommunityPosts}
+        hasMoreCommunityPosts={hasMoreCommunityPosts}
+        jumpToPostId={jumpToPostId}
+        showSavedPosts={showSavedPosts}
+        setShowSavedPosts={setShowSavedPosts}
+        refreshCommunity={refreshCommunity}
+        scrollToTop={scrollToTop}
+        setIsCommunityFormOpen={setIsCommunityFormOpen}
+        CommentModal={CommentModal}
+      />
     );
   };
 
   const renderProfile = () => (
-    <div className={`flex-1 flex flex-col pb-44 relative ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '16px' }}>
-      <AnimatePresence>
-        {profileSubView && (
-          <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={springTransition} className={`absolute inset-0 z-50 p-6 flex flex-col ${isDark ? 'bg-black' : 'bg-white'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 24px)' : '24px' }}>
-            <header className="flex items-center justify-between mb-8 shrink-0">
-              <div className="flex items-center gap-4">
-                <button onClick={() => setProfileSubView(null)} className="p-2 btn-back-circle bg-stone-50 rounded-full"><ChevronLeft size={20} /></button>
-                <h2 className={`text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                  {profileSubView === 'personalInfo' ? t.personalInfo :
-                    profileSubView === 'security' ? t.security :
-                      profileSubView === 'notifications' ? t.notifications :
-                        profileSubView === 'shopping' ? "Ma liste de courses" :
-                          profileSubView === 'about' ? t.about :
-                            profileSubView === 'contribution' ? t.contribution :
-                              t.settings}
-                </h2>
-              </div>
-              {isOffline && (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500 shrink-0">
-                  <WifiOff size={20} />
-                </motion.div>
-              )}
-            </header>
-
-            <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
-              {profileSubView === 'shopping' ? (
-                <div className="space-y-6">
-                  {currentUser?.shoppingList && currentUser.shoppingList.length > 0 ? (
-                    <div className="space-y-3">
-                      {currentUser.shoppingList.map((shopItem) => (
-                        <motion.div
-                          key={shopItem.id}
-                          layout
-                          className={`p-4 rounded-[28px] border transition-all flex items-center gap-4 ${shopItem.isPurchased ? 'bg-emerald-50 border-emerald-100 opacity-70' : 'bg-white border-stone-100 shadow-sm'}`}
-                        >
-                          <button
-                            onClick={() => {
-                              const newList = currentUser.shoppingList.map(i =>
-                                i.id === shopItem.id ? { ...i, isPurchased: !i.isPurchased } : i
-                              );
-                              updateShoppingList(newList);
-                            }}
-                            className={`w-6 h-6 rounded-xl flex items-center justify-center transition-all ${shopItem.isPurchased ? 'bg-emerald-500 scale-110 rotate-[360deg]' : 'bg-stone-50 border-2 border-stone-200'}`}
-                          >
-                            {shopItem.isPurchased && <Check size={14} className="text-white" />}
-                          </button>
-                          <div className="flex-1">
-                            <p className={`text-[13px] font-bold leading-none mb-1 transition-all ${shopItem.isPurchased ? 'text-emerald-900 line-through' : 'text-stone-800'}`}>{shopItem.item}</p>
-                            <p className={`text-[11px] font-medium ${shopItem.isPurchased ? 'text-emerald-600' : 'text-[#fb5607]'}`}>{shopItem.amount}</p>
-                            {shopItem.recipeName && (
-                              <p className="text-[9px] font-bold text-stone-400 mt-1 uppercase tracking-widest">{shopItem.recipeName}</p>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => {
-                              const newList = currentUser.shoppingList.filter(i => i.id !== shopItem.id);
-                              updateShoppingList(newList);
-                            }}
-                            className="p-2 text-stone-300 hover:text-rose-500 transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </motion.div>
-                      ))}
-
-                      <button
-                        onClick={() => {
-                          updateShoppingList([]);
-                        }}
-                        className="w-full py-4 text-rose-500 font-bold text-xs uppercase tracking-widest mt-4"
-                      >
-                        Vider la liste
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                      <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mb-6 relative">
-                        <span className="text-4xl">🛒</span>
-                        <div className="absolute -top-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md">
-                          <Plus size={16} className="text-stone-300" />
-                        </div>
-                      </div>
-                      <h3 className="text-lg font-black text-stone-800 mb-2 tracking-tight">Liste vide</h3>
-                      <p className="text-stone-400 text-xs max-w-[220px] leading-relaxed font-medium">
-                        Ajoutez des ingrédients depuis les fiches de recettes pour préparer vos prochaines courses !
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <ProfileSubViewRenderer
-                  profileSubView={profileSubView}
-                  setProfileSubView={setProfileSubView}
-                  currentUser={currentUser}
-                  setCurrentUser={setCurrentUser}
-                  t={t}
-                  securitySubView={securitySubView}
-                  setSecuritySubView={setSecuritySubView}
-                  goBack={goBack}
-                  updateSettings={updateSettings}
-                  handleLogout={handleLogout}
-                  settings={settings}
-                  isSyncing={isSyncing}
-                  hasLoadedAtLeastOnce={hasLoadedAtLeastOnce}
-                  showAlert={showAlert}
-                  handleDeleteAccount={handleDeleteAccount}
-                />
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <header className={`flex flex-col items-center py-10 ${isDark ? 'text-white' : ''}`}>
-        <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden mb-4 bg-stone-100 flex items-center justify-center">
-          <span className="text-3xl font-black text-terracotta tracking-tight">
-            {getInitials(currentUser?.name)}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-stone-800'}`}>{currentUser?.name}</h2>
-          {currentUser?.is_admin && (
-            <div className="bg-[#fb5607] text-[8px] text-white px-2 py-0.5 rounded-full font-black uppercase tracking-widest shadow-lg shadow-[#fb5607]/20 flex items-center gap-1">
-              <ShieldAlert size={10} /> ADMIN
-            </div>
-          )}
-        </div>
-        <p className={`text-sm ${isDark ? 'text-white/50' : 'text-stone-500'}`}>{currentUser?.email}</p>
-
-        {/* Cloud Connection Status + Refresh */}
-        <div className="mt-4 flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-stone-100 shadow-sm">
-            <div className={`w-2 h-2 rounded-full animate-pulse ${dbService.supabase ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500'}`} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-              Cloud Sync: {dbService.supabase ? 'Activé' : 'Désactivé'}
-            </span>
-          </div>
-          <motion.button
-            whileTap={{ scale: 0.85 }}
-            onClick={() => window.location.reload()}
-            title="Actualiser les recettes"
-            className={`w-8 h-8 rounded-full flex items-center justify-center border shadow-sm transition-colors ${isDark ? 'bg-white/8 border-white/10' : 'bg-white border-stone-100'} ${isSyncing ? 'text-[#fb5607]' : (isDark ? 'text-white/40 hover:text-white/70' : 'text-stone-400 hover:text-stone-600')}`}
-          >
-            <motion.div
-              animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
-              transition={isSyncing ? { repeat: Infinity, duration: 1.5, ease: 'linear' } : { duration: 0.3 }}
-            >
-              <RefreshCw size={14} strokeWidth={2.5} />
-            </motion.div>
-          </motion.button>
-        </div>
-      </header>
-
-      <section className="px-6 space-y-3">
-        <button onClick={() => setProfileSubView('personalInfo')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
-              <UserIcon size={20} />
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.personalInfo}</span>
-          </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </button>
-
-
-        <button onClick={() => setProfileSubView('settings')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
-              <Settings size={20} />
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.settings}</span>
-          </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </button>
-
-        <button onClick={() => setProfileSubView('contribution')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
-              <Heart size={20} />
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.contribution}</span>
-          </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </button>
-
-        <button onClick={() => setProfileSubView('about')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
-              <Info size={20} />
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.about}</span>
-          </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </button>
-
-        <a href="https://wa.me/+2290151455072" target="_blank" rel="noopener noreferrer" className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all outline-none ${isDark ? 'bg-[#111111] border-[#25D366]/20 hover:bg-[#1a1a1a]' : 'bg-white border-green-100/50 hover:bg-stone-50'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-[#25D366]/20 text-[#25D366]' : 'bg-[#25D366]/10 text-[#25D366]'}`}>
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-              </svg>
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>Contacter le support</span>
-          </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </a>
-
-
-        {currentUser?.is_admin && (
-          <button
-            onClick={() => setIsAdminDashboardOpen(true)}
-            className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all outline-none mb-3 ${isDark ? 'bg-[#fb5607]/10 border-[#fb5607]/30 hover:bg-[#fb5607]/20' : 'bg-orange-50 border-orange-100 hover:bg-orange-100'}`}
-          >
-            <div className="flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-[#fb5607]/20 text-[#fb5607]' : 'bg-[#fb5607] text-white'}`}>
-                <ShieldAlert size={20} />
-              </div>
-              <div className="flex flex-col items-start">
-                <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>Administration</span>
-                <span className="text-[10px] font-bold text-[#fb5607] uppercase">Community & Flux</span>
-              </div>
-            </div>
-            <ChevronRight size={18} className={isDark ? 'text-[#fb5607]/40' : 'text-[#fb5607]/60'} />
-          </button>
-        )}
-
-        <button onClick={handleLogout} className={`w-full flex items-center gap-3 p-4 rounded-3xl font-bold mt-6 ${isDark ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-rose-50 text-rose-600'}`}><LogOut size={20} /> {t.logout}</button>
-      </section>
-    </div>
+    <ProfileView
+      isDark={isDark}
+      t={t}
+      currentUser={currentUser}
+      setCurrentUser={setCurrentUser}
+      profileSubView={profileSubView}
+      setProfileSubView={setProfileSubView}
+      isOffline={isOffline}
+      isSyncing={isSyncing}
+      hasLoadedAtLeastOnce={hasLoadedAtLeastOnce}
+      updateShoppingList={updateShoppingList}
+      updateSettings={updateSettings}
+      handleLogout={handleLogout}
+      handleDeleteAccount={handleDeleteAccount}
+      showAlert={showAlert}
+      setIsAdminDashboardOpen={setIsAdminDashboardOpen}
+      getInitials={getInitials}
+      springTransition={springTransition}
+      securitySubView={securitySubView}
+      setSecuritySubView={setSecuritySubView}
+      goBack={goBack}
+      settings={settings}
+      ProfileSubViewRenderer={ProfileSubViewRenderer}
+    />
+  );
   );
 
   const ReviewSection = ({ recipe, currentUser, t }: { recipe: Recipe; currentUser: User | null; t: any }) => {
@@ -6926,143 +6129,17 @@ export default function App() {
       </main>
 
       <AnimatePresence>
-        {isSearchExpanded && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className={`fixed inset-0 z-[600] flex flex-col ${isDark ? '' : 'search-overlay-light'}`}
-            style={{ background: isDark ? '#000000' : 'rgba(255,255,255,0.98)', backdropFilter: 'blur(20px)' }}
-          >
-            {/* Search Header */}
-            <div className="px-5 pb-4 pt-20 flex items-center gap-3">
-              <button
-                onClick={() => { setIsSearchExpanded(false); setSearchQuery(''); }}
-                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${isDark ? 'bg-white/10 text-white border-white/10' : 'bg-stone-100 text-stone-600 border-stone-200/50'}`}
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 }}
-                className="flex-1 relative"
-              >
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#fb5607]" size={18} />
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder={t.searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-full rounded-full py-3.5 pl-11 pr-5 focus:outline-none font-medium text-[15px] transition-all ${isDark ? 'bg-white/10 border border-white/10 text-white placeholder:text-white/30 focus:border-[#fb5607]/60 focus:bg-white/15' : 'bg-stone-50 border border-stone-200/40 text-stone-900 placeholder:text-stone-400 focus:ring-2 focus:ring-[#fb5607]/10'}`}
-                />
-              </motion.div>
-            </div>
-
-            {/* Results area */}
-            <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-20">
-              {searchQuery.length > 0 ? (
-                <div className="space-y-2.5 mt-2">
-                  <p className={`text-[10px] font-black tracking-[0.2em] mb-4 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
-                    {allRecipes.filter(r => normalizeString(r.name).includes(normalizeString(searchQuery)) || normalizeString(r.region).includes(normalizeString(searchQuery))).length} résultat(s)
-                  </p>
-                  {allRecipes
-                    .filter(r => normalizeString(r.name).includes(normalizeString(searchQuery)) || normalizeString(r.region).includes(normalizeString(searchQuery)))
-                    .map((recipe, i) => (
-                      <motion.div
-                        key={recipe.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.04 }}
-                        onClick={() => {
-                          setSelectedRecipe(recipe);
-                          setIsSearchExpanded(false);
-                          setSearchQuery('');
-                        }}
-                        className={`rounded-2xl flex items-center gap-4 p-3 active:scale-[0.98] transition-all cursor-pointer overflow-hidden ${isDark ? '' : 'bg-stone-50 border border-stone-100'}`}
-                        style={isDark ? { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)' } : {}}
-                      >
-                        <img
-                          src={recipe.image}
-                          className="w-14 h-14 rounded-xl object-cover shrink-0"
-                          alt={recipe.name}
-                          onError={e => { (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%23333%22/></svg>'; }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h4 className={`font-bold text-sm leading-tight truncate ${isDark ? 'text-white' : 'text-stone-900'}`}>{recipe.name}</h4>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <span className="text-[10px] bg-[#fb5607]/20 text-[#fb5607] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">{recipe.region}</span>
-                            <span className={`text-[10px] font-bold flex items-center gap-1 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
-                              <Clock size={9} /> {recipe.prepTime}
-                            </span>
-                          </div>
-                        </div>
-                        <ChevronRight size={16} className={`shrink-0 ${isDark ? 'text-white/25' : 'text-stone-300'}`} />
-                      </motion.div>
-                    ))}
-                  {allRecipes.filter(r => normalizeString(r.name).includes(normalizeString(searchQuery)) || normalizeString(r.region).includes(normalizeString(searchQuery))).length === 0 && (
-                    <div className="py-20 text-center">
-                      <div className="text-5xl mb-4">🔍</div>
-                      <p className={`font-bold ${isDark ? 'text-white/50' : 'text-stone-400'}`}>Aucun résultat pour</p>
-                      <p className="text-[#fb5607] font-black text-lg mt-1">"{searchQuery}"</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-8 mt-4">
-                  {/* Trending tags */}
-                  <div>
-                    <h3 className={`text-[11px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
-                      <span className="w-1.5 h-1.5 bg-[#fb5607] rounded-full"></span> Tendances
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {['Sauces', 'Ablo', 'Pôyô', 'Aloko', 'Boissons', 'Tchatchanga', 'Piron'].map(tag => (
-                        <button
-                          key={tag}
-                          onClick={() => setSearchQuery(tag)}
-                          className={`px-4 py-2 category-button active:scale-95 transition-all ${isDark ? 'border-white/10 text-white/70' : 'border-stone-200 text-stone-600'}`}
-                          style={{ background: isDark ? 'rgba(251, 86, 7, 0.07)' : 'rgba(251, 86, 7, 0.15)', borderRadius: '20px' }}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Recent / Suggested recipes */}
-                  <div>
-                    <h3 className={`text-[11px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
-                      <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span> Suggestions du chef
-                    </h3>
-                    <div className="space-y-2">
-                      {allRecipes.slice(0, 5).map((recipe, i) => (
-                        <motion.div
-                          key={recipe.id}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.06 }}
-                          onClick={() => { setSelectedRecipe(recipe); setIsSearchExpanded(false); }}
-                          className={`flex items-center gap-3 p-3 rounded-2xl active:scale-[0.97] transition-all cursor-pointer ${isDark ? '' : 'bg-stone-50'}`}
-                          style={isDark ? { background: 'rgba(255,255,255,0.05)' } : {}}
-                        >
-                          <OptimizedImage src={recipe.image} className="w-10 h-10 rounded-xl object-cover" alt={recipe.name} />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-bold truncate ${isDark ? 'text-white/80' : 'text-stone-800'}`}>{recipe.name}</p>
-                            <p className={`text-[10px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{recipe.region}</p>
-                          </div>
-                          <ChevronRight size={14} className={`shrink-0 ${isDark ? 'text-white/20' : 'text-stone-300'}`} />
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <SearchView
+        isSearchExpanded={isSearchExpanded}
+        setIsSearchExpanded={setIsSearchExpanded}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        allRecipes={allRecipes}
+        setSelectedRecipe={setSelectedRecipe}
+        t={t}
+        isDark={isDark}
+        normalizeString={normalizeString}
+      />
 
       <AnimatePresence>
         {selectedRecipe && (
