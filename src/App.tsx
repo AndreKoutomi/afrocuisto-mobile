@@ -1892,21 +1892,21 @@ const StoreProductCard: React.FC<{
 
 export default function App() {
   // --- ÉTATS (MÉMOIRE) DE L'APPLICATION ---
-  const [currentUser, setCurrentUser] = useState<User | null>(dbService.getCurrentUser()); // Utilisateur actuellement connecté
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot' | 'updatePassword'>('login'); // Mode choisi
+  const [currentUser, setCurrentUser] = useState<User | null>(dbService.getCurrentUser()); 
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot' | 'updatePassword'>('login');
   const [resetEmail, setResetEmail] = useState('');
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email'); // Méthode d'auth : email ou téléphone
-  const [authFormData, setAuthFormData] = useState({ name: '', email: '', password: '', phone: '' }); // Données saisies dans le formulaire
-  const [showPassword, setShowPassword] = useState(false); // Masquer/Afficher le mot de passe
-  const [isAuthLoading, setIsAuthLoading] = useState(false); // Est-on en train de se connecter ?
-  const [authError, setAuthError] = useState<string | null>(null); // Message d'erreur éventuel lors de l'auth
-  const [authStep, setAuthStep] = useState<'form' | 'otp'>('form'); // Étape d'authentification (Formulaire ou Code OTP)
-  const [sentOtp, setSentOtp] = useState(''); // Code OTP qui a été envoyé par mail (mode email)
-  const [otpInput, setOtpInput] = useState(''); // Code OTP saisi par l'utilisateur
-  const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]; // Références pour les cases OTP
-  const [phoneCountry, setPhoneCountry] = useState('+229'); // Indicatif pays pour l'inscription
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email'); 
+  const [authFormData, setAuthFormData] = useState({ name: '', email: '', password: '', phone: '' }); 
+  const [showPassword, setShowPassword] = useState(false); 
+  const [isAuthLoading, setIsAuthLoading] = useState(false); 
+  const [authError, setAuthError] = useState<string | null>(null); 
+  const [authStep, setAuthStep] = useState<'form' | 'otp'>('form'); 
+  const [sentOtp, setSentOtp] = useState(''); 
+  const [otpInput, setOtpInput] = useState(''); 
+  const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]; 
+  const [phoneCountry, setPhoneCountry] = useState('+229'); 
 
-  const [crossDeviceStep, setCrossDeviceStep] = useState(false); // true = showing cross-device OTP screen
+  const [crossDeviceStep, setCrossDeviceStep] = useState(false); 
   const [crossDeviceSentOtp, setCrossDeviceSentOtp] = useState('');
   const [crossDeviceOtpInput, setCrossDeviceOtpInput] = useState('');
   const [crossDevicePendingEmail, setCrossDevicePendingEmail] = useState('');
@@ -1916,6 +1916,98 @@ export default function App() {
 
   const [jumpToPostId, setJumpToPostId] = useState<string | null>(null);
   const [showSavedPosts, setShowSavedPosts] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeTab, setActiveTab] = useState('home');
+  const [profileSubView, setProfileSubView] = useState<string | null>(null);
+  const [securitySubView, setSecuritySubView] = useState<'main' | 'password' | 'email' | 'validation' | 'phone' | 'phone-validation'>('main');
+  const [history, setHistory] = useState<string[]>(['home']);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [aiRecommendation, setAiRecommendation] = useState<string>("Chargement de votre suggestion personnalisée...");
+  const [kidPageIndex, setKidPageIndex] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [isNotifCenterOpen, setIsNotifCenterOpen] = useState(false);
+  const [selectedNotifDetail, setSelectedNotifDetail] = useState<PushNotif | null>(null);
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [isCommunityLoading, setIsCommunityLoading] = useState(false);
+  const [selectedPostForComments, setSelectedPostForComments] = useState<CommunityPost | null>(null);
+  const [postComments, setPostComments] = useState<PostComment[]>([]);
+  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
+  const [homeCarouselIndex, setHomeCarouselIndex] = useState(0);
+  const [communityPage, setCommunityPage] = useState(0);
+  const [hasMoreCommunityPosts, setHasMoreCommunityPosts] = useState(true);
+
+  const homeTouchRef = useRef({ startX: 0, startY: 0 });
+  const juicesRef = useRef<HTMLDivElement>(null);
+  const mainScrollRef = useRef<HTMLElement>(null);
+  const goBackRef = useRef<() => void>(() => {});
+
+  const scrollToTop = () => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const { notifications, unreadCount, currentBanner, dismissBanner, markAllRead, dismissNotification } = usePushNotifications();
+
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>(() => {
+    try {
+      const cached = localStorage.getItem('afrocuisto_remote_recipes');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) { }
+    return recipes; 
+  });
+  const [allProducts, setAllProducts] = useState<Product[]>(() => {
+    try {
+      const cached = localStorage.getItem('afrocuisto_remote_products');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) { }
+    return STORE_PRODUCTS;
+  });
+  const [selectedStoreCategory, setSelectedStoreCategory] = useState('Tout');
+  const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [allMerchants, setAllMerchants] = useState<any[]>([]); 
+  const [isSyncing, setIsSyncing] = useState(true);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [syncError, setSyncError] = useState(false);
+  const [hasLoadedAtLeastOnce, setHasLoadedAtLeastOnce] = useState(false);
+  const [dynamicSections, setDynamicSections] = useState<any[]>([]);
+  const [storeTab, setStoreTab] = useState<'store' | 'mylist'>('store');
+  const [selectedStoreItemIds, setSelectedStoreItemIds] = useState<string[]>([]);
+  const [showAddShoppingModal, setShowAddShoppingModal] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [ordersCount, setOrdersCount] = useState(0);
+  const [bannerIdx, setBannerIdx] = useState(0);
+  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
+  const [isCommunityFormOpen, setIsCommunityFormOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+    onConfirm?: () => void;
+  }>({ show: false, message: '', type: 'info' });
+
+  const showAlert = (message: string, type?: 'success' | 'error' | 'info', onConfirm?: () => void) => {
+    let finalType = type || 'info';
+    if (!type) {
+      const lower = message.toLowerCase();
+      if (lower.includes('succès') || lower.includes('ajouté') || lower.includes('enregistré')) finalType = 'success';
+      else if (lower.includes('erreur') || lower.includes('incorrect') || lower.includes('échec')) finalType = 'error';
+    }
+    setAlertConfig({ show: true, message, type: finalType, onConfirm });
+  };
+
 
   const handleRecipeShare = async (recipe: Recipe | null) => {
     if (!recipe) return;
@@ -1948,15 +2040,32 @@ export default function App() {
 
   useEffect(() => {
     // Lecture des Deeplinks au démarrage Web
-    if (typeof window !== 'undefined' && window.location.search) {
-      const qs = new URLSearchParams(window.location.search);
-      const postFromUrl = qs.get('post');
-      if (postFromUrl) {
-        setJumpToPostId(postFromUrl);
-        setActiveTab('community');
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      const search = window.location.search;
+      
+      // Support du format /recette/RXX
+      if (path.includes('/recette/')) {
+        const recipeId = path.split('/recette/')[1]?.split('/')[0];
+        if (recipeId) {
+          const recipe = allRecipes.find(r => r.id === recipeId);
+          if (recipe) setSelectedRecipe(recipe);
+        }
+      } else if (search) {
+        const qs = new URLSearchParams(search);
+        const postFromUrl = qs.get('post');
+        if (postFromUrl) {
+          setJumpToPostId(postFromUrl);
+          setActiveTab('community');
+        }
+        const recFromUrl = qs.get('recipe');
+        if (recFromUrl) {
+          const recipe = allRecipes.find(r => r.id === recFromUrl);
+          if (recipe) setSelectedRecipe(recipe);
+        }
       }
     }
-  }, []);
+  }, [allRecipes]);
 
   // --- Adaptive Android System Navigation Bar ---
   // Automatically detects the height of the Android system navigation bar
@@ -2273,128 +2382,9 @@ export default function App() {
     };
   }, [currentUser]);
 
-  // Cloud Sync & Internet Dependency
-  // Prefer cached recipes from localStorage (with real images) over static fallback data (with placeholder images)
-  const [allRecipes, setAllRecipes] = useState<Recipe[]>(() => {
-    try {
-      const cached = localStorage.getItem('afrocuisto_remote_recipes');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) { /* ignore parse errors */ }
-    return recipes; // Static fallback only if no cache
-  });
-  const [allProducts, setAllProducts] = useState<Product[]>(() => {
-    try {
-      const cached = localStorage.getItem('afrocuisto_remote_products');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) { /* ignore parse errors */ }
-    return STORE_PRODUCTS;
-  });
-  const [selectedStoreCategory, setSelectedStoreCategory] = useState('Tout');
-  const [productSearchQuery, setProductSearchQuery] = useState('');
-  const [allMerchants, setAllMerchants] = useState<any[]>([]); // Dynamic merchants
-  const [isSyncing, setIsSyncing] = useState(true);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  // Theme context for shopping/store
-  const shopTheme = {
-    primary: '#38b000',
-    secondary: '#70e000',
-    dark: '#004b23',
-    light: '#ccff33',
-    accent: '#9ef01a'
-  };
-  // ── Shopping page tabs & modals ──
-  const [storeTab, setStoreTab] = useState<'store' | 'mylist'>('store');
-  const [selectedStoreItemIds, setSelectedStoreItemIds] = useState<string[]>([]);
-  const [showAddShoppingModal, setShowAddShoppingModal] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
-  const [ordersCount, setOrdersCount] = useState(0);
-
-  useEffect(() => {
-    if (!currentUser || !dbService.supabase) {
-      setOrdersCount(0);
-      return;
-    }
-
-    const fetchOrdersCount = async () => {
-      try {
-        const orders = await dbService.getUserOrders(currentUser.id);
-        setOrdersCount(orders?.length || 0);
-      } catch (err) {
-        console.error("Error fetching orders count:", err);
-      }
-    };
-
-    fetchOrdersCount();
-
-    // Listen for new orders to update count
-    const channel = dbService.supabase
-      .channel(`orders-count-${currentUser.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'orders',
-        filter: `user_id=eq.${currentUser.id}`
-      }, () => {
-        fetchOrdersCount();
-      })
-      .subscribe();
-
-    return () => {
-      dbService.supabase?.removeChannel(channel);
-    };
-  }, [currentUser]);
-
-  const [bannerIdx, setBannerIdx] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => setBannerIdx(i => (i + 1) % SHOPPING_BANNERS.length), 4000);
-    return () => clearInterval(timer);
-  }, []);
-  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
-  const [isCommunityFormOpen, setIsCommunityFormOpen] = useState(false);
-  const [alertConfig, setAlertConfig] = useState<{
-    show: boolean;
-    message: string;
-    type: 'success' | 'error' | 'info';
-    onConfirm?: () => void;
-  }>({ show: false, message: '', type: 'info' });
-
-  // Effet pour gérer l'état de connexion au lancement de l'appli
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false); // On est en ligne
-    const handleOffline = () => setIsOffline(true); // On a perdu internet
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // On nettoie les écouteurs d'événements si le composant s'arrête
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  const showAlert = (message: string, type?: 'success' | 'error' | 'info', onConfirm?: () => void) => {
-    let finalType = type || 'info';
-    if (!type) {
-      const lower = message.toLowerCase();
-      if (lower.includes('succès') || lower.includes('ajouté') || lower.includes('enregistré') || lower.includes('merci') || lower.includes('bienvenue') || lower.includes('parti')) finalType = 'success';
-      else if (lower.includes('erreur') || lower.includes('incorrect') || lower.includes('invalide') || lower.includes('échec') || lower.includes('correspondent pas')) finalType = 'error';
-    }
-    setAlertConfig({ show: true, message, type: finalType, onConfirm });
-  };
 
 
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [syncError, setSyncError] = useState(false);
-  const [hasLoadedAtLeastOnce, setHasLoadedAtLeastOnce] = useState(false);
-  const [dynamicSections, setDynamicSections] = useState<any[]>([]);
+
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -2566,10 +2556,6 @@ export default function App() {
     };
   }, []);
 
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
-
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState('home');
 
   useEffect(() => {
     const silentCron = async () => {
@@ -2616,25 +2602,6 @@ export default function App() {
   }, [activeTab, currentUser]);
 
 
-  const [history, setHistory] = useState<string[]>(['home']);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
-  const [profileSubView, setProfileSubView] = useState<string | null>(null);
-  const [securitySubView, setSecuritySubView] = useState<'main' | 'password' | 'email' | 'validation' | 'phone' | 'phone-validation'>('main');
-  const [aiRecommendation, setAiRecommendation] = useState<string>("Chargement de votre suggestion personnalisée...");
-  const [kidPageIndex, setKidPageIndex] = useState(0);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [isNotifCenterOpen, setIsNotifCenterOpen] = useState(false);
-  const [selectedNotifDetail, setSelectedNotifDetail] = useState<PushNotif | null>(null);
-  const { notifications, unreadCount, currentBanner, dismissBanner, markAllRead, dismissNotification } = usePushNotifications();
-
-  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
-  const [isCommunityLoading, setIsCommunityLoading] = useState(false);
-  const [selectedPostForComments, setSelectedPostForComments] = useState<CommunityPost | null>(null);
-  const [postComments, setPostComments] = useState<PostComment[]>([]);
-  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
 
   // Sync community when switching to tab
   useEffect(() => {
@@ -2643,20 +2610,6 @@ export default function App() {
     }
   }, [activeTab]);
 
-  const [homeCarouselIndex, setHomeCarouselIndex] = useState(0);
-  const homeTouchRef = useRef({ startX: 0, startY: 0 });
-
-  const juicesRef = useRef<HTMLDivElement>(null);
-  const mainScrollRef = useRef<HTMLElement>(null);
-
-  const scrollToTop = () => {
-    if (mainScrollRef.current) {
-      mainScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const [communityPage, setCommunityPage] = useState(0);
-  const [hasMoreCommunityPosts, setHasMoreCommunityPosts] = useState(true);
 
   const syncCommunity = async (page: number = 0) => {
     if (isCommunityLoading && page === 0) return;
@@ -2799,7 +2752,7 @@ export default function App() {
 
   // Fonction pour revenir en arrière (Bouton physique Retour sur Android ou bouton virtuel)
   // On utilise un ref pour que le listener Android voie toujours l'état le plus récent
-  const goBackRef = useRef<() => void>(() => { });
+
 
   const goBack = () => {
     // Top-most overlays (z-index 2000+)
@@ -2862,21 +2815,41 @@ export default function App() {
     // Deeplink Handling sur Mobile via Capacitor
     const urlListener = CapacitorApp.addListener('appUrlOpen', data => {
       try {
-        const urlObj = new URL(data.url);
+        const fullUrl = data.url;
+        console.log("[DeepLink] Opening URL:", fullUrl);
+        const urlObj = new URL(fullUrl);
 
-        // Clic sur Post partagé
+        // 1. Format /recette/ID (prioritaire)
+        if (fullUrl.includes('/recette/')) {
+          const recipeId = fullUrl.split('/recette/')[1].split(/[?#&]/)[0];
+          if (recipeId) {
+            const recipe = allRecipes.find(r => r.id === recipeId);
+            if (recipe) {
+              console.log("[DeepLink] Found recipe by path:", recipe.name);
+              setSelectedRecipe(recipe);
+              return;
+            }
+          }
+        }
+
+        // 2. Format ?recipe=ID
+        const recId = urlObj.searchParams.get('recipe');
+        if (recId) {
+          const recipe = allRecipes.find(r => r.id === recId);
+          if (recipe) {
+            console.log("[DeepLink] Found recipe by query:", recipe.name);
+            setSelectedRecipe(recipe);
+            return;
+          }
+        }
+
+        // 3. Format ?post=ID
         const postId = urlObj.searchParams.get('post');
         if (postId) {
+          console.log("[DeepLink] Found community post:", postId);
           setActiveTab('community');
           setJumpToPostId(postId);
           return;
-        }
-
-        // Clic sur Recette partagée
-        const recipeId = urlObj.searchParams.get('recipe');
-        if (recipeId) {
-          const recipe = allRecipes.find(r => r.id === recipeId);
-          if (recipe) setSelectedRecipe(recipe);
         }
       } catch (e) {
         console.error("Deeplink Error", e);
