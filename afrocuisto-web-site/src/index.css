@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Google Sans", "Quicksand", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Clash Grotesk", "Google Sans", sans-serif;
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased;
+    background-color: #FDFCF9;
+    color: #1a1a1a;
+    font-family: "Google Sans", sans-serif !important;
+    position: relative;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Clash Grotesk', sans-serif !important;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/assets/food-pattern.png');
+    background-repeat: repeat;
+    background-size: 400px;
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: 90;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #FF480033;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #FF480066;
+  }
+}

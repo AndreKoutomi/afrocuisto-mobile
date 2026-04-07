@@ -150,25 +150,3 @@ export interface PostComment {
   content: string;
   created_at: string;
 }
-
-// --- Bug Report Types ---
-export type BugSeverity = 'Bloquant' | 'Majeur' | 'Mineur' | 'Cosmétique';
-export type BugCategory = 'Interface' | 'Connexion' | 'Recettes' | 'Communauté' | 'Panier' | 'Notifications' | 'Performance' | 'Autre';
-export type BugStatus = 'Nouveau' | 'En cours' | 'Résolu' | 'Fermé';
-
-export interface BugReport {
-  id: string;
-  user_id?: string;
-  user_name: string;
-  user_email: string;
-  title: string;
-  description: string;
-  steps_to_reproduce?: string;
-  severity: BugSeverity;
-  category: BugCategory;
-  status: BugStatus;
-  device_info?: string;
-  app_version?: string;
-  created_at: string;
-  updated_at?: string;
-}

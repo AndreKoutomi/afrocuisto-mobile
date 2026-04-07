@@ -5,10 +5,10 @@ import {
     Users, MessageSquare, FileText, Heart, Eye,
     Trash2, ShieldAlert, CheckCircle, Search,
     Filter, MoreVertical, Ban, RefreshCcw,
-    TrendingUp, ExternalLink, ChevronRight, AlertTriangle, Layout, Plus, Edit3, Navigation, XCircle, Bug
+    TrendingUp, ExternalLink, ChevronRight, AlertTriangle, Layout, Plus, Edit3, Navigation, XCircle
 } from 'lucide-react';
 import { dbService } from '../dbService';
-import { CommunityPost, User, BugReport } from '../types';
+import { CommunityPost, User } from '../types';
 
 interface Stats {
     totalPosts: number;
@@ -23,14 +23,13 @@ export const AdminCommunityDashboard: React.FC<{
     onClose: () => void;
     t: any;
 }> = ({ isDark, onClose, t }) => {
-    const [activeTab, setActiveTab] = useState<'stats' | 'posts' | 'comments' | 'users' | 'reports' | 'sections' | 'bugs'>('stats');
+    const [activeTab, setActiveTab] = useState<'stats' | 'posts' | 'comments' | 'users' | 'reports' | 'sections'>('stats');
     const [stats, setStats] = useState<Stats | null>(null);
     const [posts, setPosts] = useState<CommunityPost[]>([]);
     const [comments, setComments] = useState<any[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [reports, setReports] = useState<any[]>([]);
     const [sections, setSections] = useState<any[]>([]);
-    const [bugReports, setBugReports] = useState<BugReport[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
@@ -60,9 +59,6 @@ export const AdminCommunityDashboard: React.FC<{
             } else if (activeTab === 'sections') {
                 const s = await dbService.getRemoteSections();
                 setSections(s);
-            } else if (activeTab === 'bugs') {
-                const b = await dbService.adminGetAllBugReports();
-                setBugReports(b);
             }
         } catch (err) {
             console.error('Admin load error:', err);
@@ -445,106 +441,6 @@ export const AdminCommunityDashboard: React.FC<{
         </div>
     );
 
-    const severityColor = (s: string) => {
-        if (s === 'Bloquant') return 'bg-rose-500/10 text-rose-600 border-rose-200';
-        if (s === 'Majeur')   return 'bg-amber-500/10 text-amber-600 border-amber-200';
-        if (s === 'Mineur')   return 'bg-blue-500/10 text-blue-600 border-blue-200';
-        return 'bg-stone-100 text-stone-500 border-stone-200';
-    };
-
-    const statusColor = (s: string) => {
-        if (s === 'Résolu')   return 'bg-emerald-500/10 text-emerald-700';
-        if (s === 'En cours') return 'bg-blue-500/10 text-blue-700';
-        if (s === 'Fermé')    return 'bg-stone-100 text-stone-400';
-        return 'bg-amber-500/10 text-amber-700';
-    };
-
-    const renderBugsList = () => (
-        <div className="space-y-4">
-            <SearchBar value={searchQuery} onChange={setSearchQuery} isDark={isDark} placeholder="Rechercher un bug..." />
-            {loading ? <Loader isDark={isDark} /> : (
-                bugReports.length === 0 ? (
-                    <div className="py-24 text-center opacity-30">
-                        <Bug size={48} className="mx-auto mb-4" />
-                        <p className="font-bold text-sm">Aucun bug signalé 🎉</p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {bugReports
-                            .filter(b => !searchQuery ||
-                                b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                b.user_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                b.category.toLowerCase().includes(searchQuery.toLowerCase())
-                            )
-                            .map(bug => (
-                                <div key={bug.id} className={`p-5 rounded-[28px] border flex flex-col gap-3 ${isDark ? 'bg-white/5 border-white/8' : 'bg-white border-stone-100 shadow-sm'}`}>
-                                    {/* Header */}
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${severityColor(bug.severity)}`}>{bug.severity}</span>
-                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${statusColor(bug.status)}`}>{bug.status}</span>
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-white/5 text-white/30' : 'bg-stone-100 text-stone-400'}`}>{bug.category}</span>
-                                            </div>
-                                            <h4 className={`font-black text-[14px] leading-snug ${isDark ? 'text-white' : 'text-stone-800'}`}>{bug.title}</h4>
-                                        </div>
-                                        <button
-                                            onClick={() => dbService.adminDeleteBugReport(bug.id).then(ok => ok && setBugReports(prev => prev.filter(b => b.id !== bug.id)))}
-                                            className="p-2 rounded-xl text-rose-400 hover:bg-rose-50 transition-colors flex-shrink-0"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-
-                                    {/* Reporter */}
-                                    <div className={`flex items-center gap-2 text-[11px] font-bold ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${isDark ? 'bg-white/10 text-white' : 'bg-stone-100 text-stone-600'}`}>
-                                            {bug.user_name.charAt(0)}
-                                        </div>
-                                        {bug.user_name} · {bug.user_email} · {new Date(bug.created_at).toLocaleDateString('fr-FR')}
-                                    </div>
-
-                                    {/* Description */}
-                                    <p className={`text-[12px] leading-relaxed ${isDark ? 'text-white/60' : 'text-stone-600'}`}>{bug.description}</p>
-
-                                    {/* Steps */}
-                                    {bug.steps_to_reproduce && (
-                                        <div className={`p-3 rounded-2xl ${isDark ? 'bg-black/30' : 'bg-stone-50'}`}>
-                                            <p className={`text-[9px] font-black uppercase tracking-widest mb-1.5 ${isDark ? 'text-white/20' : 'text-stone-400'}`}>Étapes de reproduction</p>
-                                            <p className={`text-[11px] leading-relaxed ${isDark ? 'text-white/50' : 'text-stone-500'}`}>{bug.steps_to_reproduce}</p>
-                                        </div>
-                                    )}
-
-                                    {/* Device info */}
-                                    {bug.device_info && (
-                                        <p className={`text-[10px] font-mono ${isDark ? 'text-white/20' : 'text-stone-300'}`}>📱 {bug.device_info}</p>
-                                    )}
-
-                                    {/* Status change */}
-                                    <div className="flex gap-2 flex-wrap pt-1">
-                                        {(['Nouveau', 'En cours', 'Résolu', 'Fermé'] as const).map(s => (
-                                            <button
-                                                key={s}
-                                                onClick={() => dbService.adminUpdateBugStatus(bug.id, s).then(ok => ok && setBugReports(prev => prev.map(b => b.id === bug.id ? { ...b, status: s } : b)))}
-                                                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide transition-all active:scale-95 ${
-                                                    bug.status === s
-                                                        ? 'bg-[#fb5607] text-white shadow-md shadow-[#fb5607]/30'
-                                                        : isDark ? 'bg-white/5 text-white/30 hover:bg-white/10' : 'bg-stone-100 text-stone-400 hover:bg-stone-200'
-                                                }`}
-                                            >
-                                                {s}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))
-                        }
-                    </div>
-                )
-            )}
-        </div>
-    );
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 50 }}
@@ -572,7 +468,6 @@ export const AdminCommunityDashboard: React.FC<{
                 <TabBtn id="comments" label="Comms" icon={<MessageSquare size={16} />} active={activeTab === 'comments'} onClick={() => setActiveTab('comments')} isDark={isDark} />
                 <TabBtn id="users" label="Membres" icon={<Users size={16} />} active={activeTab === 'users'} onClick={() => setActiveTab('users')} isDark={isDark} />
                 <TabBtn id="reports" label="Signaux" icon={<AlertTriangle size={16} />} active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} isDark={isDark} />
-                <TabBtn id="bugs" label="Bugs" icon={<Bug size={16} />} active={activeTab === 'bugs'} onClick={() => setActiveTab('bugs')} isDark={isDark} />
                 <TabBtn id="sections" label="Sections" icon={<Layout size={16} />} active={activeTab === 'sections'} onClick={() => setActiveTab('sections')} isDark={isDark} />
             </div>
 
@@ -582,7 +477,6 @@ export const AdminCommunityDashboard: React.FC<{
                 {activeTab === 'comments' && renderCommentsList()}
                 {activeTab === 'users' && renderUsersList()}
                 {activeTab === 'reports' && renderReportsList()}
-                {activeTab === 'bugs' && renderBugsList()}
                 {activeTab === 'sections' && renderSectionsList()}
             </div>
 
