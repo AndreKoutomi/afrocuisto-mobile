@@ -14,6 +14,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { OptimizedImage } from './components/OptimizedImage';
 import DishSuggestionForm from './components/DishSuggestionForm';
+import BugReportForm from './components/BugReportForm';
 import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { motion, AnimatePresence } from 'motion/react';
 import { CommunityFeed } from './components/community/CommunityFeed';
@@ -83,7 +84,8 @@ import {
   Maximize2,
   ClipboardList,
   Calendar,
-  ShieldAlert
+  ShieldAlert,
+  Bug
 } from 'lucide-react';
 import { recipes } from './data';
 import { Recipe, Difficulty, User, UserSettings, ShoppingItem, Product, CommunityPost, PostComment, PostCategory } from './types';
@@ -1427,6 +1429,19 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
               <ChevronRight size={16} className="text-stone-400" />
             </button>
 
+            <button
+              onClick={() => setProfileSubView('bugReport')}
+              className="w-full flex items-center justify-between p-4 bg-red-50 rounded-2xl border border-red-100 active:bg-red-100 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500">
+                  <Bug size={18} />
+                </div>
+                <span className="font-bold text-red-500 text-sm">Signaler un bug</span>
+              </div>
+              <ChevronRight size={16} className="text-red-400" />
+            </button>
+
             {/* Sync Status Indicator */}
             {(isSyncing || !hasLoadedAtLeastOnce) && (
               <div className="flex justify-center mt-6">
@@ -1523,6 +1538,22 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
               </button>
             </div>
           </div>
+        );
+      case 'bugReport':
+        return (
+          <BugReportForm
+            currentUser={currentUser}
+            onSubmit={async (data) => {
+              const result = await dbService.submitBugReport(data);
+              if (result.success) {
+                showAlert("Rapport de bug envoyé avec succès. Merci !", "success");
+                return true;
+              } else {
+                showAlert("Erreur lors de l'envoi du rapport de bug. Veuillez réessayer.", "error");
+                return false;
+              }
+            }}
+          />
         );
       case 'about':
         return (
@@ -4819,7 +4850,7 @@ export default function App() {
   };
 
   const renderProfile = () => (
-    <div className={`flex-1 flex flex-col pb-44 relative ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '16px' }}>
+    <div className={`flex-1 h-full min-h-0 flex flex-col relative overflow-hidden ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
       <AnimatePresence>
         {profileSubView && (
           <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={springTransition} className={`absolute inset-0 z-50 p-6 flex flex-col ${isDark ? 'bg-black' : 'bg-white'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 24px)' : '24px' }}>
@@ -4843,7 +4874,7 @@ export default function App() {
               )}
             </header>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
+            <div className="flex-1 overflow-y-auto no-scrollbar pb-10 min-h-0">
               {profileSubView === 'shopping' ? (
                 <div className="space-y-6">
                   {currentUser?.shoppingList && currentUser.shoppingList.length > 0 ? (
@@ -4932,121 +4963,102 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <header className={`flex flex-col items-center py-10 ${isDark ? 'text-white' : ''}`}>
-        <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden mb-4 bg-stone-100 flex items-center justify-center">
-          <span className="text-3xl font-black text-terracotta tracking-tight">
-            {getInitials(currentUser?.name)}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-stone-800'}`}>{currentUser?.name}</h2>
-          {currentUser?.is_admin && (
-            <div className="bg-[#fb5607] text-[8px] text-white px-2 py-0.5 rounded-full font-black uppercase tracking-widest shadow-lg shadow-[#fb5607]/20 flex items-center gap-1">
-              <ShieldAlert size={10} /> ADMIN
-            </div>
-          )}
-        </div>
-        <p className={`text-sm ${isDark ? 'text-white/50' : 'text-stone-500'}`}>{currentUser?.email}</p>
-
-        {/* Cloud Connection Status + Refresh */}
-        <div className="mt-4 flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-stone-100 shadow-sm">
-            <div className={`w-2 h-2 rounded-full animate-pulse ${dbService.supabase ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500'}`} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-              Cloud Sync: {dbService.supabase ? 'Activé' : 'Désactivé'}
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-44 min-h-0" style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '16px' }}>
+        <header className={`flex flex-col items-center py-10 ${isDark ? 'text-white' : ''}`}>
+          <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden mb-4 bg-stone-100 flex items-center justify-center">
+            <span className="text-3xl font-black text-terracotta tracking-tight">
+              {getInitials(currentUser?.name)}
             </span>
           </div>
-          <motion.button
-            whileTap={{ scale: 0.85 }}
-            onClick={() => window.location.reload()}
-            title="Actualiser les recettes"
-            className={`w-8 h-8 rounded-full flex items-center justify-center border shadow-sm transition-colors ${isDark ? 'bg-white/8 border-white/10' : 'bg-white border-stone-100'} ${isSyncing ? 'text-[#fb5607]' : (isDark ? 'text-white/40 hover:text-white/70' : 'text-stone-400 hover:text-stone-600')}`}
-          >
-            <motion.div
-              animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
-              transition={isSyncing ? { repeat: Infinity, duration: 1.5, ease: 'linear' } : { duration: 0.3 }}
-            >
-              <RefreshCw size={14} strokeWidth={2.5} />
-            </motion.div>
-          </motion.button>
-        </div>
-      </header>
-
-      <section className="px-6 space-y-3">
-        <button onClick={() => setProfileSubView('personalInfo')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
-              <UserIcon size={20} />
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.personalInfo}</span>
+          <div className="flex items-center gap-2">
+            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-stone-800'}`}>{currentUser?.name}</h2>
+            {currentUser?.is_admin && (
+              <div className="bg-[#fb5607] text-[8px] text-white px-2 py-0.5 rounded-full font-black uppercase tracking-widest shadow-lg shadow-[#fb5607]/20 flex items-center gap-1">
+                <ShieldAlert size={10} /> ADMIN
+              </div>
+            )}
           </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </button>
+          <p className={`text-sm ${isDark ? 'text-white/50' : 'text-stone-500'}`}>{currentUser?.email}</p>
 
 
-        <button onClick={() => setProfileSubView('settings')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
-              <Settings size={20} />
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.settings}</span>
-          </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </button>
+        </header>
 
-        <button onClick={() => setProfileSubView('contribution')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
-              <Heart size={20} />
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.contribution}</span>
-          </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </button>
-
-        <button onClick={() => setProfileSubView('about')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
-              <Info size={20} />
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.about}</span>
-          </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </button>
-
-        <a href="https://wa.me/+2290151455072" target="_blank" rel="noopener noreferrer" className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all outline-none ${isDark ? 'bg-[#111111] border-[#25D366]/20 hover:bg-[#1a1a1a]' : 'bg-white border-green-100/50 hover:bg-stone-50'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-[#25D366]/20 text-[#25D366]' : 'bg-[#25D366]/10 text-[#25D366]'}`}>
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-              </svg>
-            </div>
-            <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>Contacter le support</span>
-          </div>
-          <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
-        </a>
-
-
-        {currentUser?.is_admin && (
-          <button
-            onClick={() => setIsAdminDashboardOpen(true)}
-            className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all outline-none mb-3 ${isDark ? 'bg-[#fb5607]/10 border-[#fb5607]/30 hover:bg-[#fb5607]/20' : 'bg-orange-50 border-orange-100 hover:bg-orange-100'}`}
-          >
+        <section className="px-6 space-y-3">
+          <button onClick={() => setProfileSubView('personalInfo')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
             <div className="flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-[#fb5607]/20 text-[#fb5607]' : 'bg-[#fb5607] text-white'}`}>
-                <ShieldAlert size={20} />
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
+                <UserIcon size={20} />
               </div>
-              <div className="flex flex-col items-start">
-                <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>Administration</span>
-                <span className="text-[10px] font-bold text-[#fb5607] uppercase">Community & Flux</span>
-              </div>
+              <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.personalInfo}</span>
             </div>
-            <ChevronRight size={18} className={isDark ? 'text-[#fb5607]/40' : 'text-[#fb5607]/60'} />
+            <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
           </button>
-        )}
 
-        <button onClick={handleLogout} className={`w-full flex items-center gap-3 p-4 rounded-3xl font-bold mt-6 ${isDark ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-rose-50 text-rose-600'}`}><LogOut size={20} /> {t.logout}</button>
-      </section>
+
+          <button onClick={() => setProfileSubView('settings')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
+            <div className="flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
+                <Settings size={20} />
+              </div>
+              <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.settings}</span>
+            </div>
+            <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
+          </button>
+
+          <button onClick={() => setProfileSubView('contribution')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
+            <div className="flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
+                <Heart size={20} />
+              </div>
+              <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.contribution}</span>
+            </div>
+            <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
+          </button>
+
+          <button onClick={() => setProfileSubView('about')} className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#111111] border-white/8 hover:bg-[#1a1a1a]' : 'bg-white border-stone-100'}`}>
+            <div className="flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/8 text-white/60' : 'bg-stone-50 text-stone-600'}`}>
+                <Info size={20} />
+              </div>
+              <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.about}</span>
+            </div>
+            <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
+          </button>
+
+          <a href="https://wa.me/+2290151455072" target="_blank" rel="noopener noreferrer" className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all outline-none ${isDark ? 'bg-[#111111] border-[#25D366]/20 hover:bg-[#1a1a1a]' : 'bg-white border-green-100/50 hover:bg-stone-50'}`}>
+            <div className="flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-[#25D366]/20 text-[#25D366]' : 'bg-[#25D366]/10 text-[#25D366]'}`}>
+                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                </svg>
+              </div>
+              <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>Contacter le support</span>
+            </div>
+            <ChevronRight size={18} className={isDark ? 'text-white/25' : 'text-stone-300'} />
+          </a>
+
+
+          {currentUser?.is_admin && (
+            <button
+              onClick={() => setIsAdminDashboardOpen(true)}
+              className={`w-full flex items-center justify-between p-5 rounded-[32px] border shadow-sm active:scale-95 transition-all outline-none mb-3 ${isDark ? 'bg-[#fb5607]/10 border-[#fb5607]/30 hover:bg-[#fb5607]/20' : 'bg-orange-50 border-orange-100 hover:bg-orange-100'}`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isDark ? 'bg-[#fb5607]/20 text-[#fb5607]' : 'bg-[#fb5607] text-white'}`}>
+                  <ShieldAlert size={20} />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>Administration</span>
+                  <span className="text-[10px] font-bold text-[#fb5607] uppercase">Community & Flux</span>
+                </div>
+              </div>
+              <ChevronRight size={18} className={isDark ? 'text-[#fb5607]/40' : 'text-[#fb5607]/60'} />
+            </button>
+          )}
+
+          <button onClick={handleLogout} className={`w-full flex items-center gap-3 p-4 rounded-3xl font-bold mt-6 ${isDark ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-rose-50 text-rose-600'}`}><LogOut size={20} /> {t.logout}</button>
+        </section>
+      </div>
     </div>
   );
 
@@ -7189,7 +7201,7 @@ export default function App() {
       transition={{ duration: 0.25, ease: 'easeOut' }}
       className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
     >
-      <main onScroll={onMainScroll} ref={mainScrollRef as any} className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative min-h-0" style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}>
+      <main onScroll={onMainScroll} ref={mainScrollRef as any} className={`flex-1 ${activeTab === 'profile' ? 'overflow-hidden' : 'overflow-y-auto'} overflow-x-hidden no-scrollbar relative min-h-0`} style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}>
         <AnimatePresence mode="wait">
           {activeTab === 'home' && <motion.div key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderHome()}</motion.div>}
           {activeTab === 'search' && <motion.div key="search" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderExplorer()}</motion.div>}

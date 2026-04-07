@@ -1502,5 +1502,49 @@ export const dbService = {
         } catch (err) {
             return false;
         }
+    },
+
+    async submitBugReport(data: any): Promise<{ success: boolean; error?: string }> {
+        try {
+            if (!supabase) return { success: false, error: 'Supabase client not initialized' };
+
+            let screenshotUrl = data.screenshot || null;
+            // If it's a base64 image, upload it first
+            if (data.screenshot && data.screenshot.startsWith('data:image/')) {
+                const uploadedUrl = await this.uploadPostImage(data.screenshot, data.user_id || 'anonymous');
+                if (uploadedUrl) {
+                    screenshotUrl = uploadedUrl;
+                }
+            }
+
+            const { error } = await supabase.from('bug_reports').insert([{
+                user_id: data.user_id || null,
+                user_name: data.user_name || null,
+                user_email: data.user_email || null,
+                title: data.title,
+                description: data.description,
+                steps_to_reproduce: data.steps_to_reproduce || null,
+                severity: data.severity || 'medium',
+                category: data.category || 'other',
+                status: data.status || 'open',
+                device_info: data.device_info || null,
+                app_version: data.app_version || null,
+                screenshot: screenshotUrl,
+                created_at: new Date().toISOString()
+            }]);
+
+            if (error) {
+                console.error('Supabase bug report insert error:', error);
+                if (error.code === '42P01') {
+                    return { success: false, error: 'La table "bug_reports" est inexistante.' };
+                }
+                return { success: false, error: error.message };
+            }
+
+            return { success: true };
+        } catch (err: any) {
+            console.error('submitBugReport exception:', err);
+            return { success: false, error: err.message || 'Une erreur est survenue lors de l\'envoi du rapport.' };
+        }
     }
 };
