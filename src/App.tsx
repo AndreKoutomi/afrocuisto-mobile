@@ -1387,20 +1387,6 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
                 ))}
               </div>
             </div>
-            <div className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
-                  <Ruler size={18} />
-                </div>
-                <span className="font-bold text-stone-700 text-sm">{t.units}</span>
-              </div>
-              <button
-                onClick={() => updateSettings({ unitSystem: settings.unitSystem === 'metric' ? 'imperial' : 'metric' })}
-                className="px-3 py-1.5 bg-white border border-stone-100 rounded-full text-[10px] font-black uppercase text-terracotta"
-              >
-                {settings.unitSystem === 'metric' ? t.metric.split(' ')[0] : t.imperial.split(' ')[0]}
-              </button>
-            </div>
             <button
               onClick={() => {
                 setProfileSubView('security');
@@ -1571,7 +1557,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
 
             <div>
               <h2 className="text-2xl font-black text-stone-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-br dark:from-white dark:via-white dark:to-white/40 tracking-tight mb-2">AfroCuisto v1.0.6</h2>
-              <p className="text-stone-500 dark:text-stone-300 font-medium text-sm px-8 leading-relaxed max-w-[280px] mx-auto italic transition-colors">
+              <p className="text-stone-900 dark:text-white font-medium text-sm px-8 leading-relaxed max-w-[280px] mx-auto italic transition-colors">
                 L'excellence de la cuisine béninoise à portée de main.
               </p>
             </div>
@@ -4963,7 +4949,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-44 min-h-0" style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '16px' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-20 min-h-0" style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 16px)' : '16px' }}>
         <header className={`flex flex-col items-center py-10 ${isDark ? 'text-white' : ''}`}>
           <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden mb-4 bg-stone-100 flex items-center justify-center">
             <span className="text-3xl font-black text-terracotta tracking-tight">
