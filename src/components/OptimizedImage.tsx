@@ -35,13 +35,18 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
 
 export const OptimizedImage: React.FC<OptimizedImageProps> = ({ src, widthHint = 600, priority = false, className = '', alt, ...props }) => {
     const [hasError, setHasError] = useState(false);
-    
+
     // Si la source change, réinitialiser le statut d'erreur
     useEffect(() => {
         setHasError(false);
     }, [src]);
 
     const optimizedSrc = getOptimizedUrl(src, widthHint);
+
+    // Si pas de source valide, ne pas rendre l'image
+    if (!optimizedSrc) {
+        return null;
+    }
 
     return (
         <img

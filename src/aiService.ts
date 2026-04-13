@@ -44,6 +44,12 @@ export async function getAIRecipeRecommendation(recipes: Recipe[], userName: str
       Donne uniquement la phrase de recommandation.
     `;
 
+    // Check if any API key is configured
+    if (!GEMINI_KEY && !ANTHROPIC_KEY) {
+        // No API key configured - return default message silently
+        return "Découvrez notre spécialité du jour sélectionnée pour vous !";
+    }
+
     try {
         // Si le modèle configuré est Claude (Anthropic)
         if (AI_MODEL.startsWith("claude") && ANTHROPIC_KEY) {

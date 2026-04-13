@@ -40,7 +40,6 @@ export const dbService = {
     async getRemoteRecipes(): Promise<Recipe[]> {
         try {
             if (!supabase) {
-                console.warn('Supabase not configured');
                 throw new Error('Supabase client not initialized');
             }
             const { data, error } = await supabase
@@ -48,7 +47,14 @@ export const dbService = {
                 .select('*')
                 .order('name');
 
-            if (error) throw error;
+            if (error) {
+                // Silently handle expected errors (table not found, schema issues, etc.)
+                const expectedErrorCodes = ['42P01', 'PGRST116', 'PGRST205', 'PGRST204'];
+                if (expectedErrorCodes.includes(error.code)) {
+                    return [];
+                }
+                throw error;
+            }
 
             if (data) {
                 const recipes: Recipe[] = data.map(r => {
@@ -120,8 +126,14 @@ export const dbService = {
                 localStorage.setItem(REMOTE_RECIPES_KEY, JSON.stringify(recipes));
                 return recipes;
             }
-        } catch (err) {
-            console.error('Remote sync error:', err);
+        } catch (err: any) {
+            // Only log unexpected errors, not network failures
+            const isNetworkError = err?.message?.includes('Failed to fetch') ||
+                                   err?.message?.includes('fetch') ||
+                                   !navigator.onLine;
+            if (!isNetworkError) {
+                console.error('Remote sync error:', err);
+            }
         }
 
         // Fallback to local storage if offline/error
@@ -131,7 +143,6 @@ export const dbService = {
                 return JSON.parse(cached);
             }
         } catch (e) {
-            console.error('Error parsing cached recipes:', e);
             localStorage.removeItem(REMOTE_RECIPES_KEY);
         }
 
@@ -147,13 +158,26 @@ export const dbService = {
                 .select('*')
                 .order('name');
 
-            if (error) throw error;
+            if (error) {
+                // Silently handle expected errors (table not found, schema issues, etc.)
+                const expectedErrorCodes = ['42P01', 'PGRST116', 'PGRST205', 'PGRST204'];
+                if (expectedErrorCodes.includes(error.code)) {
+                    return [];
+                }
+                throw error;
+            }
             if (data) {
                 localStorage.setItem(REMOTE_MERCHANTS_KEY, JSON.stringify(data));
                 return data;
             }
-        } catch (err) {
-            console.error('Merchants sync error:', err);
+        } catch (err: any) {
+            // Only log unexpected errors, not network failures
+            const isNetworkError = err?.message?.includes('Failed to fetch') ||
+                                   err?.message?.includes('fetch') ||
+                                   !navigator.onLine;
+            if (!isNetworkError) {
+                console.error('Merchants sync error:', err);
+            }
         }
         try {
             const cached = localStorage.getItem(REMOTE_MERCHANTS_KEY);
@@ -173,8 +197,9 @@ export const dbService = {
                 .order('order_index');
 
             if (error) {
-                if (error.code === '42P01') {
-                    // Table doesn't exist, return empty
+                // Silently handle expected errors (table not found, schema issues, etc.)
+                const expectedErrorCodes = ['42P01', 'PGRST116', 'PGRST205', 'PGRST204'];
+                if (expectedErrorCodes.includes(error.code)) {
                     return [];
                 }
                 throw error;
@@ -183,8 +208,14 @@ export const dbService = {
                 localStorage.setItem(REMOTE_SECTIONS_KEY, JSON.stringify(data));
                 return data;
             }
-        } catch (err) {
-            console.error('Sections sync error:', err);
+        } catch (err: any) {
+            // Only log unexpected errors, not network failures
+            const isNetworkError = err?.message?.includes('Failed to fetch') ||
+                                   err?.message?.includes('fetch') ||
+                                   !navigator.onLine;
+            if (!isNetworkError) {
+                console.error('Sections sync error:', err);
+            }
         }
         const cached = localStorage.getItem(REMOTE_SECTIONS_KEY);
         return cached ? JSON.parse(cached) : [];
@@ -200,15 +231,25 @@ export const dbService = {
                 .order('name');
 
             if (error) {
-                if (error.code === '42P01') return [];
+                // Silently handle expected errors (table not found, schema issues, etc.)
+                const expectedErrorCodes = ['42P01', 'PGRST116', 'PGRST205', 'PGRST204'];
+                if (expectedErrorCodes.includes(error.code)) {
+                    return [];
+                }
                 throw error;
             }
             if (data) {
                 localStorage.setItem(REMOTE_PRODUCTS_KEY, JSON.stringify(data));
                 return data;
             }
-        } catch (err) {
-            console.error('Products sync error:', err);
+        } catch (err: any) {
+            // Only log unexpected errors, not network failures
+            const isNetworkError = err?.message?.includes('Failed to fetch') ||
+                                   err?.message?.includes('fetch') ||
+                                   !navigator.onLine;
+            if (!isNetworkError) {
+                console.error('Products sync error:', err);
+            }
         }
         try {
             const cached = localStorage.getItem(REMOTE_PRODUCTS_KEY);
@@ -931,12 +972,23 @@ export const dbService = {
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
             if (error) {
-                if (error.code === '42P01') return []; // Table may not exist yet
+                // Silently handle expected errors (table not found, schema issues, etc.)
+                const expectedErrorCodes = ['42P01', 'PGRST116', 'PGRST205', 'PGRST204'];
+                if (expectedErrorCodes.includes(error.code)) {
+                    return [];
+                }
+                // Only log unexpected errors (not network errors)
+                const isNetworkError = error.message?.includes('Failed to fetch') ||
+                                       error.message?.includes('fetch') ||
+                                       !navigator.onLine;
+                if (!isNetworkError) {
+                    console.error('Error fetching user orders:', error);
+                }
                 throw error;
             }
             return data || [];
         } catch (err) {
-            console.error('Error fetching user orders:', err);
+            // Error already logged above if unexpected, return empty array gracefully
             return [];
         }
     },
@@ -1085,8 +1137,14 @@ export const dbService = {
                 localStorage.setItem('afrocuisto_community_posts_cache', JSON.stringify(finalPosts));
             }
             return finalPosts;
-        } catch (err) {
-            console.error('Error fetching community posts:', err);
+        } catch (err: any) {
+            // Only log unexpected errors, not network failures
+            const isNetworkError = err?.message?.includes('Failed to fetch') ||
+                                   err?.message?.includes('fetch') ||
+                                   !navigator.onLine;
+            if (!isNetworkError) {
+                console.error('Error fetching community posts:', err);
+            }
             // Fallback to cache
             if (page === 0) {
                 try {

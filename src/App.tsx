@@ -2874,7 +2874,10 @@ export default function App() {
             });
           }
         }
-      } catch (err) { }
+      } catch (err: any) {
+        // Silently catch errors from silent cron sync operations
+        // These are expected to fail occasionally due to network issues
+      }
     };
     const intervalId = setInterval(silentCron, 3000);
     return () => clearInterval(intervalId);
@@ -4114,12 +4117,15 @@ export default function App() {
                         width: '76px', height: '76px', flexShrink: 0,
                         borderRadius: '14px', overflow: 'hidden',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                        background: '#e5e7eb'
                       }}>
-                        <img
-                          src={recipe.image}
-                          alt={recipe.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                        {recipe.image && (
+                          <img
+                            src={recipe.image}
+                            alt={recipe.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        )}
                       </div>
 
                       {/* Center info */}
@@ -7257,12 +7263,17 @@ export default function App() {
                         className={`rounded-2xl flex items-center gap-4 p-3 active:scale-[0.98] transition-all cursor-pointer overflow-hidden ${isDark ? '' : 'bg-stone-50 border border-stone-100'}`}
                         style={isDark ? { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)' } : {}}
                       >
-                        <img
-                          src={recipe.image}
-                          className="w-14 h-14 rounded-xl object-cover shrink-0"
-                          alt={recipe.name}
-                          onError={e => { (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%23333%22/></svg>'; }}
-                        />
+                        {recipe.image && (
+                          <img
+                            src={recipe.image}
+                            className="w-14 h-14 rounded-xl object-cover shrink-0"
+                            alt={recipe.name}
+                            onError={e => { (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%23333%22/></svg>'; }}
+                          />
+                        )}
+                        {!recipe.image && (
+                          <div className="w-14 h-14 rounded-xl bg-gray-300 shrink-0" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <h4 className={`font-bold text-sm leading-tight truncate ${isDark ? 'text-white' : 'text-stone-900'}`}>{recipe.name}</h4>
                           <div className="flex items-center gap-2 mt-1.5">

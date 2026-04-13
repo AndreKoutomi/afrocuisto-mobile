@@ -243,12 +243,14 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                                         border: '6px solid rgba(255, 255, 255, 0.2)',
                                         boxShadow: '0 12px 25px rgba(0,0,0,0.2)'
                                     }}>
-                                        <img
-                                            src={recipe.image}
-                                            alt={recipe.name}
-                                            draggable={false}
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                        />
+                                        {recipe.image && (
+                                            <img
+                                                src={recipe.image}
+                                                alt={recipe.name}
+                                                draggable={false}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                        )}
                                     </div>
 
                                 </div>
@@ -384,12 +386,14 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({
                                 boxShadow: '0 12px 10px rgba(131, 131, 131, 0.18)',
                                 backgroundColor: '#f3f4f6',
                             }}>
-                                <img
-                                    src={isRecipe ? recipe!.image : (product!.image_url || '/logo_admin.png')}
-                                    alt={isRecipe ? recipe!.name : product!.name}
-                                    draggable={false}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                />
+                                {(isRecipe ? recipe!.image : product!.image_url) && (
+                                    <img
+                                        src={isRecipe ? recipe!.image : (product!.image_url || '/logo_admin.png')}
+                                        alt={isRecipe ? recipe!.name : product!.name}
+                                        draggable={false}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                )}
 
                                 {/* Dark Gradient Overlay at bottom for text readability */}
                                 <div style={{
