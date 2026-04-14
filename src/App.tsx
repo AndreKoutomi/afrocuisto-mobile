@@ -20,6 +20,7 @@ import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { motion, AnimatePresence } from 'motion/react';
 import { CommunityFeed } from './components/community/CommunityFeed';
 import { AdminCommunityDashboard } from './components/AdminCommunityDashboard';
+import { PullToRefresh } from './components/PullToRefresh';
 import {
   ChefHat,
   Clock,
@@ -2920,6 +2921,8 @@ export default function App() {
       "info",
       async () => {
         setIsAuthLoading(true);
+        // Purge all trusted devices before deleting the account
+        await dbService.purgeAllSessions(currentUser.id).catch(() => {});
         const success = await dbService.deleteAccount(currentUser.id);
         setIsAuthLoading(false);
         if (success) {
@@ -2950,10 +2953,7 @@ export default function App() {
     const currentDarkMode = isDark;
     localStorage.setItem('afrocuisto_dark_mode', String(currentDarkMode));
 
-    // 1b. Clear the active device session record
-    if (currentUser?.id) {
-      await dbService.clearActiveSession(currentUser.id);
-    }
+    // 1b. Trusted devices are intentionally kept on logout — the user will return to this device
 
     // 2. Déconnexion immédiate de l'UI (Etat local)
     setCurrentUser(null);
@@ -3424,8 +3424,8 @@ export default function App() {
     const populaires = otherRecipes.slice(0, 10);
 
     return (
-
-      <div className="flex-1 flex flex-col pb-44" style={{
+      <PullToRefresh onRefresh={refreshHome} isDark={isDark} scrollRef={mainScrollRef as React.RefObject<HTMLElement | null>}>
+        <div className="flex-1 flex flex-col pb-44" style={{
         background: isDark ? '#000000ff' : '#ffffff',
         minHeight: '100vh',
       }}>
@@ -3912,13 +3912,13 @@ export default function App() {
         })}
 
       </div >
-
+      </PullToRefresh>
     );
   };
 
   const renderExplorer = () => (
-
-    <div className="flex-1 flex flex-col pb-44">
+    <PullToRefresh onRefresh={refreshExplorer} isDark={isDark} scrollRef={mainScrollRef as React.RefObject<HTMLElement | null>}>
+      <div className="flex-1 flex flex-col pb-44">
       {/* Immersive Search Header -> Now using Home page style button */}
       <header style={{
         display: 'flex',
@@ -4265,8 +4265,8 @@ export default function App() {
           </div >
         )
       }
-    </div >
-
+      </div >
+    </PullToRefresh>
   );
 
   const renderCommunity = () => {
@@ -4414,8 +4414,8 @@ export default function App() {
       : communityPosts;
 
     return (
-
-      <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
+      <PullToRefresh onRefresh={refreshCommunity} isDark={isDark} scrollRef={mainScrollRef as React.RefObject<HTMLElement | null>} enabled={!isCommunityFormOpen}>
+        <div className={`flex-1 flex flex-col pb-44 transition-colors ${isDark ? 'bg-black' : 'bg-[#f3f4f6]'}`}>
         <header
           style={{
             padding: '16px 24px',
@@ -4498,7 +4498,7 @@ export default function App() {
           isDark={isDark}
         />
       </div>
-
+      </PullToRefresh>
     );
   };
 

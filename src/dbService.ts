@@ -345,7 +345,11 @@ export const dbService = {
         if (error) throw error;
     },
 
-    // ── Single-Device Session Management ────────────────────────────────────
+    // ── Trusted Device Management ────────────────────────────────────────────
+    // Logic: each user has a SET of trusted device IDs stored locally.
+    // An OTP is only required when an unknown device (never seen before for this user) attempts login.
+    // Re-logging in from the same device never triggers OTP, regardless of how many times.
+
     /** Generate or retrieve a persistent unique device ID for this browser/device */
     getOrCreateDeviceId(): string {
         const DEVICE_KEY = 'afrocuisto_device_id';
@@ -357,15 +361,47 @@ export const dbService = {
         return deviceId;
     },
 
-    /** Register this device as the authoritative active session for the user */
+    /** LocalStorage key for the set of trusted device IDs for a given user */
+    _trustedDevicesKey(userId: string): string {
+        return `afrocuisto_trusted_devices_${userId}`;
+    },
+
+    /** Returns whether the current device is trusted for this user (local check — instant, no network) */
+    isDeviceTrusted(userId: string, deviceId: string): boolean {
+        try {
+            const raw = localStorage.getItem(dbService._trustedDevicesKey(userId));
+            if (!raw) return false;
+            const trusted: string[] = JSON.parse(raw);
+            return trusted.includes(deviceId);
+        } catch {
+            return false;
+        }
+    },
+
+    /** Persist this device as trusted for this user (local) and also sync the set to cloud */
     async registerActiveSession(userId: string, deviceId: string): Promise<void> {
         try {
+            // 1. Add to local trusted set
+            const key = dbService._trustedDevicesKey(userId);
+            let trusted: string[] = [];
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw) trusted = JSON.parse(raw);
+            } catch {}
+            if (!trusted.includes(deviceId)) {
+                trusted.push(deviceId);
+                // Keep at most 10 trusted devices to avoid unbounded growth
+                if (trusted.length > 10) trusted = trusted.slice(-10);
+                localStorage.setItem(key, JSON.stringify(trusted));
+            }
+
+            // 2. Also upsert to cloud so other devices can verify (store as comma-separated string)
             if (!supabase) return;
             await supabase
                 .from('user_active_sessions')
                 .upsert([{
                     user_id: userId,
-                    device_id: deviceId,
+                    device_id: trusted.join(','),
                     updated_at: new Date().toISOString()
                 }], { onConflict: 'user_id' });
         } catch (err) {
@@ -373,36 +409,80 @@ export const dbService = {
         }
     },
 
-    /** Returns whether another device has claimed this user's session */
+    /**
+     * Returns whether this device is unknown (= new, untrusted).
+     * hasConflict = true means OTP should be requested.
+     * The device is considered trusted if:
+     *   - it exists in the local trusted-devices list, OR
+     *   - it exists in the cloud-stored device list for this user.
+     * No entry in cloud = no previous session = first login ever = not a conflict.
+     */
     async checkActiveSession(userId: string, deviceId: string): Promise<{ hasConflict: boolean; existingDeviceId: string | null }> {
         try {
+            // Fast path: check local cache first
+            if (dbService.isDeviceTrusted(userId, deviceId)) {
+                return { hasConflict: false, existingDeviceId: null };
+            }
+
             if (!supabase) return { hasConflict: false, existingDeviceId: null };
+
             const { data, error } = await supabase
                 .from('user_active_sessions')
                 .select('device_id')
                 .eq('user_id', userId)
                 .maybeSingle();
+
+            // No record yet = truly first login ever = not a conflict
             if (error || !data) return { hasConflict: false, existingDeviceId: null };
-            return {
-                hasConflict: data.device_id !== deviceId,
-                existingDeviceId: data.device_id
-            };
+
+            // Cloud stores a comma-separated list of trusted device IDs
+            const cloudTrusted: string[] = data.device_id
+                ? data.device_id.split(',').map((s: string) => s.trim()).filter(Boolean)
+                : [];
+
+            const isTrustedInCloud = cloudTrusted.includes(deviceId);
+
+            if (isTrustedInCloud) {
+                // Sync back to local so future checks are instant
+                const key = dbService._trustedDevicesKey(userId);
+                try {
+                    const raw = localStorage.getItem(key);
+                    const local: string[] = raw ? JSON.parse(raw) : [];
+                    if (!local.includes(deviceId)) {
+                        local.push(deviceId);
+                        localStorage.setItem(key, JSON.stringify(local));
+                    }
+                } catch {}
+                return { hasConflict: false, existingDeviceId: null };
+            }
+
+            // Device not in local or cloud trusted list → unknown device → conflict
+            return { hasConflict: true, existingDeviceId: data.device_id };
         } catch (err) {
             console.warn('checkActiveSession error:', err);
+            // On error, be permissive (don't block login)
             return { hasConflict: false, existingDeviceId: null };
         }
     },
 
-    /** Remove active session record on logout or account deletion */
-    async clearActiveSession(userId: string): Promise<void> {
+    /** On logout, do NOT clear the trusted devices — the user might log back in from this device.
+     *  Only wipes devices when account is fully deleted. This is intentional. */
+    async clearActiveSession(_userId: string): Promise<void> {
+        // No-op: We no longer evict sessions on logout.
+        // The trusted device list is additive and persists across logouts.
+    },
+
+    /** Full reset — called only on account deletion */
+    async purgeAllSessions(userId: string): Promise<void> {
         try {
+            localStorage.removeItem(dbService._trustedDevicesKey(userId));
             if (!supabase) return;
             await supabase
                 .from('user_active_sessions')
                 .delete()
                 .eq('user_id', userId);
         } catch (err) {
-            console.warn('clearActiveSession error:', err);
+            console.warn('purgeAllSessions error:', err);
         }
     },
 
