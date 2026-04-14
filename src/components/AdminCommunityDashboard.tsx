@@ -167,8 +167,8 @@ export const AdminCommunityDashboard: React.FC<{
                         </div>
                         <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-stone-100 overflow-hidden">
-                                    {false && selectedItem.author_avatar ? <OptimizedImage src={selectedItem.author_avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-stone-400">{(selectedItem.author_name || 'U').charAt(0)}</div>}
+                                <div className="w-10 h-10 rounded-full bg-stone-100 overflow-hidden flex items-center justify-center font-bold text-stone-400">
+                                    {(selectedItem.author_name || 'U').charAt(0).toUpperCase()}
                                 </div>
                                 <div>
                                     <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-stone-800'}`}>{selectedItem.author_name}</p>
@@ -198,7 +198,7 @@ export const AdminCommunityDashboard: React.FC<{
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="w-5 h-5 rounded-full bg-stone-100 overflow-hidden text-[8px] flex items-center justify-center font-bold">
-                                        {false && comment.author_avatar ? <OptimizedImage src={comment.author_avatar} /> : (comment.author_name || 'U').charAt(0)}
+                                        {(comment.author_name || 'U').charAt(0).toUpperCase()}
                                     </div>
                                     <span className={`text-[10px] font-black uppercase ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{comment.author_name}</span>
                                 </div>
@@ -225,7 +225,7 @@ export const AdminCommunityDashboard: React.FC<{
                     {users.filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase())).map(user => (
                         <div key={user.id} className={`p-3 rounded-2xl border flex items-center gap-3 ${isDark ? 'bg-white/5 border-white/8' : 'bg-white border-stone-100 shadow-sm'}`}>
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs ${isDark ? 'bg-white/10 text-white' : 'bg-stone-100 text-stone-700'}`}>
-                                {false && user.avatar ? <OptimizedImage src={user.avatar} className="w-full h-full rounded-full object-cover" /> : user.name.charAt(0)}
+                                {user.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -294,7 +294,19 @@ export const AdminCommunityDashboard: React.FC<{
     );
 
     const [editingSection, setEditingSection] = React.useState<any | null>(null);
-    const [editForm, setEditForm] = React.useState<{ auto_scroll: boolean; scroll_interval: number }>({ auto_scroll: false, scroll_interval: 4 });
+    const [editForm, setEditForm] = React.useState<{
+      auto_scroll: boolean;
+      scroll_interval: number;
+      background: string;
+      tag: string;
+      button_text: string;
+    }>({
+      auto_scroll: false,
+      scroll_interval: 4,
+      background: 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)',
+      tag: 'OFFRE',
+      button_text: 'Voir'
+    });
     const [saving, setSaving] = React.useState(false);
 
     const openEdit = (section: any) => {
@@ -303,7 +315,10 @@ export const AdminCommunityDashboard: React.FC<{
         const rawInterval = cfg.scroll_interval ?? cfg.scrollInterval ?? cfg.interval ?? cfg.autoplay_interval;
         setEditForm({
             auto_scroll: !!(rawAutoScroll === true || rawAutoScroll === 'true' || rawAutoScroll === 1 || rawAutoScroll === '1'),
-            scroll_interval: Math.round((Math.max(1500, Number(rawInterval) || 4000)) / 1000)
+            scroll_interval: Math.round((Math.max(1500, Number(rawInterval) || 4000)) / 1000),
+            background: cfg.background || 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)',
+            tag: cfg.tag || 'OFFRE',
+            button_text: cfg.button_text || 'Voir',
         });
         setEditingSection(section);
     };
@@ -315,9 +330,11 @@ export const AdminCommunityDashboard: React.FC<{
             ...editingSection.config,
             autoplay: editForm.auto_scroll,
             autoplay_interval: editForm.scroll_interval * 1000,
-            // also write normalized keys for compatibility
             auto_scroll: editForm.auto_scroll,
-            scroll_interval: editForm.scroll_interval * 1000
+            scroll_interval: editForm.scroll_interval * 1000,
+            background: editForm.background,
+            tag: editForm.tag,
+            button_text: editForm.button_text,
         };
         const ok = await dbService.adminUpdateSection(editingSection.id, { config: newConfig });
         if (ok) {
@@ -427,6 +444,78 @@ export const AdminCommunityDashboard: React.FC<{
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Banner Visual Customization */}
+                            {editingSection?.type === 'advertising' && (
+                                <div className={`p-5 rounded-3xl border space-y-4 ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
+                                    <p className={`font-black text-[14px] ${isDark ? 'text-white' : 'text-stone-800'}`}>🎨 Style de la Bannière</p>
+
+                                    {/* Background gradient preview */}
+                                    <div>
+                                        <p className={`text-[11px] font-bold mb-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Gradient de fond</p>
+                                        <div className="w-full h-10 rounded-2xl mb-2" style={{ background: editForm.background }} />
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[
+                                                { label: '🔥 Orange', val: 'linear-gradient(135deg, #f97316 0%, #fb5607 50%, #dc2626 100%)' },
+                                                { label: '🌿 Vert', val: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)' },
+                                                { label: '💜 Violet', val: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%)' },
+                                                { label: '🌊 Bleu', val: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #06b6d4 100%)' },
+                                                { label: '🌹 Rose', val: 'linear-gradient(135deg, #be185d 0%, #ec4899 50%, #f43f5e 100%)' },
+                                                { label: '🌑 Nuit', val: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)' },
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.label}
+                                                    onClick={() => setEditForm(f => ({ ...f, background: opt.val }))}
+                                                    className={`py-2 px-2 rounded-xl text-[10px] font-black transition-all text-white ${editForm.background === opt.val ? 'ring-2 ring-white scale-105' : 'opacity-70'}`}
+                                                    style={{ background: opt.val }}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Tag text */}
+                                    <div>
+                                        <p className={`text-[11px] font-bold mb-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Texte du badge</p>
+                                        <input
+                                            type="text"
+                                            value={editForm.tag}
+                                            onChange={e => setEditForm(f => ({ ...f, tag: e.target.value.toUpperCase() }))}
+                                            maxLength={20}
+                                            placeholder="Ex: OFFRE DU JOUR"
+                                            className={`w-full py-3 px-4 rounded-xl text-[13px] font-black uppercase tracking-widest outline-none border transition-all ${isDark ? 'bg-white/10 border-white/10 text-white' : 'bg-white border-stone-200 text-stone-800'}`}
+                                        />
+                                    </div>
+
+                                    {/* Button text */}
+                                    <div>
+                                        <p className={`text-[11px] font-bold mb-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Texte du bouton</p>
+                                        <input
+                                            type="text"
+                                            value={editForm.button_text}
+                                            onChange={e => setEditForm(f => ({ ...f, button_text: e.target.value }))}
+                                            maxLength={15}
+                                            placeholder="Ex: Acheter"
+                                            className={`w-full py-3 px-4 rounded-xl text-[13px] font-bold outline-none border transition-all ${isDark ? 'bg-white/10 border-white/10 text-white' : 'bg-white border-stone-200 text-stone-800'}`}
+                                        />
+                                    </div>
+
+                                    {/* Live preview */}
+                                    <div>
+                                        <p className={`text-[11px] font-bold mb-2 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Aperçu</p>
+                                        <div className="w-full rounded-2xl p-4 flex items-end justify-between gap-3" style={{ background: editForm.background, minHeight: 90 }}>
+                                            <div>
+                                                <span className="text-[8px] font-black uppercase tracking-widest text-white/70">{editForm.tag || 'BADGE'}</span>
+                                                <p className="text-[16px] font-black text-white leading-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>{editingSection.title}</p>
+                                            </div>
+                                            <div className="px-3 py-2 rounded-full" style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.4)' }}>
+                                                <span className="text-[10px] font-black text-white">{editForm.button_text || 'Voir'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="pt-5 mt-auto flex gap-3">

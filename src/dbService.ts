@@ -551,31 +551,6 @@ export const dbService = {
         return allRecipes.filter(r => user.favorites.includes(r.id));
     },
 
-    updateAvatar: (userId: string, avatarData: string): User | null => {
-        const users = dbService.getUsers();
-        // Chercher par ID ou par Email pour être plus robuste
-        const user = users.find(u => u.id === userId);
-        if (!user) {
-            // Tentative via le current user si l'id match
-            const current = dbService.getCurrentUser();
-            if (current && current.id === userId) {
-                current.avatar = avatarData;
-                dbService.setCurrentUser(current);
-                return current;
-            }
-            return null;
-        }
-
-        user.avatar = avatarData;
-        dbService.saveUser(user);
-
-        const currentUser = dbService.getCurrentUser();
-        if (currentUser && currentUser.id === userId) {
-            dbService.setCurrentUser(user);
-        }
-        return user;
-    },
-
     updateShoppingList: (userId: string, shoppingList: any[]): User | null => {
         const users = dbService.getUsers();
         const user = users.find(u => u.id === userId);
@@ -737,7 +712,6 @@ export const dbService = {
                     shopping_list: user.shoppingList || [],
                     saved_posts: user.savedPosts || [],
                     following: user.following || [],
-                    avatar: user.avatar || null,
                     is_admin: user.is_admin ?? false
                 }], { onConflict: 'id' });
 
@@ -804,7 +778,6 @@ export const dbService = {
                     shoppingList: data.shopping_list || [],
                     savedPosts: data.saved_posts || [],
                     following: data.following || [],
-                    avatar: data.avatar,
                     is_admin: data.is_admin ?? false,
                     settings: {
                         darkMode: data.dark_mode ?? false,
@@ -1081,15 +1054,15 @@ export const dbService = {
             // Récupérer les profils séparément (jointure manuelle pour robustesse)
             const userIds = [...new Set(posts.map((p: any) => p.user_id).filter(Boolean))];
             const postIds = posts.map((p: any) => p.id);
-            let profilesMap: Record<string, { name: string; avatar?: string }> = {};
+            let profilesMap: Record<string, { name: string }> = {};
 
             if (userIds.length > 0) {
                 const { data: profiles } = await supabase
                     .from('user_profiles')
-                    .select('id, name, avatar')
+                    .select('id, name')
                     .in('id', userIds);
                 if (profiles) {
-                    profiles.forEach((p: any) => { profilesMap[p.id] = { name: p.name, avatar: p.avatar }; });
+                    profiles.forEach((p: any) => { profilesMap[p.id] = { name: p.name }; });
                 }
             }
 
@@ -1120,7 +1093,6 @@ export const dbService = {
                 id: p.id,
                 user_id: p.user_id,
                 author_name: profilesMap[p.user_id]?.name || 'Utilisateur',
-                author_avatar: profilesMap[p.user_id]?.avatar,
                 title: p.title,
                 content: p.content,
                 image_url: p.image_url,
@@ -1165,7 +1137,6 @@ export const dbService = {
             const userObj: any = {
                 id: post.user_id,
                 name: post.author_name,
-                avatar: post.author_avatar,
                 joinedDate: new Date().toISOString()
             };
             await this.syncUserToCloud(userObj).catch(e => console.error('Pre-post sync error:', e));
@@ -1191,7 +1162,6 @@ export const dbService = {
             return {
                 ...data,
                 author_name: post.author_name,
-                author_avatar: post.author_avatar,
                 likes_count: 0,
                 comments_count: 0,
                 views_count: 0,
@@ -1318,7 +1288,6 @@ export const dbService = {
                 post_id: c.post_id,
                 user_id: c.user_id,
                 author_name: c.author?.name || 'Utilisateur',
-                author_avatar: c.author?.avatar,
                 content: c.content,
                 created_at: c.created_at
             }));
@@ -1378,8 +1347,7 @@ export const dbService = {
             if (error) throw error;
             return (data || []).map(p => ({
                 ...p,
-                author_name: (p.user_profiles as any)?.name || 'Anonyme',
-                author_avatar: (p.user_profiles as any)?.avatar
+                author_name: (p.user_profiles as any)?.name || 'Anonyme'
             }));
         } catch (err) {
             console.error('adminGetAllPosts error:', err);
@@ -1421,7 +1389,6 @@ export const dbService = {
                 name: d.name,
                 email: d.email,
                 phone: d.phone,
-                avatar: d.avatar,
                 is_admin: d.is_admin,
                 joinedDate: d.joined_date,
                 favorites: d.favorites || [],

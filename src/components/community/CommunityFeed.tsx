@@ -197,10 +197,7 @@ const FullScreenCreatePostForm: React.FC<{
                 <div className="flex items-center gap-3 px-4 py-4">
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607]/80 to-[#ff9a6c]/60 p-[2px] shrink-0">
                         <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-black overflow-hidden ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
-                            {false && currentUser?.avatar
-                                ? <OptimizedImage src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
-                                : getInitials(currentUser?.name)
-                            }
+                            {getInitials(currentUser?.name)}
                         </div>
                     </div>
                     <div>
@@ -399,7 +396,7 @@ const ImageLightbox = ({ imageUrl, onClose }: { imageUrl: string; onClose: () =>
 const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDeletePost, onSavePost, onFollowAuthor, onEdit, onZoom, isDark }: any) => {
     const hasViewedRef = useRef(false);
     const [showOptions, setShowOptions] = useState(false);
-    const [isLiking, setIsLiking] = useState(false); // animation de double-tap
+    const [isLiking, setIsLiking] = useState(false);
     const isSaved = currentUser?.savedPosts?.includes(post.id);
     const isOwner = currentUser?.id === post.user_id;
     const isFollowing = currentUser?.following?.includes(post.user_id);
@@ -411,10 +408,8 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
         }
     }, [post.id]);
 
-    const handleDoubleTap = (e: React.MouseEvent) => {
-        if (!post.is_liked) {
-            onLike(post);
-        }
+    const handleDoubleTap = () => {
+        if (!post.is_liked) onLike(post);
         setIsLiking(true);
         setTimeout(() => setIsLiking(false), 800);
     };
@@ -422,35 +417,38 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
     return (
         <motion.article
             id={`post-${post.id}`}
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-            className="mb-6"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className={`mb-4 rounded-2xl overflow-hidden ${isDark
+                ? 'bg-[#161616] shadow-[0_2px_16px_rgba(0,0,0,0.45)]'
+                : 'bg-white shadow-[0_2px_12px_rgba(0,0,0,0.07)]'
+            }`}
         >
-            {/* Author row */}
-            <div className="flex items-center justify-between px-1 mb-2.5">
-                <div className="flex items-center gap-2.5">
-                    <div className="relative">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607] to-[#ff9a6c] p-[1.5px]">
-                            <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
-                                {false && post.author_avatar
-                                    ? <OptimizedImage src={post.author_avatar} className="w-full h-full object-cover" alt="" />
-                                    : getInitials(post.author_name)
-                                }
-                            </div>
+            {/* ── Header: avatar + nom + temps + options ── */}
+            <div className="flex items-center justify-between px-4 pt-4 pb-3">
+                <div className="flex items-center gap-3">
+                    {/* Avatar with gradient ring */}
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#fb5607] to-[#ff9a6c] p-[2px] shrink-0">
+                        <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center font-black text-[13px] ${isDark ? 'bg-[#161616] text-white' : 'bg-white text-stone-700'}`}>
+                            {getInitials(post.author_name)}
                         </div>
                     </div>
+
                     <div>
-                        <div className="flex items-center gap-2">
-                            <p className={`text-[14px] font-bold leading-tight ${isDark ? 'text-white' : 'text-stone-900'}`}>{post.author_name}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`text-[14px] font-bold leading-none ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                                {post.author_name}
+                            </span>
                             {post.category && (
-                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${isDark ? 'bg-white/10 text-white/50' : 'bg-[#fb5607]/10 text-[#fb5607]'
-                                    }`}>
+                                <span className={`text-[9px] font-black uppercase tracking-wide px-2 py-[3px] rounded-full ${isDark ? 'bg-white/10 text-white/50' : 'bg-[#fb5607]/10 text-[#fb5607]'}`}>
                                     {post.category}
                                 </span>
                             )}
                         </div>
-                        <p className={`text-[11px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{formatTimeAgo(post.created_at)}</p>
+                        <p className={`text-[11px] mt-0.5 ${isDark ? 'text-white/30' : 'text-stone-400'}`}>
+                            {formatTimeAgo(post.created_at)}
+                        </p>
                     </div>
                 </div>
 
@@ -458,7 +456,7 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
                 <div className="relative">
                     <button
                         onClick={() => setShowOptions(!showOptions)}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isDark ? 'text-white/25 hover:bg-white/5' : 'text-stone-300 hover:bg-stone-100'}`}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors active:scale-90 ${isDark ? 'text-white/25 hover:bg-white/8' : 'text-stone-300 hover:bg-stone-100'}`}
                     >
                         <MoreHorizontal size={18} />
                     </button>
@@ -505,91 +503,108 @@ const PostCard = ({ post, currentUser, onLike, onCommentClick, onShare, onDelete
                 </div>
             </div>
 
-            {/* Content Body */}
-            <div className={`rounded-3xl overflow-hidden ${isDark ? 'bg-[#141414] border border-white/5' : 'bg-white border border-stone-100'} shadow-sm`}>
-                {/* Image Section */}
-                {post.image_url && (
-                    <div className="relative w-full overflow-hidden bg-stone-100" style={{ paddingBottom: '100%' }}>
-                        <img
-                            src={post.image_url}
-                            alt={post.title || 'Photo du plat'}
-                            className="absolute inset-0 w-full h-full object-cover cursor-zoom-in active:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                            onClick={() => onZoom(post.image_url)}
-                            onDoubleClick={handleDoubleTap}
-                        />
-
-                        {/* Double tap heart animation */}
-                        <AnimatePresence>
-                            {isLiking && (
-                                <motion.div
-                                    initial={{ scale: 0, opacity: 0 }}
-                                    animate={{ scale: 1.2, opacity: 1 }}
-                                    exit={{ scale: 0.8, opacity: 0 }}
-                                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                                >
-                                    <Heart size={100} fill="#fff" className="text-white drop-shadow-2xl" />
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                )}
-
-                {/* Text Content */}
-                {(post.title || post.content) && (
-                    <div className={`px-4 ${post.image_url ? 'pt-4' : 'pt-5'} pb-4`}>
-                        {post.title && (
-                            <h3 className={`font-black text-[17px] leading-tight mb-1.5 ${isDark ? 'text-white' : 'text-stone-900'}`}>
-                                {post.title}
-                            </h3>
-                        )}
-                        {post.content && (
-                            <p className={`text-[14px] leading-relaxed ${isDark ? 'text-white/60' : 'text-stone-500'}`}>
-                                {post.content}
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {/* Footer Actions */}
-                <div className={`flex items-center justify-between px-4 py-3.5 ${(post.title || post.content) ? `border-t ${isDark ? 'border-white/5' : 'border-stone-50'}` : ''
-                    }`}>
-                    <div className="flex items-center gap-6">
-                        <motion.button
-                            whileTap={{ scale: 0.8 }}
-                            onClick={() => onLike(post)}
-                            className={`flex items-center gap-2 group ${post.is_liked ? 'text-[#ff2a5f]' : isDark ? 'text-white/30' : 'text-stone-400'}`}
-                        >
-                            <div className={`p-2 rounded-full transition-colors ${post.is_liked ? 'bg-[#ff2a5f]/10' : 'hover:bg-stone-100 group-hover:text-stone-600'
-                                }`}>
-                                <Heart size={20} fill={post.is_liked ? 'currentColor' : 'none'} strokeWidth={2.5} />
-                            </div>
-                            <span className="text-[13px] font-black">{post.likes_count ?? 0}</span>
-                        </motion.button>
-
-                        <button
-                            onClick={() => onCommentClick(post)}
-                            className={`flex items-center gap-2 group ${isDark ? 'text-white/30' : 'text-stone-400'}`}
-                        >
-                            <div className="p-2 rounded-full hover:bg-stone-100 transition-colors group-hover:text-stone-600">
-                                <MessageCircle size={20} strokeWidth={2.5} />
-                            </div>
-                            <span className="text-[13px] font-black">{post.comments_count ?? 0}</span>
-                        </button>
-
-                        <button
-                            onClick={() => onShare?.(post)}
-                            className={`p-2 rounded-full hover:bg-stone-100 transition-colors ${isDark ? 'text-white/30' : 'text-stone-400 hover:text-stone-600'}`}
-                        >
-                            <Share2 size={19} strokeWidth={2.5} />
-                        </button>
-                    </div>
-
-                    <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/10' : 'text-stone-300'}`}>
-                        <Eye size={14} />
-                        <span className="text-[11px] font-bold">{post.views_count ?? 0}</span>
-                    </div>
+            {/* ── Texte (titre + contenu) ── */}
+            {(post.title || post.content) && (
+                <div className={`px-4 ${post.image_url ? 'pb-3' : 'pb-4'}`}>
+                    {post.title && (
+                        <h3 className={`font-black text-[16px] leading-snug mb-1 ${isDark ? 'text-white' : 'text-stone-900'}`}>
+                            {post.title}
+                        </h3>
+                    )}
+                    {post.content && (
+                        <p className={`text-[13.5px] leading-relaxed ${isDark ? 'text-white/55' : 'text-stone-500'}`}>
+                            {post.content}
+                        </p>
+                    )}
                 </div>
+            )}
+
+            {/* ── Image pleine largeur ── */}
+            {post.image_url && (
+                <div className="relative w-full overflow-hidden" style={{ aspectRatio: '4/3' }}>
+                    <img
+                        src={post.image_url}
+                        alt={post.title || 'Photo du plat'}
+                        className="w-full h-full object-cover cursor-zoom-in active:brightness-90 transition-all duration-300"
+                        loading="lazy"
+                        onClick={() => onZoom(post.image_url)}
+                        onDoubleClick={handleDoubleTap}
+                    />
+                    {/* Double-tap heart animation */}
+                    <AnimatePresence>
+                        {isLiking && (
+                            <motion.div
+                                initial={{ scale: 0.4, opacity: 0 }}
+                                animate={{ scale: 1.1, opacity: 1 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+                                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                            >
+                                <Heart size={90} fill="white" className="text-white drop-shadow-2xl" />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            )}
+
+            {/* ── Action Bar ── */}
+            <div className={`flex items-center px-3 py-2.5 ${post.image_url ? `border-t ${isDark ? 'border-white/5' : 'border-stone-50'}` : ''}`}>
+                {/* Like */}
+                <motion.button
+                    whileTap={{ scale: 0.82 }}
+                    onClick={() => onLike(post)}
+                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl transition-colors ${post.is_liked
+                        ? 'text-[#ff2a5f]'
+                        : isDark ? 'text-white/35 hover:text-white/60' : 'text-stone-400 hover:text-stone-600'
+                    }`}
+                >
+                    <Heart
+                        size={19}
+                        fill={post.is_liked ? 'currentColor' : 'none'}
+                        strokeWidth={2.2}
+                        className={post.is_liked ? 'drop-shadow-[0_0_6px_rgba(255,42,95,0.5)]' : ''}
+                    />
+                    <span className="text-[13px] font-bold">{post.likes_count ?? 0}</span>
+                </motion.button>
+
+                {/* Comment */}
+                <button
+                    onClick={() => onCommentClick(post)}
+                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl transition-colors ${isDark ? 'text-white/35 hover:text-white/60' : 'text-stone-400 hover:text-stone-600'}`}
+                >
+                    <MessageCircle size={19} strokeWidth={2.2} />
+                    <span className="text-[13px] font-bold">{post.comments_count ?? 0}</span>
+                </button>
+
+                {/* Share */}
+                <button
+                    onClick={() => onShare?.(post)}
+                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl transition-colors ${isDark ? 'text-white/35 hover:text-white/60' : 'text-stone-400 hover:text-stone-600'}`}
+                >
+                    <Share2 size={18} strokeWidth={2.2} />
+                    <span className="text-[13px] font-bold">{post.shares_count ?? 0}</span>
+                </button>
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Views */}
+                <div className={`flex items-center gap-1 mr-2 ${isDark ? 'text-white/15' : 'text-stone-300'}`}>
+                    <Eye size={13} strokeWidth={2} />
+                    <span className="text-[11px] font-semibold">{post.views_count ?? 0}</span>
+                </div>
+
+                {/* Bookmark */}
+                <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => onSavePost?.(post)}
+                    className={`p-2 rounded-xl transition-colors ${isSaved
+                        ? 'text-[#fb5607]'
+                        : isDark ? 'text-white/25 hover:text-white/50' : 'text-stone-300 hover:text-stone-500'
+                    }`}
+                >
+                    <Bookmark size={18} strokeWidth={2.2} fill={isSaved ? 'currentColor' : 'none'} />
+                </motion.button>
             </div>
         </motion.article>
     );
@@ -719,10 +734,7 @@ export const CommunityFeed = ({
                     >
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fb5607] to-[#ff9a6c] p-[1.5px] shrink-0">
                             <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-black overflow-hidden ${isDark ? 'bg-[#111] text-white' : 'bg-white text-stone-700'}`}>
-                                {false && currentUser.avatar
-                                    ? <OptimizedImage src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
-                                    : getInitials(currentUser.name)
-                                }
+                                {getInitials(currentUser.name)}
                             </div>
                         </div>
                         <span className={`flex-1 text-left text-[13.5px] ${isDark ? 'text-white/30' : 'text-stone-400'}`}>

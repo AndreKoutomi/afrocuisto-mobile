@@ -14,6 +14,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { OptimizedImage } from './components/OptimizedImage';
 import DishSuggestionForm from './components/DishSuggestionForm';
+import { LegalTextView } from './components/LegalTextView';
 import BugReportForm from './components/BugReportForm';
 import { FeaturedCarousel } from './components/FeaturedCarousel';
 import { motion, AnimatePresence } from 'motion/react';
@@ -492,7 +493,8 @@ const ShoppingAddModal = ({ isOpen, onClose, onAdd, t, isDark }: any) => {
 
 // --- Deep Views ---
 
-const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, showAlert }: any) => {
+const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, setSecuritySubView, goBack, showAlert, settings }: any) => {
+  const isDark = settings.darkMode;
   const [showSuccess, setShowSuccess] = useState(false); // Affiche un message de succès après modification
   const [formData, setFormData] = useState({ current: '', new: '', confirm: '', email: currentUser?.email || '', phone: currentUser?.phone || '', otp: '' }); // Formulaire temporaire
   const [showPass, setShowPass] = useState({ current: false, new: false, confirm: false }); // Gérer l'affichage des mots de passe (oeil)
@@ -610,11 +612,11 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
   if (showSuccess) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 mb-4 animate-bounce">
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 animate-bounce ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-500'}`}>
           <CheckCircle2 size={32} />
         </div>
-        <h3 className="font-bold text-stone-800">{t.save} !</h3>
-        <p className="text-stone-400 text-xs">Vos modifications ont été enregistrées avec succès.</p>
+        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-stone-800'}`}>{t.save} !</h3>
+        <p className={`text-xs ${isDark ? 'text-stone-400' : 'text-stone-400'}`}>Vos modifications ont été enregistrées avec succès.</p>
       </div>
     );
   }
@@ -623,14 +625,14 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
     case 'password':
       return (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={springTransition} className="space-y-4">
-          <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
-            <h3 className="text-[10px] font-black uppercase text-stone-400 mb-4">{t.changePassword}</h3>
+          <div className={`p-6 rounded-3xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
+            <h3 className={`text-[10px] font-black uppercase mb-4 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>{t.changePassword}</h3>
             <div className="space-y-4">
               <div className="relative">
                 <input
                   type={showPass.current ? "text" : "password"}
                   placeholder={t.currentPassword}
-                  className="w-full bg-white border border-stone-100 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta"
+                  className={`w-full rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta transition-all ${isDark ? 'bg-white/10 border-white/10 text-white placeholder:text-white/30' : 'bg-white border-stone-100 text-stone-900'}`}
                   value={formData.current}
                   onChange={e => setFormData({ ...formData, current: e.target.value })}
                 />
@@ -642,7 +644,7 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
                 <input
                   type={showPass.new ? "text" : "password"}
                   placeholder={t.newPassword}
-                  className="w-full bg-white border border-stone-100 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta"
+                  className={`w-full rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta transition-all ${isDark ? 'bg-white/10 border-white/10 text-white placeholder:text-white/30' : 'bg-white border-stone-100 text-stone-900'}`}
                   value={formData.new}
                   onChange={e => setFormData({ ...formData, new: e.target.value })}
                 />
@@ -654,7 +656,7 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
                 <input
                   type={showPass.confirm ? "text" : "password"}
                   placeholder={t.confirmPassword}
-                  className="w-full bg-white border border-stone-100 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta"
+                  className={`w-full rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta transition-all ${isDark ? 'bg-white/10 border-white/10 text-white placeholder:text-white/30' : 'bg-white border-stone-100 text-stone-900'}`}
                   value={formData.confirm}
                   onChange={e => setFormData({ ...formData, confirm: e.target.value })}
                 />
@@ -663,7 +665,7 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
                 </button>
               </div>
             </div>
-            <p className="mt-4 text-[10px] text-stone-400 italic">{t.passwordSecurityNote}</p>
+            <p className={`mt-4 text-[10px] italic ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{t.passwordSecurityNote}</p>
           </div>
           <button onClick={handleSave} className="w-full bg-terracotta text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform shadow-lg shadow-terracotta/20">{t.save}</button>
           <button onClick={() => setSecuritySubView('main')} className="w-full text-stone-400 py-2 font-bold text-sm">{t.back}</button>
@@ -672,21 +674,21 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
     case 'email':
       return (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={springTransition} className="space-y-4">
-          <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
-            <h3 className="text-[10px] font-black uppercase text-stone-400 mb-4">{t.changeEmail}</h3>
+          <div className={`p-6 rounded-3xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
+            <h3 className={`text-[10px] font-black uppercase mb-4 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>{t.changeEmail}</h3>
             <div className="space-y-4">
               <input
                 type="email"
                 value={formData.email}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
-                className="w-full bg-white border border-stone-100 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta"
+                className={`w-full rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta transition-all ${isDark ? 'bg-white/10 border-white/10 text-white' : 'bg-white border-stone-100 text-stone-900'}`}
               />
               <div className="relative">
-                <input type="text" placeholder={t.authCode} className="w-full bg-white border border-stone-100 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta" />
-                <button className="absolute right-2 top-1.5 px-3 py-1.5 bg-stone-100 rounded-lg text-[10px] font-bold text-stone-500 uppercase">Envoyer</button>
+                <input type="text" placeholder={t.authCode} className={`w-full rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta transition-all ${isDark ? 'bg-white/10 border-white/10 text-white placeholder:text-white/30' : 'bg-white border-stone-100 text-stone-900'}`} />
+                <button className={`absolute right-2 top-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-colors ${isDark ? 'bg-white/10 text-white/60' : 'bg-stone-100 text-stone-500'}`}>Envoyer</button>
               </div>
             </div>
-            <p className="mt-4 text-[10px] text-stone-400 italic">{t.authCodeDesc}</p>
+            <p className={`mt-4 text-[10px] italic ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{t.authCodeDesc}</p>
           </div>
           <button onClick={handleSave} disabled={isAuthLoading} className="w-full bg-terracotta text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform shadow-lg shadow-terracotta/20">{isAuthLoading ? "Chargement..." : t.save}</button>
           <button onClick={() => setSecuritySubView('main')} className="w-full text-stone-400 py-2 font-bold text-sm">{t.back}</button>
@@ -695,15 +697,15 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
     case 'phone':
       return (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={springTransition} className="space-y-4">
-          <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
-            <h3 className="text-[10px] font-black uppercase text-stone-400 mb-4">Configurer un numéro</h3>
+          <div className={`p-6 rounded-3xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
+            <h3 className={`text-[10px] font-black uppercase mb-4 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Configurer un numéro</h3>
             <div className="space-y-4">
               <div className="flex gap-2 relative">
                 <div className="relative w-[110px] shrink-0">
                   <select
                     value={phoneCountry}
                     onChange={e => setPhoneCountry(e.target.value)}
-                    className="w-full appearance-none bg-white rounded-xl border border-stone-100 py-3 pl-3 pr-8 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-terracotta text-stone-900"
+                    className={`w-full appearance-none rounded-xl border py-3 pl-3 pr-8 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-terracotta transition-all ${isDark ? 'bg-white/10 border-white/10 text-white' : 'bg-white border-stone-100 text-stone-900'}`}
                   >
                     <option value="+229">🇧🇯 +229</option>
                     <option value="+225">🇨🇮 +225</option>
@@ -717,14 +719,14 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
                   <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400" />
                 </div>
                 <div className="relative flex-1">
-                  <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <Phone size={15} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/20' : 'text-stone-400'}`} />
                   <input type="tel" placeholder="01 23 45 67"
                     value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-white border border-stone-100 rounded-xl py-3 pl-9 pr-4 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-terracotta text-stone-900" />
+                    className={`w-full rounded-xl py-3 pl-9 pr-4 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-terracotta transition-all ${isDark ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20' : 'bg-white border-stone-100 text-stone-900'}`} />
                 </div>
               </div>
             </div>
-            <p className="mt-4 text-[10px] text-stone-400 italic">Un code de sécurité sera envoyé sur votre adresse email ({currentUser?.email}) pour valider cette modification.</p>
+            <p className={`mt-4 text-[10px] italic ${isDark ? 'text-white/30' : 'text-stone-400'}`}>Un code de sécurité sera envoyé sur votre adresse email ({currentUser?.email}) pour valider cette modification.</p>
           </div>
           <button onClick={handleSave} disabled={isAuthLoading} className="w-full bg-terracotta text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform shadow-lg shadow-terracotta/20">{isAuthLoading ? "Envoi du code..." : "Continuer"}</button>
           <button onClick={() => setSecuritySubView('main')} className="w-full text-stone-400 py-2 font-bold text-sm">{t.back}</button>
@@ -733,9 +735,9 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
     case 'phone-validation':
       return (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={springTransition} className="space-y-4">
-          <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
-            <h3 className="text-[10px] font-black uppercase text-stone-400 mb-4">Code de sécurité Email</h3>
-            <p className="text-[12px] text-stone-500 mb-4">
+          <div className={`p-6 rounded-3xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
+            <h3 className={`text-[10px] font-black uppercase mb-4 ${isDark ? 'text-white/40' : 'text-stone-400'}`}>Code de sécurité Email</h3>
+            <p className={`text-[12px] mb-4 ${isDark ? 'text-white/60' : 'text-stone-500'}`}>
               Veuillez entrer le code à 4 chiffres envoyé à l'adresse <span className="font-bold text-terracotta">{currentUser?.email}</span>.
             </p>
             <div className="space-y-4">
@@ -744,7 +746,7 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
                 placeholder="Code OTP"
                 value={formData.otp}
                 onChange={e => setFormData({ ...formData, otp: e.target.value })}
-                className="w-full bg-white border border-stone-100 rounded-xl p-3 text-sm font-bold text-center tracking-[0.2em] focus:outline-none focus:ring-1 focus:ring-terracotta text-stone-900"
+                className={`w-full rounded-xl p-3 text-sm font-bold text-center tracking-[0.2em] focus:outline-none focus:ring-1 focus:ring-terracotta transition-all ${isDark ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20' : 'bg-white border-stone-100 text-stone-900'}`}
               />
             </div>
           </div>
@@ -755,26 +757,26 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
     default:
       return (
         <div className="space-y-3">
-          <button onClick={() => setSecuritySubView('password')} className="w-full flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 active:bg-stone-100 transition-colors">
+          <button onClick={() => setSecuritySubView('password')} className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-colors ${isDark ? 'bg-white/5 border-white/10 active:bg-white/10' : 'bg-stone-50 border-stone-100 active:bg-stone-100'}`}>
             <div className="flex items-center gap-3">
-              <Key size={18} className="text-stone-500" />
-              <span className="font-bold text-stone-700 text-sm">{t.changePassword}</span>
+              <Key size={18} className={isDark ? 'text-stone-500' : 'text-stone-500'} />
+              <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-stone-700'}`}>{t.changePassword}</span>
             </div>
-            <ChevronRight size={16} className="text-stone-400" />
+            <ChevronRight size={16} className={isDark ? 'text-stone-600' : 'text-stone-400'} />
           </button>
-          <button onClick={() => setSecuritySubView('email')} className="w-full flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 active:bg-stone-100 transition-colors">
+          <button onClick={() => setSecuritySubView('email')} className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-colors ${isDark ? 'bg-white/5 border-white/10 active:bg-white/10' : 'bg-stone-50 border-stone-100 active:bg-stone-100'}`}>
             <div className="flex items-center gap-3">
-              <Mail size={18} className="text-stone-500" />
-              <span className="font-bold text-stone-700 text-sm">{t.changeEmail}</span>
+              <Mail size={18} className={isDark ? 'text-stone-500' : 'text-stone-500'} />
+              <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-stone-700'}`}>{t.changeEmail}</span>
             </div>
-            <ChevronRight size={16} className="text-stone-400" />
+            <ChevronRight size={16} className={isDark ? 'text-stone-600' : 'text-stone-400'} />
           </button>
-          <button onClick={() => setSecuritySubView('phone')} className="w-full flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 active:bg-stone-100 transition-colors">
+          <button onClick={() => setSecuritySubView('phone')} className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-colors ${isDark ? 'bg-white/5 border-white/10 active:bg-white/10' : 'bg-stone-50 border-stone-100 active:bg-stone-100'}`}>
             <div className="flex items-center gap-3">
-              <Phone size={18} className="text-stone-500" />
-              <span className="font-bold text-stone-700 text-sm">Ajouter/Modifier numéro</span>
+              <Phone size={18} className={isDark ? 'text-stone-500' : 'text-stone-500'} />
+              <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-stone-700'}`}>Ajouter/Modifier numéro</span>
             </div>
-            <ChevronRight size={16} className="text-stone-400" />
+            <ChevronRight size={16} className={isDark ? 'text-stone-600' : 'text-stone-400'} />
           </button>
         </div>
       );
@@ -782,7 +784,8 @@ const AccountSecurityView = ({ currentUser, setCurrentUser, t, securitySubView, 
 };
 
 // Vue pour gérer les informations personnelles (nom, photo)
-const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) => {
+const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert, settings }: any) => {
+  const isDark = settings.darkMode;
   const [isEditing, setIsEditing] = useState(false); // Mode édition activé ou non
   const [name, setName] = useState(currentUser?.name || ''); // Nom à modifier
   const [isSaving, setIsSaving] = useState(false); // Est-on en train d'enregistrer sur Internet ?
@@ -808,7 +811,7 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
     <div className="space-y-6">
       <div className="flex flex-col items-center mb-6">
         <div className="relative group">
-          <div className="w-28 h-28 rounded-full border-4 border-white shadow-xl overflow-hidden bg-stone-100 flex items-center justify-center">
+          <div className={`w-28 h-28 rounded-full border-4 shadow-xl overflow-hidden flex items-center justify-center transition-all ${isDark ? 'border-white/10 bg-white/5' : 'border-white bg-stone-100'}`}>
             <span className="text-4xl font-black text-terracotta tracking-tight">
               {getInitials(currentUser?.name)}
             </span>
@@ -816,9 +819,9 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
         </div>
       </div>
 
-      <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
+      <div className={`p-6 rounded-3xl border transition-all ${isDark ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xs font-black uppercase text-stone-400 tracking-widest">{t.identity}</h3>
+          <h3 className={`text-xs font-black uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-stone-400'}`}>{t.identity}</h3>
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}
@@ -831,27 +834,27 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
 
         <div className="space-y-4">
           <div>
-            <label className="text-[10px] font-bold text-stone-400 uppercase">{t.fullName}</label>
+            <label className={`text-[10px] font-bold uppercase ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{t.fullName}</label>
             {isEditing ? (
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-white border border-stone-100 rounded-xl p-3 text-sm font-bold text-stone-800 focus:outline-none focus:ring-1 focus:ring-terracotta mt-1 transition-all"
+                className={`w-full rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-1 focus:ring-terracotta mt-1 transition-all ${isDark ? 'bg-white/10 border-white/10 text-white' : 'bg-white border-stone-100 text-stone-800'}`}
                 placeholder={t.fullName}
               />
             ) : (
-              <p className="font-bold text-stone-800 border-b border-stone-100 pb-2 transition-all">{currentUser?.name}</p>
+              <p className={`font-bold border-b pb-2 transition-all ${isDark ? 'text-white border-white/10' : 'text-stone-800 border-stone-100'}`}>{currentUser?.name}</p>
             )}
           </div>
           <div>
-            <label className="text-[10px] font-bold text-stone-400 uppercase">{t.emailAddr}</label>
-            <p className="font-bold text-stone-400 border-b border-stone-100 pb-2">{currentUser?.email}</p>
-            <p className="text-[9px] text-stone-300 italic mt-1">L'email ne peut pas être modifié ici pour des raisons de sécurité.</p>
+            <label className={`text-[10px] font-bold uppercase ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{t.emailAddr}</label>
+            <p className={`font-bold border-b pb-2 ${isDark ? 'text-white/40 border-white/10' : 'text-stone-400 border-stone-100'}`}>{currentUser?.email}</p>
+            <p className={`text-[9px] italic mt-1 ${isDark ? 'text-white/20' : 'text-stone-300'}`}>L'email ne peut pas être modifié ici pour des raisons de sécurité.</p>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-stone-400 uppercase">{t.memberSince}</label>
-            <p className="font-bold text-stone-800">{currentUser?.joinedDate}</p>
+            <label className={`text-[10px] font-bold uppercase ${isDark ? 'text-white/30' : 'text-stone-400'}`}>{t.memberSince}</label>
+            <p className={`font-bold ${isDark ? 'text-white' : 'text-stone-800'}`}>{currentUser?.joinedDate}</p>
           </div>
         </div>
       </div>
@@ -860,7 +863,7 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
         <div className="flex gap-3">
           <button
             onClick={() => { setIsEditing(false); setName(currentUser?.name || ''); }}
-            className="flex-1 py-4 rounded-full font-bold text-sm text-stone-400 bg-stone-100 active:scale-95 transition-all"
+            className={`flex-1 py-4 rounded-full font-bold text-sm active:scale-95 transition-all ${isDark ? 'bg-white/5 text-white/40' : 'bg-stone-100 text-stone-400'}`}
           >
             {t.back || "Annuler"}
           </button>
@@ -874,7 +877,7 @@ const PersonalInfoView = ({ currentUser, setCurrentUser, t, showAlert }: any) =>
           </button>
         </div>
       ) : (
-        <p className="text-center text-[10px] text-stone-400 font-medium px-6">
+        <p className={`text-center text-[10px] font-medium px-6 ${isDark ? 'text-white/20' : 'text-stone-400'}`}>
           Vos informations sont stockées en toute sécurité et synchronisées sur tous vos appareils.
         </p>
       )}
@@ -1033,6 +1036,7 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
             setCurrentUser={setCurrentUser}
             t={t}
             showAlert={showAlert}
+            settings={settings}
           />
         );
       case 'notifications':
@@ -1049,12 +1053,12 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
         return (
           <div className="space-y-3">
             {/* Dark Mode Toggle */}
-            <div className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100">
+            <div className={`flex items-center justify-between p-4 rounded-2xl border ${settings.darkMode ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
                   {settings.darkMode ? <Moon size={16} /> : <Sun size={16} />}
                 </div>
-                <span className="font-bold text-stone-700 text-sm">Mode sombre</span>
+                <span className={`font-bold text-sm ${settings.darkMode ? 'text-white' : 'text-stone-700'}`}>Mode sombre</span>
               </div>
               <button
                 onClick={() => updateSettings({ darkMode: !settings.darkMode })}
@@ -1068,12 +1072,12 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
               </button>
             </div>
 
-            <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100">
+            <div className={`p-4 rounded-2xl border ${settings.darkMode ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
                   <Globe size={18} />
                 </div>
-                <span className="font-bold text-stone-700 text-sm">{t.language}</span>
+                <span className={`font-bold text-sm ${settings.darkMode ? 'text-white' : 'text-stone-700'}`}>{t.language}</span>
               </div>
               <div className="flex gap-2">
                 {(['fr', 'en', 'es'] as const).map(lang => (
@@ -1092,40 +1096,40 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
                 setProfileSubView('security');
                 setSecuritySubView('main');
               }}
-              className="w-full flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 active:bg-stone-100 transition-colors"
+              className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-colors ${settings.darkMode ? 'bg-white/5 border-white/10 active:bg-white/10' : 'bg-stone-50 border-stone-100 active:bg-stone-100'}`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.darkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
                   <ShieldCheck size={18} />
                 </div>
-                <span className="font-bold text-stone-700 text-sm">{t.security}</span>
+                <span className={`font-bold text-sm ${settings.darkMode ? 'text-white' : 'text-stone-700'}`}>{t.security}</span>
               </div>
-              <ChevronRight size={16} className="text-stone-400" />
+              <ChevronRight size={16} className={settings.darkMode ? 'text-stone-500' : 'text-stone-400'} />
             </button>
             <button
               onClick={() => setProfileSubView('privacy')}
-              className="w-full flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 active:bg-stone-100 transition-colors"
+              className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-colors ${settings.darkMode ? 'bg-white/5 border-white/10 active:bg-white/10' : 'bg-stone-50 border-stone-100 active:bg-stone-100'}`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-600">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.darkMode ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-50 text-rose-600'}`}>
                   <Eye size={18} />
                 </div>
-                <span className="font-bold text-stone-700 text-sm">{t.privacy}</span>
+                <span className={`font-bold text-sm ${settings.darkMode ? 'text-white' : 'text-stone-700'}`}>{t.privacy}</span>
               </div>
-              <ChevronRight size={16} className="text-stone-400" />
+              <ChevronRight size={16} className={settings.darkMode ? 'text-stone-500' : 'text-stone-400'} />
             </button>
 
             <button
               onClick={() => setProfileSubView('bugReport')}
-              className="w-full flex items-center justify-between p-4 bg-red-50 rounded-2xl border border-red-100 active:bg-red-100 transition-colors"
+              className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-colors ${settings.darkMode ? 'bg-red-500/10 border-red-500/20 active:bg-red-500/20' : 'bg-red-50 border-red-100 active:bg-red-100'}`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.darkMode ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-500'}`}>
                   <Bug size={18} />
                 </div>
-                <span className="font-bold text-red-500 text-sm">Signaler un bug</span>
+                <span className={`font-bold text-sm ${settings.darkMode ? 'text-red-400' : 'text-red-500'}`}>Signaler un bug</span>
               </div>
-              <ChevronRight size={16} className="text-red-400" />
+              <ChevronRight size={16} className={settings.darkMode ? 'text-red-500/40' : 'text-red-400'} />
             </button>
 
             {/* Sync Status Indicator */}
@@ -1145,14 +1149,14 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
       case 'contribution':
         return (
           <div className="space-y-6">
-            <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
+            <div className={`p-6 rounded-3xl border ${settings.darkMode ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-100'}`}>
               <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${settings.darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
                   <Heart size={22} fill="currentColor" strokeWidth={2} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-stone-800 mb-2">{t.contribution}</h3>
-                  <p className="text-sm text-stone-500 leading-relaxed">
+                  <h3 className={`text-base font-black mb-2 ${settings.darkMode ? 'text-white' : 'text-stone-800'}`}>{t.contribution}</h3>
+                  <p className={`text-sm leading-relaxed ${settings.darkMode ? 'text-white/45' : 'text-stone-500'}`}>
                     {t.contributionDesc}
                   </p>
                 </div>
@@ -1184,38 +1188,15 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
             setSecuritySubView={setSecuritySubView}
             goBack={goBack}
             showAlert={showAlert}
+            settings={settings}
           />
         );
       case 'privacy':
         return (
           <div className="space-y-6">
-            <div className="bg-stone-50 p-6 rounded-3xl border border-stone-100">
-              <h3 className="text-[10px] font-black uppercase text-stone-400 mb-6">{t.privacyMenu}</h3>
-              <div className="space-y-6">
-                <div className="flex items-start justify-between">
-                  <div className="pr-4">
-                    <h4 className="text-sm font-bold text-stone-700 mb-1">{t.tracking}</h4>
-                    <p className="text-[10px] text-stone-400 leading-relaxed">{t.trackingDesc}</p>
-                  </div>
-                  <div className="w-10 h-6 bg-emerald-500 rounded-full relative flex-shrink-0 transition-colors">
-                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
-                  </div>
-                </div>
-                <div className="flex items-start justify-between">
-                  <div className="pr-4">
-                    <h4 className="text-sm font-bold text-stone-700 mb-1">{t.dataSharing}</h4>
-                    <p className="text-[10px] text-stone-400 leading-relaxed">{t.dataSharingDesc}</p>
-                  </div>
-                  <div className="w-10 h-6 bg-stone-200 rounded-full relative flex-shrink-0 transition-colors">
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 bg-rose-50/50 rounded-3xl border border-rose-100/50">
-              <h4 className="text-sm font-bold text-rose-800 mb-1">{t.deleteAccount}</h4>
-              <p className="text-[10px] text-rose-600/70 leading-relaxed mb-6">{t.deleteAccountDesc}</p>
+            <div className={`p-6 rounded-3xl border ${settings.darkMode ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50/50 border-rose-100/50'}`}>
+              <h4 className={`text-sm font-bold mb-1 ${settings.darkMode ? 'text-rose-400' : 'text-rose-800'}`}>{t.deleteAccount}</h4>
+              <p className={`text-[10px] leading-relaxed mb-6 ${settings.darkMode ? 'text-rose-400/60' : 'text-rose-600/70'}`}>{t.deleteAccountDesc}</p>
               <button
                 onClick={handleDeleteAccount}
                 className="w-full bg-rose-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rose-500/20 active:scale-95 transition-all"
@@ -1241,11 +1222,15 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
             }}
           />
         );
+      case 'legalCGU':
+        return <LegalTextView type="cgu" settings={settings} />;
+      case 'legalPrivacy':
+        return <LegalTextView type="privacy" settings={settings} />;
       case 'about':
         return (
           <div className="space-y-8 text-center py-6">
             <div className="relative mx-auto w-24 h-24 mb-4">
-              <div className="absolute inset-0 bg-terracotta/5 dark:bg-terracotta/10 rounded-[32px] animate-pulse" />
+              <div className={`absolute inset-0 rounded-[32px] animate-pulse ${settings.darkMode ? 'bg-terracotta/10' : 'bg-terracotta/5'}`} />
               <div className="relative flex items-center justify-center h-full rounded-[28px] shadow-2xl overflow-hidden" style={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.05)' }}>
                 <img
                   src="/images/chef_icon_v2.png"
@@ -1256,21 +1241,57 @@ const ProfileSubViewRenderer = ({ profileSubView, setProfileSubView, currentUser
             </div>
 
             <div>
-              <h2 className="text-2xl font-black text-stone-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-br dark:from-white dark:via-white dark:to-white/40 tracking-tight mb-2">AfroCuisto v1.0.6</h2>
-              <p className="text-stone-900 dark:text-white font-medium text-sm px-8 leading-relaxed max-w-[280px] mx-auto italic transition-colors">
+              <h2 className={`text-2xl font-black tracking-tight mb-2 ${settings.darkMode ? 'text-white' : 'text-stone-900'}`}>AfroCuisto v1.0.1</h2>
+              <p className={`font-medium text-sm px-8 leading-relaxed max-w-[280px] mx-auto italic transition-colors ${settings.darkMode ? 'text-white/80' : 'text-stone-700'}`}>
                 L'excellence de la cuisine béninoise à portée de main.
               </p>
             </div>
 
             <div className="pt-4 pb-2">
-              <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-stone-200/40 dark:bg-white/[0.08] backdrop-blur-xl rounded-full border border-stone-300/50 dark:border-white/10 shadow-lg transition-all hover:scale-105 active:scale-95 cursor-default">
-                <span className="text-[9px] font-black text-stone-500 dark:text-white/60 uppercase tracking-[0.2em]">Powered by</span>
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-400/30 dark:bg-white/20" />
+              <div className={`inline-flex items-center gap-2.5 px-5 py-2.5 backdrop-blur-xl rounded-full border shadow-lg transition-all hover:scale-105 active:scale-95 cursor-default ${settings.darkMode ? 'bg-white/[0.08] border-white/10' : 'bg-stone-200/50 border-stone-300/50'}`}>
+                <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${settings.darkMode ? 'text-white/60' : 'text-stone-500'}`}>Powered by</span>
+                <div className={`w-1.5 h-1.5 rounded-full ${settings.darkMode ? 'bg-white/20' : 'bg-stone-400'}`} />
                 <span className="text-[14px] font-black text-terracotta tracking-tight drop-shadow-[0_2px_10px_rgba(230,88,32,0.3)]">André Koutomi</span>
               </div>
             </div>
 
-            <p className="text-[10px] text-stone-400 dark:text-stone-500 italic transition-colors mt-8">
+            <div className={`mx-6 mt-4 mb-2 flex flex-col gap-1 rounded-3xl p-1.5 border shadow-sm ${settings.darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-stone-200'}`}>
+              <button 
+                onClick={() => setProfileSubView('legalCGU')}
+                className={`w-full flex items-center justify-between p-3.5 rounded-[20px] transition-colors active:scale-[0.98] ${settings.darkMode ? 'active:bg-white/10' : 'active:bg-stone-100'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${settings.darkMode ? 'bg-sky-500/20 text-sky-400' : 'bg-sky-50 text-sky-500'}`}>
+                    <BookOpen size={18} />
+                  </div>
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className={`text-sm font-bold ${settings.darkMode ? 'text-white' : 'text-stone-800'}`}>Conditions d'utilisation</span>
+                    <span className={`text-[10px] uppercase tracking-wider font-bold ${settings.darkMode ? 'text-stone-500' : 'text-stone-400'}`}>Loi n°2017-20</span>
+                  </div>
+                </div>
+                <ChevronRight size={18} className={settings.darkMode ? 'text-stone-600' : 'text-stone-400'} />
+              </button>
+
+              <div className={`h-px mx-5 ${settings.darkMode ? 'bg-white/5' : 'bg-stone-100'}`} />
+
+              <button 
+                onClick={() => setProfileSubView('legalPrivacy')}
+                className={`w-full flex items-center justify-between p-3.5 rounded-[20px] transition-colors active:scale-[0.98] ${settings.darkMode ? 'active:bg-white/10' : 'active:bg-stone-100'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${settings.darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-500'}`}>
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className={`text-sm font-bold ${settings.darkMode ? 'text-white' : 'text-stone-800'}`}>Confidentialité & Données</span>
+                    <span className={`text-[10px] uppercase tracking-wider font-bold ${settings.darkMode ? 'text-stone-500' : 'text-stone-400'}`}>Protection APDP</span>
+                  </div>
+                </div>
+                <ChevronRight size={18} className={settings.darkMode ? 'text-stone-600' : 'text-stone-400'} />
+              </button>
+            </div>
+
+            <p className={`text-[10px] italic transition-colors mt-6 ${settings.darkMode ? 'text-stone-500' : 'text-stone-400'}`}>
               &copy; {new Date().getFullYear()} AfroCuisto. Tous droits réservés.
             </p>
           </div>
@@ -1501,9 +1522,9 @@ const STORE_PRODUCTS = [
 ];
 
 const SHOPPING_BANNERS = [
-  { id: 1, title: 'Livraison Express Abidjan', sub: 'Recevez vos ingrédients en moins de 2h !', image_url: 'https://images.unsplash.com/photo-1526367790999-0150786486a9?q=80&w=400', bg: 'linear-gradient(135deg, #fb5607 0%, #ff006e 100%)', tag: 'OFFRE' },
-  { id: 2, title: 'Bio & Équitable', sub: 'Soutenez les producteurs locaux avec NaturAfrik.', image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=400', bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', tag: 'ÉCO' },
-  { id: 3, title: 'Promo Semaine', sub: '-20% sur tout le rayon épices ce weekend.', image_url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=400', bg: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', tag: 'SOLDE' },
+  { id: 1, title: 'Livraison Express', sub: 'Ingrédients frais livrés en moins de 2h à Abidjan.', image_url: 'https://images.unsplash.com/photo-1526367790999-0150786486a9?q=80&w=600', bg: 'linear-gradient(135deg, #f97316 0%, #fb5607 50%, #dc2626 100%)', tag: 'OFFRE DU JOUR', buttonText: 'Commander' },
+  { id: 2, title: 'Bio & Local', sub: 'Soutenez les producteurs du terroir africain.', image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=600', bg: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)', tag: 'ÉCO RESPONSABLE', buttonText: 'Découvrir' },
+  { id: 3, title: 'Épices Rares', sub: '-20% sur tout le rayon épices ce weekend.', image_url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=600', bg: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%)', tag: 'WEEK-END PROMO', buttonText: 'Profiter' },
 ];
 
 const ShoppingItemRow: React.FC<{
@@ -2080,8 +2101,7 @@ export default function App() {
         following: remoteProfile?.following || existingLocal?.following || currentUser?.following || [],
         joinedDate: existingLocal?.joinedDate || new Date(targetUser.created_at || Date.now()).toLocaleDateString(),
         is_admin: remoteProfile?.is_admin || existingLocal?.is_admin || false,
-        settings: mergedSettings,
-        avatar: remoteProfile?.avatar || existingLocal?.avatar || currentUser?.avatar
+        settings: mergedSettings
       };
 
       if (dbService.supabase) {
@@ -2704,7 +2724,7 @@ export default function App() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'community_posts' }, (payload) => {
         const updatedPost = payload.new;
         setCommunityPosts(prev => prev.map(p =>
-          // IMPORTANT: Merge with existing post to keep joined fields (author_name, author_avatar)
+          // IMPORTANT: Merge with existing post to keep joined fields (author_name)
           p.id === updatedPost.id ? { ...p, ...updatedPost } : p
         ));
       })
@@ -2786,6 +2806,16 @@ export default function App() {
     // Profile sub-views
     if (profileSubView === 'security' && securitySubView !== 'main') {
       setSecuritySubView('main');
+      return;
+    }
+    // Children of 'settings' go back to settings
+    if (profileSubView === 'security' || profileSubView === 'privacy' || profileSubView === 'bugReport') {
+      setProfileSubView('settings');
+      return;
+    }
+    // Children of 'about' go back to about
+    if (profileSubView === 'legalCGU' || profileSubView === 'legalPrivacy') {
+      setProfileSubView('about');
       return;
     }
     if (profileSubView) { setProfileSubView(null); return; }
@@ -4259,7 +4289,7 @@ export default function App() {
       if (!currentUser || !selectedPostForComments) return;
       const res = await dbService.addComment(selectedPostForComments.id, currentUser.id, content);
       if (res) {
-        setPostComments(prev => [...prev, { ...res, author_name: currentUser.name, author_avatar: currentUser.avatar }]);
+        setPostComments(prev => [...prev, { ...res, author_name: currentUser.name }]);
         setCommunityPosts(prev => prev.map(p => {
           if (p.id === selectedPostForComments.id) {
             return { ...p, comments_count: p.comments_count + 1 };
@@ -4277,7 +4307,6 @@ export default function App() {
         const res = await dbService.createPost({
           user_id: currentUser.id,
           author_name: currentUser.name,
-          author_avatar: currentUser.avatar,
           title: postData.title,
           content: postData.content,
           image_url: postData.image_url,
@@ -4428,9 +4457,11 @@ export default function App() {
               </button>
             )}
           </div>
-          <p className={`text-xs font-medium mt-1 opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
-            {showSavedPosts ? "Vos publications sauvegardées" : t.communityDesc}
-          </p>
+          {showSavedPosts && (
+            <p className={`text-xs font-medium mt-1 opacity-50 ${isDark ? 'text-white' : 'text-stone-500'}`}>
+              Vos publications sauvegardées
+            </p>
+          )}
         </header>
 
         <div className="px-6">
@@ -4547,15 +4578,34 @@ export default function App() {
           <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={springTransition} className={`absolute inset-0 z-50 p-6 flex flex-col ${isDark ? 'bg-black' : 'bg-white'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 24px)' : '24px' }}>
             <header className="flex items-center justify-between mb-8 shrink-0">
               <div className="flex items-center gap-4">
-                <button onClick={() => setProfileSubView(null)} className="p-2 btn-back-circle bg-stone-50 rounded-full"><ChevronLeft size={20} /></button>
+                <button
+                  onClick={() => {
+                    // Children of 'settings' → back to settings
+                    if (profileSubView === 'security' || profileSubView === 'privacy' || profileSubView === 'bugReport') {
+                      setProfileSubView('settings');
+                    // Children of 'about' → back to about
+                    } else if (profileSubView === 'legalCGU' || profileSubView === 'legalPrivacy') {
+                      setProfileSubView('about');
+                    } else {
+                      setProfileSubView(null);
+                    }
+                  }}
+                  className="p-2 btn-back-circle bg-stone-50 rounded-full"
+                >
+                  <ChevronLeft size={20} />
+                </button>
                 <h2 className={`text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-stone-800'}`}>
                   {profileSubView === 'personalInfo' ? t.personalInfo :
                     profileSubView === 'security' ? t.security :
                       profileSubView === 'notifications' ? t.notifications :
                         profileSubView === 'shopping' ? "Ma liste de courses" :
                           profileSubView === 'about' ? t.about :
-                            profileSubView === 'contribution' ? t.contribution :
-                              t.settings}
+                            profileSubView === 'legalCGU' ? "Conditions d'utilisation" :
+                              profileSubView === 'legalPrivacy' ? "Confidentialité & Données" :
+                                profileSubView === 'privacy' ? "Confidentialité" :
+                                  profileSubView === 'bugReport' ? "Signaler un bug" :
+                                    profileSubView === 'contribution' ? t.contribution :
+                                      t.settings}
                 </h2>
               </div>
               {isOffline && (
@@ -5844,44 +5894,101 @@ export default function App() {
     return (
       <div className={`flex-1 flex flex-col pb-44 ${isDark ? 'bg-[#0a0a0f]' : 'bg-[#f5f5f8]'}`} style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top, 40px) + 8px)' : '8px' }}>
 
-        {/* ── Promo Banner — Premium ── */}
-        <div className="mx-4 mt-4 mb-2 rounded-[28px] overflow-hidden relative" style={{ background: banner.bg, minHeight: 156 }}>
-          {/* Verre dépoli overlay premium */}
-          <div className="absolute inset-0 pointer-events-none" style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%, rgba(0,0,0,0.15) 100%)'
-          }} />
-          {/* Orbe décoratif */}
-          <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10 pointer-events-none" style={{ filter: 'blur(2px)' }} />
-          <div className="absolute right-8 -bottom-6 w-20 h-20 rounded-full bg-white/06 pointer-events-none" />
-          <div className="absolute left-0 bottom-0 w-24 h-24 rounded-full bg-black/08 pointer-events-none" style={{ filter: 'blur(8px)' }} />
+        {/* ── Promo Banner — Ultra Premium ── */}
+        <div
+          className="mx-4 mt-4 mb-2 rounded-[32px] overflow-hidden relative"
+          style={{ background: banner.bg, minHeight: 180 }}
+        >
 
-          <div className="p-6 flex items-center gap-4 relative z-10">
-            <div className="w-16 h-16 rounded-[20px] bg-white/20 backdrop-blur-sm flex-shrink-0 overflow-hidden border-2 border-white/30 shadow-xl">
-              {banner.image_url ? (
-                <OptimizedImage priority={true} src={banner.image_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-stone-300 text-3xl flex items-center justify-center w-full h-full">📦</span>
-              )}
+
+          {/* Overlay gradient sophistiqué */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: 'linear-gradient(120deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.20) 55%, rgba(0,0,0,0.05) 100%)'
+          }} />
+
+          {/* Orbes décoratifs premium */}
+          <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-white/10 pointer-events-none" style={{ filter: 'blur(30px)' }} />
+          <div className="absolute right-4 bottom-0 w-28 h-28 rounded-full bg-black/20 pointer-events-none" style={{ filter: 'blur(20px)' }} />
+          <div className="absolute left-1/2 top-0 w-px h-full bg-white/5 pointer-events-none" />
+
+          {/* Contenu principal */}
+          <div className="relative z-10 p-6 flex flex-col justify-between" style={{ minHeight: 180 }}>
+            {/* Badge + image flottante */}
+            <div className="flex items-start justify-between mb-auto">
+              <div
+                className="px-3 py-1.5 rounded-full"
+                style={{
+                  background: 'rgba(255,255,255,0.18)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.25)'
+                }}
+              >
+                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white">{banner.tag}</span>
+              </div>
+
+              {/* Thumbnail flottant */}
+              <div
+                className="w-20 h-20 rounded-[22px] overflow-hidden flex-shrink-0 -mt-1"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  border: '2px solid rgba(255,255,255,0.30)',
+                  boxShadow: '0 12px 32px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.20)'
+                }}
+              >
+                {banner.image_url ? (
+                  <OptimizedImage priority={true} src={banner.image_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-white text-3xl flex items-center justify-center w-full h-full">📦</span>
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-[9px] font-black uppercase tracking-[0.15em] text-white/60 block mb-0.5">{banner.tag}</span>
-              <p className="text-[18px] font-black text-white leading-tight drop-shadow-sm">{banner.title}</p>
-              <p className="text-[11px] font-semibold text-white/70 mt-1 truncate">{banner.sub}</p>
+
+            {/* Titre + sous-titre + bouton */}
+            <div className="flex items-end justify-between gap-3 mt-4">
+              <div className="flex-1 min-w-0">
+                <p
+                  className="text-white font-black leading-tight mb-1"
+                  style={{ fontSize: '22px', letterSpacing: '-0.02em', textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}
+                >
+                  {banner.title}
+                </p>
+                <p className="text-[12px] font-semibold text-white/70 truncate">{banner.sub}</p>
+              </div>
+
+              <button
+                onClick={() => { if (banner.product) setSelectedProduct(banner.product); }}
+                className="flex-shrink-0 active:scale-95 transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.22)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1.5px solid rgba(255,255,255,0.50)',
+                  borderRadius: '100px',
+                  padding: '10px 18px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.25)'
+                }}
+              >
+                <span className="text-[11px] font-black uppercase tracking-widest text-white">{banner.buttonText || 'Voir'}</span>
+              </button>
             </div>
-            <button
-              onClick={() => {
-                if (banner.product) setSelectedProduct(banner.product);
-              }}
-              className="flex-shrink-0 bg-white/95 text-[#fb5607] text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-full transition-all active:scale-95 shadow-lg shadow-black/15"
-            >
-              {banner.buttonText || 'Voir'}
-            </button>
           </div>
 
           {/* Dots indicator */}
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
             {activeBanners.map((_, i) => (
-              <div key={i} className={`rounded-full transition-all duration-300 ${i === (bannerIdx % activeBanners.length) ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/35'}`} />
+              <div
+                key={i}
+                className="rounded-full transition-all duration-500"
+                style={{
+                  width: i === (bannerIdx % activeBanners.length) ? '20px' : '6px',
+                  height: '4px',
+                  background: i === (bannerIdx % activeBanners.length) ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.35)',
+                  boxShadow: i === (bannerIdx % activeBanners.length) ? '0 0 8px rgba(255,255,255,0.5)' : 'none'
+                }}
+              />
             ))}
           </div>
         </div>
@@ -6124,19 +6231,19 @@ export default function App() {
             >
               {/* Search Bar — Premium */}
               <div className="px-4 pt-5 pb-3">
-                <div className={`flex items-center gap-3 px-5 h-[52px] rounded-[20px] border ${
+                <div className={`flex items-center gap-3 px-5 h-[52px] rounded-[20px] border transition-all ${
                   isDark
-                    ? 'bg-white/6 border-white/10'
+                    ? 'bg-transparent border-white/20 focus-within:border-[#fb5607]/40 focus-within:bg-white/5'
                     : 'bg-white border-stone-100'
                 }`} style={isDark ? {} : { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                  <Search size={18} className="text-stone-300 flex-shrink-0" />
+                  <Search size={18} className={`${isDark ? 'text-white/40' : 'text-stone-300'} flex-shrink-0`} />
                   <input
                     type="text"
                     value={productSearchQuery}
                     onChange={(e) => setProductSearchQuery(e.target.value)}
                     placeholder="Rechercher des produits…"
-                    className={`flex-1 bg-transparent border-none outline-none text-[14px] font-medium placeholder:text-stone-300 ${
-                      isDark ? 'text-white' : 'text-stone-800'
+                    className={`flex-1 bg-transparent border-none outline-none text-[14px] font-medium ${
+                      isDark ? 'text-white placeholder:text-white/30' : 'text-stone-800 placeholder:text-stone-400'
                     }`}
                   />
                   {productSearchQuery.length > 0 && (

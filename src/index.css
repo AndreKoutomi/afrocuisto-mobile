@@ -96,11 +96,11 @@
 }
 
 .dark .bg-white\/10 {
-  background-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 .dark .bg-white\/5 {
-  background-color: rgba(255, 255, 255, 0.03) !important;
+  background-color: rgba(255, 255, 255, 0.06) !important;
 }
 
 /* Stone greys → dark tones */
@@ -335,9 +335,8 @@
 .dark input:not([type="range"]),
 .dark textarea,
 .dark select {
-  background-color: rgba(255, 255, 255, 0.06) !important;
   color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
 .dark input::placeholder,
