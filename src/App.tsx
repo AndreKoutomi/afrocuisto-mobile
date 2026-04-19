@@ -325,26 +325,25 @@ const NavButton = ({ iconId, label, isActive, onClick, isDark }: { iconId: strin
   return (
     <button
       onClick={onClick}
-      className="relative flex items-center justify-center active:scale-95"
+      className={`relative flex items-center justify-center`}
       style={{
         height: '46px',
         minWidth: '46px',
         padding: isActive ? '0 16px' : '0',
         borderRadius: '24px',
         backgroundColor: isActive ? (isDark ? 'rgba(255,72,0,0.18)' : 'rgba(255,109,0,0.1)') : 'transparent',
-        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)'
+        transition: 'background-color 0.45s cubic-bezier(0.4, 0, 0.2, 1), padding 0.45s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
     >
       <div className="flex items-center">
         <NavIcon id={iconId} active={isActive} isDark={isDark} />
-
-        {/* Effet à 120Hz d'expansion CSS via grid */}
+        
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: isActive ? '1fr' : '0fr',
             opacity: isActive ? 1 : 0,
-            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)'
+            transition: 'all 0.45s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
           <span
@@ -354,7 +353,7 @@ const NavButton = ({ iconId, label, isActive, onClick, isDark }: { iconId: strin
               overflow: 'hidden',
               whiteSpace: 'nowrap',
               paddingLeft: isActive ? '6px' : '0px',
-              transition: 'padding 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)'
+              transition: 'padding 0.45s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           >
             {label}
@@ -2777,7 +2776,17 @@ export default function App() {
     setProfileSubView(null); // Réinitialise les sous-vues de profil
     setSecuritySubView('main');
     setIsScrolled(false);
-    if (mainScrollRef.current) mainScrollRef.current.scrollTo(0, 0); // Remonte en haut de page
+    
+    setTimeout(() => {
+      const container = document.getElementById('native-swipe-track');
+      if (container) {
+          const tabIds = ['home', 'search', 'community', 'cart', 'profile'];
+          const idx = tabIds.indexOf(tab);
+          if (idx !== -1) {
+             container.scrollTo({ left: idx * container.clientWidth, behavior: 'smooth' });
+          }
+      }
+    }, 10);
   };
 
   const onMainScroll = (e: React.UIEvent<HTMLElement>) => {
@@ -3461,8 +3470,8 @@ export default function App() {
             {isSyncing && !isOffline && (
               <motion.div
                 className="flex items-center justify-center text-[#fb5607]"
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
               >
                 <RefreshCw size={14} />
               </motion.div>
@@ -6993,108 +7002,64 @@ export default function App() {
     </motion.div>
   );
 
-  // --- SWIPE NAVIGATION MECHANICS ---
-  let appSwipeStartX = 0;
-  let appSwipeStartY = 0;
-  let ignoreSwipe = false;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    ignoreSwipe = false;
-    const t = e.target as HTMLElement;
-
-    if (t.closest && (t.closest('.no-swipe') || t.closest('.overflow-x-auto') || t.closest('.overflow-x-scroll') || t.closest('[data-swipeable]'))) {
-      ignoreSwipe = true;
-      return;
-    }
-
-    let node: HTMLElement | null = t;
-    let depthCount = 0;
-    while (node && node !== e.currentTarget && depthCount < 4) {
-      if (node.scrollWidth > node.clientWidth) {
-        const style = window.getComputedStyle(node);
-        if (style.overflowX === 'auto' || style.overflowX === 'scroll') {
-          ignoreSwipe = true;
-          return;
-        }
-      }
-      if (node.style && node.style.touchAction && (node.style.touchAction.includes('pan-y') || node.style.touchAction === 'none')) {
-        ignoreSwipe = true;
-        return;
-      }
-      node = node.parentElement;
-      depthCount++;
-    }
-
-    appSwipeStartX = e.touches[0].clientX;
-    appSwipeStartY = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (ignoreSwipe || (appSwipeStartX === 0 && appSwipeStartY === 0)) {
-        ignoreSwipe = false;
-        appSwipeStartX = 0;
-        appSwipeStartY = 0;
-        return;
-    }
-    
-    const swipeEndX = e.changedTouches[0].clientX;
-    const swipeEndY = e.changedTouches[0].clientY;
-    
-    const deltaX = appSwipeStartX - swipeEndX;
-    const deltaY = appSwipeStartY - swipeEndY;
-    
-    // Rendu extrêmement sensible et réactif : déplacement > 30px et angle plus souple
-    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.1 && Math.abs(deltaX) > 30) {
-      if (!navItems || navItems.length === 0) return;
-      const currentIndex = navItems.findIndex((item: any) => item.id === activeTab);
-      if (currentIndex === -1) return;
-
-      if (deltaX > 0 && currentIndex < navItems.length - 1) {
-        (window as any).__swipeDir = 1;
-        navigateTo(navItems[currentIndex + 1].id);
-      } else if (deltaX < 0 && currentIndex > 0) {
-        (window as any).__swipeDir = -1;
-        navigateTo(navItems[currentIndex - 1].id);
+  // --- NATIVE CONTINUOUS SWIPE TRACK ---
+  const tabIds = ['home', 'search', 'community', 'cart', 'profile'];
+  const onNativeHorizontalScroll = (e: React.UIEvent<HTMLElement>) => {
+    const scrollLeft = e.currentTarget.scrollLeft;
+    const width = e.currentTarget.clientWidth;
+    if (width > 0) {
+      const activeIndex = Math.round(scrollLeft / width);
+      const newTabId = tabIds[activeIndex];
+      if (newTabId && activeTab !== newTabId && newTabId !== 'favs') {
+         setActiveTab(newTabId);
+         if (history[history.length - 1] !== newTabId) {
+             setHistory(prev => [...prev, newTabId]);
+         }
       }
     }
-    
-    appSwipeStartX = 0;
-    appSwipeStartY = 0;
   };
-
-  const swipeDir = (window as any).__swipeDir || 1;
-  
-  // Effet de Liste Continue - Pas de parallaxe, glissement synchrone 100% à gauche ou 100% à droite
-  const continuousListVariants = {
-    initial: { x: swipeDir === 1 ? '100%' : '-100%', opacity: 1 },
-    animate: { x: 0, opacity: 1 },
-    exit: { x: swipeDir === 1 ? '-100%' : '100%', opacity: 1 }
-  };
-  
-  // Transition un peu plus douce pour qu'on puisse voir que les deux pages glissent collées l'une à l'autre
-  const continuousTransition = { type: 'tween', ease: 'easeOut', duration: 0.22 };
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      className={`h-screen max-w-md mx-auto shadow-2xl relative flex flex-col transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
     >
-      {/* On utilise un div wrapper relatif pour contenir les absolutes de AnimatePresence */}
-      <main id="main-swipe-container" onScroll={onMainScroll} ref={mainScrollRef as any} className={`flex-1 overflow-x-hidden no-scrollbar relative min-h-0 ${activeTab === 'profile' ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="relative w-full h-full">
-          <AnimatePresence mode="popLayout" custom={swipeDir}>
-            {activeTab === 'home' && <motion.div key="home" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderHome()}</motion.div>}
-            {activeTab === 'search' && <motion.div key="search" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderExplorer()}</motion.div>}
-            {activeTab === 'community' && <motion.div key="community" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderCommunity()}</motion.div>}
-            {activeTab === 'favs' && <motion.div key="favs" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderFavorites()}</motion.div>}
-            {activeTab === 'cart' && <motion.div key="cart" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderShoppingList()}</motion.div>}
-            {activeTab === 'profile' && <motion.div key="profile" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-hidden ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderProfile()}</motion.div>}
-          </AnimatePresence>
+      <main className="flex-1 relative min-h-0 w-full overflow-hidden">
+        <div 
+          id="native-swipe-track"
+          onScroll={onNativeHorizontalScroll}
+          className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+        >
+          {/* HOME */}
+          <div className="w-full shrink-0 snap-center snap-always h-full relative overflow-y-auto no-scrollbar" onScroll={onMainScroll}>
+            {renderHome()}
+          </div>
+          {/* EXPLORER */}
+          <div className="w-full shrink-0 snap-center snap-always h-full relative overflow-y-auto no-scrollbar" onScroll={onMainScroll}>
+            {renderExplorer()}
+          </div>
+          {/* COMMUNITY */}
+          <div className="w-full shrink-0 snap-center snap-always h-full relative overflow-y-auto no-scrollbar" onScroll={onMainScroll}>
+            {renderCommunity()}
+          </div>
+          {/* CART */}
+          <div className="w-full shrink-0 snap-center snap-always h-full relative overflow-y-auto no-scrollbar" onScroll={onMainScroll}>
+            {renderShoppingList()}
+          </div>
+          {/* PROFILE */}
+          <div className="w-full shrink-0 snap-center snap-always h-full relative overflow-hidden">
+            {renderProfile()}
+          </div>
         </div>
+        
+        {/* FAVS (Non-swipeable sub-view) */}
+        {activeTab === 'favs' && (
+           <div className={`absolute inset-0 z-50 overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>
+             {renderFavorites()}
+           </div>
+        )}
       </main>
 
       <AnimatePresence>
@@ -7302,15 +7267,15 @@ export default function App() {
       <AnimatePresence>
         {!selectedRecipe && !profileSubView && !selectedProduct && !isCommunityFormOpen && (
           <motion.nav
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: 'spring', damping: 24, stiffness: 360, mass: 0.85 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
             className={`absolute bottom-0 w-full z-[800] rounded-t-[32px]`}
             style={{
               paddingBottom: 'calc(env(safe-area-inset-bottom, 16px))',
               background: isDark
-                ? 'rgba(10, 10, 18, 0.60)'
+                ? 'rgba(0, 0, 0, 0.60)'
                 : 'rgba(255, 255, 255, 0.58)',
               backdropFilter: 'blur(28px) saturate(180%)',
               WebkitBackdropFilter: 'blur(28px) saturate(180%)',

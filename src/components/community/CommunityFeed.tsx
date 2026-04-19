@@ -161,7 +161,6 @@ const FullScreenCreatePostForm: React.FC<{
             exit={{ opacity: 0, y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 320, mass: 0.7 }}
             className={`fixed inset-0 z-[850] flex flex-col overflow-hidden ${isDark ? 'bg-[#0a0a0a]' : 'bg-[#f7f7f5]'}`}
-            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
             {/* ── Header compact ── */}
             <div className={`flex items-center justify-between px-4 py-3 shrink-0 border-b ${isDark ? 'border-white/6' : 'border-stone-100'}`}
