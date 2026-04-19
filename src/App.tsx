@@ -2799,6 +2799,7 @@ export default function App() {
     if (showAddShoppingModal) { setShowAddShoppingModal(false); return; }
 
     // Middle overlays
+    if (isCommunityFormOpen) { setIsCommunityFormOpen(false); return; }
     if (selectedPostForComments) { setSelectedPostForComments(null); return; }
     if (selectedProduct) { setSelectedProduct(null); return; }
     if (selectedRecipe) { setSelectedRecipe(null); return; }
@@ -6992,22 +6993,108 @@ export default function App() {
     </motion.div>
   );
 
+  // --- SWIPE NAVIGATION MECHANICS ---
+  let appSwipeStartX = 0;
+  let appSwipeStartY = 0;
+  let ignoreSwipe = false;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    ignoreSwipe = false;
+    const t = e.target as HTMLElement;
+
+    if (t.closest && (t.closest('.no-swipe') || t.closest('.overflow-x-auto') || t.closest('.overflow-x-scroll') || t.closest('[data-swipeable]'))) {
+      ignoreSwipe = true;
+      return;
+    }
+
+    let node: HTMLElement | null = t;
+    let depthCount = 0;
+    while (node && node !== e.currentTarget && depthCount < 4) {
+      if (node.scrollWidth > node.clientWidth) {
+        const style = window.getComputedStyle(node);
+        if (style.overflowX === 'auto' || style.overflowX === 'scroll') {
+          ignoreSwipe = true;
+          return;
+        }
+      }
+      if (node.style && node.style.touchAction && (node.style.touchAction.includes('pan-y') || node.style.touchAction === 'none')) {
+        ignoreSwipe = true;
+        return;
+      }
+      node = node.parentElement;
+      depthCount++;
+    }
+
+    appSwipeStartX = e.touches[0].clientX;
+    appSwipeStartY = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (ignoreSwipe || (appSwipeStartX === 0 && appSwipeStartY === 0)) {
+        ignoreSwipe = false;
+        appSwipeStartX = 0;
+        appSwipeStartY = 0;
+        return;
+    }
+    
+    const swipeEndX = e.changedTouches[0].clientX;
+    const swipeEndY = e.changedTouches[0].clientY;
+    
+    const deltaX = appSwipeStartX - swipeEndX;
+    const deltaY = appSwipeStartY - swipeEndY;
+    
+    // Rendu extrêmement sensible et réactif : déplacement > 30px et angle plus souple
+    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.1 && Math.abs(deltaX) > 30) {
+      if (!navItems || navItems.length === 0) return;
+      const currentIndex = navItems.findIndex((item: any) => item.id === activeTab);
+      if (currentIndex === -1) return;
+
+      if (deltaX > 0 && currentIndex < navItems.length - 1) {
+        (window as any).__swipeDir = 1;
+        navigateTo(navItems[currentIndex + 1].id);
+      } else if (deltaX < 0 && currentIndex > 0) {
+        (window as any).__swipeDir = -1;
+        navigateTo(navItems[currentIndex - 1].id);
+      }
+    }
+    
+    appSwipeStartX = 0;
+    appSwipeStartY = 0;
+  };
+
+  const swipeDir = (window as any).__swipeDir || 1;
+  
+  // Effet de Liste Continue - Pas de parallaxe, glissement synchrone 100% à gauche ou 100% à droite
+  const continuousListVariants = {
+    initial: { x: swipeDir === 1 ? '100%' : '-100%', opacity: 1 },
+    animate: { x: 0, opacity: 1 },
+    exit: { x: swipeDir === 1 ? '-100%' : '100%', opacity: 1 }
+  };
+  
+  // Transition un peu plus douce pour qu'on puisse voir que les deux pages glissent collées l'une à l'autre
+  const continuousTransition = { type: 'tween', ease: 'easeOut', duration: 0.22 };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
       className={`h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${isDark ? 'dark bg-[#000000]' : 'bg-[#f3f4f6]'}`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
-      <main onScroll={onMainScroll} ref={mainScrollRef as any} className={`flex-1 ${activeTab === 'profile' ? 'overflow-hidden' : 'overflow-y-auto'} overflow-x-hidden no-scrollbar relative min-h-0`} style={{ WebkitOverflowScrolling: 'touch', willChange: 'transform', transform: 'translateZ(0)' }}>
-        <AnimatePresence mode="wait">
-          {activeTab === 'home' && <motion.div key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderHome()}</motion.div>}
-          {activeTab === 'search' && <motion.div key="search" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderExplorer()}</motion.div>}
-          {activeTab === 'community' && <motion.div key="community" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderCommunity()}</motion.div>}
-          {activeTab === 'favs' && <motion.div key="favs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderFavorites()}</motion.div>}
-          {activeTab === 'cart' && <motion.div key="cart" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderShoppingList()}</motion.div>}
-          {activeTab === 'profile' && <motion.div key="profile" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={springTransition} className="h-full">{renderProfile()}</motion.div>}
-        </AnimatePresence>
+      {/* On utilise un div wrapper relatif pour contenir les absolutes de AnimatePresence */}
+      <main id="main-swipe-container" onScroll={onMainScroll} ref={mainScrollRef as any} className={`flex-1 overflow-x-hidden no-scrollbar relative min-h-0 ${activeTab === 'profile' ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="relative w-full h-full">
+          <AnimatePresence mode="popLayout" custom={swipeDir}>
+            {activeTab === 'home' && <motion.div key="home" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderHome()}</motion.div>}
+            {activeTab === 'search' && <motion.div key="search" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderExplorer()}</motion.div>}
+            {activeTab === 'community' && <motion.div key="community" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderCommunity()}</motion.div>}
+            {activeTab === 'favs' && <motion.div key="favs" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderFavorites()}</motion.div>}
+            {activeTab === 'cart' && <motion.div key="cart" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-y-auto no-scrollbar ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderShoppingList()}</motion.div>}
+            {activeTab === 'profile' && <motion.div key="profile" variants={continuousListVariants} initial="initial" animate="animate" exit="exit" transition={continuousTransition} className={`absolute inset-0 w-full h-full overflow-hidden ${isDark ? 'bg-[#000000]' : 'bg-[#f3f4f6]'}`}>{renderProfile()}</motion.div>}
+          </AnimatePresence>
+        </div>
       </main>
 
       <AnimatePresence>
