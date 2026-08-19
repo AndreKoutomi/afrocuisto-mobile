@@ -28,8 +28,7 @@
         "WAKE_LOCK",
         "SYSTEM_ALERT_WINDOW",
         "MODIFY_AUDIO_SETTINGS",
-        "ACCESS_NOTIFICATION_POLICY",
-        "WRITE_SETTINGS"
+        "ACCESS_NOTIFICATION_POLICY"
       ]
     },
     "plugins": [

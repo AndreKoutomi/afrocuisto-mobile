@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Platform, DeviceEventEmitter } from 'react-native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Speech from 'expo-speech';
-import * as Brightness from 'expo-brightness';
 import { Accelerometer } from 'expo-sensors';
 
 export interface UseKitchenAccessibilityProps {
@@ -11,7 +10,6 @@ export interface UseKitchenAccessibilityProps {
   totalSteps?: number;
   currentStepText?: string;
   autoReadStep?: boolean;
-  isSimmering?: boolean;
   onNextStep?: () => void;
   onPrevStep?: () => void;
   onRepeatStep?: () => void;
@@ -24,7 +22,6 @@ export const useKitchenAccessibility = ({
   totalSteps = 1,
   currentStepText = '',
   autoReadStep = true,
-  isSimmering = false,
   onNextStep,
   onPrevStep,
   onRepeatStep,
@@ -32,7 +29,6 @@ export const useKitchenAccessibility = ({
 }: UseKitchenAccessibilityProps) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isTtsEnabled, setIsTtsEnabled] = useState(autoReadStep);
-  const previousBrightness = useRef<number | null>(null);
   const lastLiftTime = useRef<number>(0);
 
   // 1. Anti-Verrouillage de l'écran (Keep Screen On / WAKE_LOCK)
@@ -49,39 +45,6 @@ export const useKitchenAccessibility = ({
       deactivateKeepAwake('AFROCUISTO_COOK_MODE').catch(() => {});
     };
   }, [isActive]);
-
-  // 2. Luminosité Adaptative Cuisine (Contre les reflets & Économie en mijotage)
-  useEffect(() => {
-    if (Platform.OS === 'web' || !isActive) return;
-
-    let mounted = true;
-    const applyBrightness = async () => {
-      try {
-        const { status } = await Brightness.requestPermissionsAsync();
-        if (status !== 'granted' || !mounted) return;
-
-        if (previousBrightness.current === null) {
-          previousBrightness.current = await Brightness.getBrightnessAsync();
-        }
-
-        // Si mijotage prolongé : 35% de luminosité (économie batterie), sinon 100% (anti-reflets plan de travail)
-        const targetBrightness = isSimmering ? 0.35 : 1.0;
-        await Brightness.setBrightnessAsync(targetBrightness);
-      } catch (e) {
-        // Fallback silencieux si non supporté sur l'émulateur
-      }
-    };
-
-    applyBrightness();
-
-    return () => {
-      mounted = false;
-      if (previousBrightness.current !== null && Platform.OS !== 'web') {
-        Brightness.setBrightnessAsync(previousBrightness.current).catch(() => {});
-        previousBrightness.current = null;
-      }
-    };
-  }, [isActive, isSimmering]);
 
   // 3. Synthèse Vocale Automatique (TTS)
   const speakStep = useCallback((textToSpeak?: string) => {

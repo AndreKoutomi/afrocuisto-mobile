@@ -257,7 +257,6 @@ export const CookModeModal: React.FC<CookModeModalProps> = ({
     totalSteps,
     currentStepText,
     autoReadStep: true,
-    isSimmering: isTimerRunning && timerSeconds > 180,
     onNextStep: handleNext,
     onPrevStep: handlePrev,
     onRepeatStep: () => speakStep(),
