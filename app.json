@@ -33,11 +33,7 @@
       ]
     },
     "plugins": [
-      "expo-notifications",
-      "expo-brightness",
-      "expo-speech",
-      "expo-keep-awake",
-      "expo-sensors"
+      "expo-notifications"
     ],
     "web": {
       "favicon": "./assets/favicon.png",
