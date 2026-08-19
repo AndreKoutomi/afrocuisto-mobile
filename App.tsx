@@ -118,8 +118,8 @@ export default function App() {
               <CookingTimerProvider>
                 <NavigationTransitionProvider>
                   <WebDeviceFrame>
-                    <InteractiveTimerPill />
                     <RootNavigation />
+                    <InteractiveTimerPill />
                   </WebDeviceFrame>
                 </NavigationTransitionProvider>
               </CookingTimerProvider>
