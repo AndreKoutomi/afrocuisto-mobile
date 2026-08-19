@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "lucide-react": "^1.33.0",
+    "morphicons": "^1.7.0",
+    "motion": "^13.1.0"
+  }
+}

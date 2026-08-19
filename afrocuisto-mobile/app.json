@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "AfroCuisto",
+    "slug": "afrocuisto-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#121110"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#121110"
+      },
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE",
+        "VIBRATE",
+        "WAKE_LOCK",
+        "SYSTEM_ALERT_WINDOW",
+        "MODIFY_AUDIO_SETTINGS",
+        "ACCESS_NOTIFICATION_POLICY",
+        "WRITE_SETTINGS"
+      ]
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-brightness",
+      "expo-speech",
+      "expo-keep-awake",
+      "expo-sensors"
+    ],
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "openclaw-openclaw-skills-coding-agent-skill-md",
+  "name": "coding-agent",
+  "github_url": "https://github.com/openclaw/openclaw/tree/main/skills/coding-agent",
+  "installed_at": "2026-08-19T14:09:04.331Z",
+  "owner": "openclaw",
+  "repo": "openclaw",
+  "branch": "main",
+  "skill_path": "skills/coding-agent"
+}

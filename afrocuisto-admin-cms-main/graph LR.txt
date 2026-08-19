@@ -1,0 +1,2 @@
+graph LR
+    A[🔴 URGENT] --> B[Unifier couleur

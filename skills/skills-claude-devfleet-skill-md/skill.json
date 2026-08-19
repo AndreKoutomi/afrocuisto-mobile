@@ -1,0 +1,10 @@
+{
+  "id": "affaan-m-ecc-docs-ja-jp-skills-claude-devfleet-skill-md",
+  "name": "claude-devfleet",
+  "github_url": "https://github.com/affaan-m/ECC/tree/main/docs/ja-JP/skills/claude-devfleet",
+  "installed_at": "2026-08-19T14:09:05.938Z",
+  "owner": "affaan-m",
+  "repo": "ECC",
+  "branch": "main",
+  "skill_path": "docs/ja-JP/skills/claude-devfleet"
+}

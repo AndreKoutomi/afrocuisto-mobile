@@ -1,0 +1,32 @@
+{
+    "skillSync.sources": [
+        {
+            "type": "github-repo",
+            "value": "AndreKoutomi/afrocuisto-mobile"
+        }
+    ],
+    "openclaw.gatewayUrl": "http://127.0.0.1:18789",
+    "openclaw.gatewayToken": "84a52d7505485feb074e9bb75e57802cbd64130b54d9760d",
+    "openclaw.openclawPath": "C:\\Users\\ANDRE\\AppData\\Roaming\\npm\\openclaw.cmd",
+    "openclaw.enableCliFallback": true,
+    "openclaw.aiOutputLanguage": "auto",
+    "openclaw.defaultAgent": "main",
+    "snapds.packages": [
+        {
+            "name": "@types/react",
+            "version": "18.2.79",
+            "importPath": "@types/react",
+            "tsconfigPath": "d:\\Works and Projects\\Afrocuisto\\afrocuisto-mobile\\tsconfig.json",
+            "excluded": [],
+            "manual": []
+        },
+        {
+            "name": "lucide-react",
+            "version": "0.575.0",
+            "importPath": "lucide-react",
+            "tsconfigPath": "d:\\Works and Projects\\Afrocuisto\\afrocuisto-admin-cms-main\\tsconfig.json",
+            "excluded": [],
+            "manual": []
+        }
+    ]
+}
