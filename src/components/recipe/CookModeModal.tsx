@@ -246,17 +246,13 @@ export const CookModeModal: React.FC<CookModeModalProps> = ({
     }
   };
 
-  // Garde : si Modal pas mounté ET pas visible, ne pas rendre
-  if (!visible && !isModalMounted) return null;
-
-
   const currentStepText = steps[currentStepIndex] || 'Bonne préparation !';
   const isCurrentStepDone = !!completedSteps[currentStepIndex];
   const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 24 : 16);
 
   // 🌟 Assistance Cuisine Intelligente (Keep Screen On, TTS Vocale, Touches Volume ±, Capteurs)
   const { isSpeaking, isTtsEnabled, toggleTts, speakStep } = useKitchenAccessibility({
-    isActive: visible,
+    isActive: visible && isModalMounted,
     currentStepIndex,
     totalSteps,
     currentStepText,
@@ -266,6 +262,9 @@ export const CookModeModal: React.FC<CookModeModalProps> = ({
     onPrevStep: handlePrev,
     onRepeatStep: () => speakStep(),
   });
+
+  // Garde : si Modal pas mounté ET pas visible, ne pas rendre
+  if (!visible && !isModalMounted) return null;
 
   const modalBody = (
     <View
