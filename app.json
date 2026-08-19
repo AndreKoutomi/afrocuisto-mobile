@@ -12,9 +12,11 @@
       "backgroundColor": "#121110"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.afrocuisto.mobile"
     },
     "android": {
+      "package": "com.afrocuisto.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#121110"
