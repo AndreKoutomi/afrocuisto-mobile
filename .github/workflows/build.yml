@@ -32,10 +32,10 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: 📦 Install Dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: 🏗️ Expo Prebuild (Android)
-        run: npx expo prebuild --platform android --clean
+        run: npx expo prebuild --platform android --clean --no-install
 
       - name: 🔑 Set gradlew permissions
         run: chmod +x android/gradlew
