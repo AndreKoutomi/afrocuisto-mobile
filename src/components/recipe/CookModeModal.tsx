@@ -31,8 +31,6 @@ import {
   Sparkles,
   PartyPopper,
   Share2,
-  Volume2,
-  VolumeX,
   Smartphone,
 } from 'lucide-react-native';
 import { MorphIcon, Play as LucidePlay, Pause as LucidePause } from '../common/MorphIcon';
@@ -250,16 +248,14 @@ export const CookModeModal: React.FC<CookModeModalProps> = ({
   const isCurrentStepDone = !!completedSteps[currentStepIndex];
   const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 24 : 16);
 
-  // 🌟 Assistance Cuisine Intelligente (Keep Screen On, TTS Vocale, Touches Volume ±, Capteurs)
-  const { isSpeaking, isTtsEnabled, toggleTts, speakStep } = useKitchenAccessibility({
+  // 🌟 Assistance Cuisine Intelligente (Keep Screen On, Touches Volume ±, Capteurs)
+  useKitchenAccessibility({
     isActive: visible && isModalMounted,
     currentStepIndex,
     totalSteps,
     currentStepText,
-    autoReadStep: true,
     onNextStep: handleNext,
     onPrevStep: handlePrev,
-    onRepeatStep: () => speakStep(),
   });
 
   // Garde : si Modal pas mounté ET pas visible, ne pas rendre
@@ -384,57 +380,6 @@ export const CookModeModal: React.FC<CookModeModalProps> = ({
                   <ChefHat size={16} color="#FFFFFF" />
                   <Text style={styles.stepPillText}>Étape {currentStepIndex + 1}</Text>
                 </View>
-
-                {/* Bouton Synthèse Vocale TTS interactif */}
-                <TouchableOpacity
-                  style={[
-                    styles.ttsBtn,
-                    {
-                      backgroundColor: isTtsEnabled
-                        ? isSpeaking
-                          ? '#EA580C'
-                          : isDark
-                          ? '#2E201B'
-                          : '#FFF2EE'
-                        : isDark
-                        ? '#262422'
-                        : '#F3F4F6',
-                      borderColor: isTtsEnabled
-                        ? AppColors.primary
-                        : isDark
-                        ? '#383531'
-                        : '#E5E7EB',
-                    },
-                  ]}
-                  onPress={toggleTts}
-                  activeOpacity={0.8}
-                  accessibilityLabel="Activer ou désactiver la lecture vocale"
-                >
-                  {isTtsEnabled ? (
-                    <Volume2
-                      size={15}
-                      color={isSpeaking ? '#FFFFFF' : AppColors.primary}
-                    />
-                  ) : (
-                    <VolumeX size={15} color={isDark ? '#9CA3AF' : '#6B7280'} />
-                  )}
-                  <Text
-                    style={[
-                      styles.ttsBtnText,
-                      {
-                        color: isTtsEnabled
-                          ? isSpeaking
-                            ? '#FFFFFF'
-                            : AppColors.primary
-                          : isDark
-                          ? '#9CA3AF'
-                          : '#6B7280',
-                      },
-                    ]}
-                  >
-                    {isSpeaking ? 'En lecture...' : isTtsEnabled ? 'Voix active' : 'Voix coupée'}
-                  </Text>
-                </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
@@ -865,20 +810,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    flexWrap: 'wrap',
-  },
-  ttsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  ttsBtnText: {
-    fontSize: 11.5,
-    fontWeight: '700',
   },
   stepPill: {
     backgroundColor: AppColors.primary,

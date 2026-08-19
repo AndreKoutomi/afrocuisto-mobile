@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { Platform, DeviceEventEmitter } from 'react-native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import * as Speech from 'expo-speech';
 import { Accelerometer } from 'expo-sensors';
 
 export interface UseKitchenAccessibilityProps {
@@ -9,7 +8,6 @@ export interface UseKitchenAccessibilityProps {
   currentStepIndex?: number;
   totalSteps?: number;
   currentStepText?: string;
-  autoReadStep?: boolean;
   onNextStep?: () => void;
   onPrevStep?: () => void;
   onRepeatStep?: () => void;
@@ -18,17 +16,11 @@ export interface UseKitchenAccessibilityProps {
 
 export const useKitchenAccessibility = ({
   isActive,
-  currentStepIndex = 0,
-  totalSteps = 1,
-  currentStepText = '',
-  autoReadStep = true,
   onNextStep,
   onPrevStep,
   onRepeatStep,
   onLiftOrTilt,
 }: UseKitchenAccessibilityProps) => {
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isTtsEnabled, setIsTtsEnabled] = useState(autoReadStep);
   const lastLiftTime = useRef<number>(0);
 
   // 1. Anti-Verrouillage de l'écran (Keep Screen On / WAKE_LOCK)
@@ -46,62 +38,7 @@ export const useKitchenAccessibility = ({
     };
   }, [isActive]);
 
-  // 3. Synthèse Vocale Automatique (TTS)
-  const speakStep = useCallback((textToSpeak?: string) => {
-    const raw = textToSpeak || currentStepText;
-    if (!raw || raw.trim().length === 0) return;
-
-    const formattedSpeech = `Étape ${currentStepIndex + 1} sur ${totalSteps}. ${raw}`;
-
-    try {
-      Speech.stop();
-      setIsSpeaking(true);
-      Speech.speak(formattedSpeech, {
-        language: 'fr-FR',
-        pitch: 1.0,
-        rate: 0.92, // Rythme posé pour compréhension aisée en cuisine
-        onDone: () => setIsSpeaking(false),
-        onStopped: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false),
-      });
-    } catch (e) {
-      console.warn('Speech error:', e);
-      setIsSpeaking(false);
-    }
-  }, [currentStepIndex, totalSteps, currentStepText]);
-
-  const stopSpeaking = useCallback(() => {
-    try {
-      Speech.stop();
-      setIsSpeaking(false);
-    } catch (e) {
-      // Ignorer
-    }
-  }, []);
-
-  const toggleTts = useCallback(() => {
-    setIsTtsEnabled(prev => {
-      const next = !prev;
-      if (!next) {
-        stopSpeaking();
-      } else {
-        speakStep();
-      }
-      return next;
-    });
-  }, [speakStep, stopSpeaking]);
-
-  // Déclenchement automatique de la lecture vocale au changement d'étape
-  useEffect(() => {
-    if (isActive && isTtsEnabled && currentStepText) {
-      speakStep(currentStepText);
-    }
-    return () => {
-      stopSpeaking();
-    };
-  }, [isActive, currentStepIndex, isTtsEnabled]);
-
-  // 4. Interception des Touches Physiques (Accessibility Service Events)
+  // 2. Interception des Touches Physiques (Accessibility Service Events)
   useEffect(() => {
     if (!isActive) return;
 
@@ -114,11 +51,7 @@ export const useKitchenAccessibility = ({
     });
 
     const subRepeat = DeviceEventEmitter.addListener('ON_KITCHEN_REPEAT_STEP', () => {
-      if (onRepeatStep) {
-        onRepeatStep();
-      } else {
-        speakStep();
-      }
+      if (onRepeatStep) onRepeatStep();
     });
 
     return () => {
@@ -126,9 +59,9 @@ export const useKitchenAccessibility = ({
       subPrev.remove();
       subRepeat.remove();
     };
-  }, [isActive, onNextStep, onPrevStep, onRepeatStep, speakStep]);
+  }, [isActive, onNextStep, onPrevStep, onRepeatStep]);
 
-  // 5. Capteur de Mouvement / Détection de Prise en Main (Accelerometer / Lift to Speak)
+  // 3. Capteur de Mouvement / Détection de Prise en Main (Accelerometer)
   useEffect(() => {
     if (!isActive || Platform.OS === 'web') return;
 
@@ -137,13 +70,11 @@ export const useKitchenAccessibility = ({
       const gForce = Math.sqrt(data.x ** 2 + data.y ** 2 + data.z ** 2);
       const now = Date.now();
 
-      // Détection d'un mouvement franc de soulèvement (ex: téléphone ramassé sur le plan de travail)
+      // Détection d'un mouvement franc de soulèvement
       if (gForce > 1.8 && now - lastLiftTime.current > 3500) {
         lastLiftTime.current = now;
         if (onLiftOrTilt) {
           onLiftOrTilt();
-        } else if (isTtsEnabled) {
-          speakStep();
         }
       }
     });
@@ -151,13 +82,7 @@ export const useKitchenAccessibility = ({
     return () => {
       sub.remove();
     };
-  }, [isActive, isTtsEnabled, onLiftOrTilt, speakStep]);
+  }, [isActive, onLiftOrTilt]);
 
-  return {
-    isSpeaking,
-    isTtsEnabled,
-    toggleTts,
-    speakStep,
-    stopSpeaking,
-  };
+  return {};
 };
