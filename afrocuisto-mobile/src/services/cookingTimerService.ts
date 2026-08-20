@@ -417,9 +417,7 @@ class CookingTimerService {
           autoDismiss: false,
           color: '#FB5607',
         },
-        trigger: {
-          channelId: NOTIFICATION_CHANNEL_ID,
-        },
+        trigger: null,
       });
     } catch (err) {
       console.warn('Erreur mise à jour notification Android:', err);
@@ -457,9 +455,7 @@ class CookingTimerService {
           vibrate: [0, 500, 200, 500],
           color: '#FB5607',
         },
-        trigger: {
-          channelId: NOTIFICATION_CHANNEL_ID,
-        },
+        trigger: null,
       });
     } catch (err) {
       console.warn('Erreur notification fin de cuisson:', err);

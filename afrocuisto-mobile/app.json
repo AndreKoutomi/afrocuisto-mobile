@@ -12,9 +12,12 @@
       "backgroundColor": "#121110"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.afrocuisto.mobile"
     },
     "android": {
+      "package": "com.afrocuisto.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#121110"
@@ -26,16 +29,11 @@
         "WAKE_LOCK",
         "SYSTEM_ALERT_WINDOW",
         "MODIFY_AUDIO_SETTINGS",
-        "ACCESS_NOTIFICATION_POLICY",
-        "WRITE_SETTINGS"
+        "ACCESS_NOTIFICATION_POLICY"
       ]
     },
     "plugins": [
-      "expo-notifications",
-      "expo-brightness",
-      "expo-speech",
-      "expo-keep-awake",
-      "expo-sensors"
+      "expo-notifications"
     ],
     "web": {
       "favicon": "./assets/favicon.png",
