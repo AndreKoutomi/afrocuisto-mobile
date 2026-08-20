@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android Release APK
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Fast Android APK Build
+    name: Android Standalone Release APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -36,31 +36,113 @@ jobs:
           gradle-version: wrapper
           cache-read-only: false
 
-      - name: 📦 Install Dependencies (Fast Cache)
+      - name: 🔢 Configure Versioning (versionCode & versionName)
+        id: versioning
+        run: |
+          node -e "
+            const fs = require('fs');
+            const appJson = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            const buildNumber = parseInt(process.env.BUILD_NUM || '${{ github.run_number }}', 10);
+            const version = appJson.expo.version || '1.0.0';
+            
+            if (!appJson.expo.android) appJson.expo.android = {};
+            appJson.expo.android.versionCode = buildNumber;
+            
+            fs.writeFileSync('app.json', JSON.stringify(appJson, null, 2));
+            console.log('Configured app.json -> versionCode:', buildNumber, 'versionName:', version);
+          "
+          APP_VER=$(node -p "require('./app.json').expo.version || '1.0.0'")
+          echo "APP_VERSION=$APP_VER" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: 📦 Install Dependencies
         run: npm ci --legacy-peer-deps --prefer-offline
 
       - name: 🏗️ Expo Prebuild (Android)
         run: npx expo prebuild --platform android --clean --no-install
 
+      - name: 🔐 Configure Keystore & Release Signing
+        run: |
+          mkdir -p android/app
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "Using custom Keystore from GitHub Secrets..."
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+            KEYSTORE_PASS="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}"
+            KEY_PASS="${{ secrets.ANDROID_KEY_PASSWORD }}"
+          else
+            echo "Generating valid Automated Release Keystore..."
+            keytool -genkeypair -v -storetype PKCS12 \
+              -keystore android/app/release.keystore \
+              -alias afrocuisto-release \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass afrocuisto123 \
+              -keypass afrocuisto123 \
+              -dname "CN=AfroCuisto, OU=Mobile, O=AfroCuisto, L=Paris, S=IDF, C=FR"
+            KEYSTORE_PASS="afrocuisto123"
+            KEY_ALIAS="afrocuisto-release"
+            KEY_PASS="afrocuisto123"
+          fi
+
+          # Append signing credentials to gradle.properties
+          cat <<EOT >> android/gradle.properties
+          AFROCUISTO_RELEASE_STORE_FILE=release.keystore
+          AFROCUISTO_RELEASE_KEY_ALIAS=$KEY_ALIAS
+          AFROCUISTO_RELEASE_STORE_PASSWORD=$KEYSTORE_PASS
+          AFROCUISTO_RELEASE_KEY_PASSWORD=$KEY_PASS
+          EOT
+
+          # Inject Release Signing into android/app/build.gradle
+          node -e "
+            const fs = require('fs');
+            let gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+            
+            const releaseConfig = \`
+            release {
+                if (project.hasProperty('AFROCUISTO_RELEASE_STORE_FILE')) {
+                    storeFile file(AFROCUISTO_RELEASE_STORE_FILE)
+                    storePassword AFROCUISTO_RELEASE_STORE_PASSWORD
+                    keyAlias AFROCUISTO_RELEASE_KEY_ALIAS
+                    keyPassword AFROCUISTO_RELEASE_KEY_PASSWORD
+                    v1SigningEnabled true
+                    v2SigningEnabled true
+                }
+            }\`;
+            
+            gradle = gradle.replace(/signingConfigs\s*\{/, 'signingConfigs {' + releaseConfig);
+            gradle = gradle.replace(/signingConfig signingConfigs\.debug/g, 'signingConfig signingConfigs.release');
+            
+            fs.writeFileSync('android/app/build.gradle', gradle);
+            console.log('android/app/build.gradle signingConfig updated.');
+          "
+
       - name: 🔑 Set gradlew permissions
         run: chmod +x android/gradlew
 
-      - name: ⚡ Build Fast Android APK
+      - name: ⚡ Build Standalone Android Release APK
         run: |
           cd android
-          ./gradlew assembleDebug \
+          ./gradlew assembleRelease \
             --no-daemon \
             --parallel \
             --build-cache \
-            --configure-on-demand \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+UseParallelGC" \
-            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64
+
+      - name: 🏷️ Prepare & Rename APK Artifact
+        run: |
+          mkdir -p build-output
+          find android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} build-output/AfroCuisto-v${{ env.APP_VERSION }}-build${{ env.BUILD_NUMBER }}.apk \;
+          echo "APK successfully generated:"
+          ls -la build-output/
 
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: AfroCuisto-Android-APK
-          path: android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: warn
+          name: AfroCuisto-v${{ env.APP_VERSION }}-build${{ env.BUILD_NUMBER }}-APK
+          path: build-output/*.apk
+          if-no-files-found: error
           retention-days: 14
