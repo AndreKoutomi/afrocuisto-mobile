@@ -22,7 +22,7 @@ export const MarketScreen: React.FC = () => {
   const { isDark } = useTheme();
   const { isScreenLoading } = useNavigationTransition();
 
-  const showSkeleton = isScreenLoading('Market');
+  const showSkeleton = false;
 
   return (
     <SafeAreaView

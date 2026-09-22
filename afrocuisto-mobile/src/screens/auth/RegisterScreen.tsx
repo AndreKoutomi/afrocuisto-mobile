@@ -21,7 +21,7 @@ import { GoogleAuthButton } from '../../components/auth/GoogleAuthButton';
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { updateUser, login } = useAuth();
+  const { signUp, login } = useAuth();
   const { isDark } = useTheme();
 
   const [name, setName] = useState('');
@@ -30,6 +30,7 @@ export const RegisterScreen: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [generalError, setGeneralError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
@@ -72,20 +73,30 @@ export const RegisterScreen: React.FC = () => {
   };
 
   const handleRegister = async () => {
+    setGeneralError(null);
     if (!validate()) return;
     setLoading(true);
     try {
-      await updateUser({
-        name: name.trim(),
-        email: email.trim(),
-      });
-      // Navigate to OTP verification for new account
-      navigation.navigate('Otp', {
-        email: email.trim(),
-        fromReset: false,
-      });
-    } catch (e) {
-      console.error(e);
+      const response = await signUp(name.trim(), email.trim(), password);
+      if (!response.success) {
+        setGeneralError(response.error || "Impossible de créer le compte.");
+        return;
+      }
+
+      // Si confirmation d'email requise, rediriger vers l'écran OTP
+      if (response.needsEmailVerification) {
+        navigation.navigate('Otp', {
+          email: email.trim(),
+          fromReset: false,
+        });
+      } else {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainTabs' }],
+        });
+      }
+    } catch (e: any) {
+      setGeneralError(e.message || "Une erreur est survenue lors de l'inscription.");
     } finally {
       setLoading(false);
     }
@@ -148,6 +159,12 @@ export const RegisterScreen: React.FC = () => {
 
           {/* Form Fields */}
           <View style={styles.formContainer}>
+            {generalError && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{generalError}</Text>
+              </View>
+            )}
+
             <AuthInput
               label="Votre nom"
               placeholder="Entrez votre nom complet"
@@ -331,6 +348,21 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: '#EF4444',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  errorBannerText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   checkboxRow: {
     flexDirection: 'row',

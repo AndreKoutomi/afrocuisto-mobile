@@ -21,12 +21,13 @@ import { GoogleAuthButton } from '../../components/auth/GoogleAuthButton';
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { login } = useAuth();
+  const { signIn, login } = useAuth();
   const { isDark } = useTheme();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [generalError, setGeneralError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const validate = () => {
@@ -46,16 +47,30 @@ export const LoginScreen: React.FC = () => {
   };
 
   const handleLogin = async () => {
+    setGeneralError(null);
     if (!validate()) return;
     setLoading(true);
     try {
-      await login();
+      const response = await signIn(email.trim(), password);
+      if (!response.success) {
+        setGeneralError(response.error || 'Erreur lors de la connexion.');
+        return;
+      }
+
+      if (response.needsEmailVerification) {
+        navigation.navigate('Otp', {
+          email: email.trim(),
+          fromReset: false,
+        });
+        return;
+      }
+
       navigation.reset({
         index: 0,
         routes: [{ name: 'MainTabs' }],
       });
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setGeneralError(e.message || 'Impossible de se connecter.');
     } finally {
       setLoading(false);
     }
@@ -120,6 +135,12 @@ export const LoginScreen: React.FC = () => {
 
           {/* Form Fields */}
           <View style={styles.formContainer}>
+            {generalError && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{generalError}</Text>
+              </View>
+            )}
+
             <AuthInput
               label="Email"
               placeholder="Entrez votre email de connexion"
@@ -239,6 +260,21 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: '#EF4444',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  errorBannerText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',

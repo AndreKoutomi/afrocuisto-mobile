@@ -4,6 +4,8 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
+  Keyboard,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
@@ -14,6 +16,7 @@ import { HomeHeader } from '../components/home/HomeHeader';
 import { FigmaRecipeCarousel } from '../components/home/FigmaRecipeCarousel';
 import { MagicFridgeCard } from '../components/home/MagicFridgeCard';
 import { PopularDishCard } from '../components/home/PopularDishCard';
+import { DishCategoriesRail } from '../components/home/DishCategoriesRail';
 import { RegionalDishesGrid } from '../components/home/RegionalDishesGrid';
 import { CommunityLiveTeaser } from '../components/home/CommunityLiveTeaser';
 import { useRecipes } from '../context/RecipeContext';
@@ -32,11 +35,12 @@ export const HomeScreen: React.FC = () => {
   const { isDark } = useTheme();
   const { isScreenLoading } = useNavigationTransition();
 
-  // Recherche directe depuis le Header de la Home (sans changement de page)
+  // Recherche avec animation d'ouverture du Header & auto-suggestions
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const isSearching = searchQuery.trim().length > 0;
 
-  const showSkeleton = isScreenLoading('Home') || (isLoading && recipes.length === 0);
+  const showSkeleton = isLoading && recipes.length === 0;
 
   const handleRecipePress = (recipe: Recipe) => {
     navigation.navigate('RecipeDetail', { recipe });
@@ -65,20 +69,44 @@ export const HomeScreen: React.FC = () => {
       ]}
     >
       <AnimatedScreenWrapper>
-        {/* 1. Header fixe & interactif avec barre de recherche intégrée */}
+        {/* 1. Header fixe avec animation fluide d'ouverture / fermeture et dropdown menu de suggestions */}
         <HomeHeader
           onProfilePress={() => navigation.navigate('Profile')}
           onNotificationPress={() => navigation.navigate('AnimationLab')}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          onSearchClear={() => setSearchQuery('')}
+          isSearchOpen={isSearchOpen}
+          onOpenChange={isOpen => setIsSearchOpen(isOpen)}
+          onSearchClear={() => {
+            setIsSearchOpen(false);
+            setSearchQuery('');
+          }}
           onAiPress={() => navigation.navigate('AiChef')}
+          onSelectRecipe={handleRecipePress}
+          onSelectAiSearch={query =>
+            navigation.navigate('AiChef', { initialIngredient: query })
+          }
+          onSelectCategory={(category: any) =>
+            navigation.navigate('CategoryRecipes', { category: typeof category === 'string' ? category : category?.id })
+          }
         />
+
+        {/* 2. Backdrop pour fermer la recherche au clic extérieur sans activer les éléments en arrière-plan */}
+        {isSearchOpen && (
+          <Pressable
+            style={styles.searchBackdrop}
+            onPress={() => {
+              Keyboard.dismiss();
+              setIsSearchOpen(false);
+              setSearchQuery('');
+            }}
+          />
+        )}
 
         {showSkeleton ? (
           <HomeScreenSkeleton />
         ) : isSearching ? (
-          /* ================= Vue Résultats de recherche sur la Home Page ================= */
+          /* ================= Vue Résultats de recherche sur la Home ================= */
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -149,7 +177,10 @@ export const HomeScreen: React.FC = () => {
                 <TouchableOpacity
                   style={styles.resetSearchBtn}
                   activeOpacity={0.8}
-                  onPress={() => setSearchQuery('')}
+                  onPress={() => {
+                    setSearchQuery('');
+                    setIsSearchOpen(false);
+                  }}
                 >
                   <Text style={styles.resetSearchBtnText}>Effacer la recherche</Text>
                 </TouchableOpacity>
@@ -167,7 +198,10 @@ export const HomeScreen: React.FC = () => {
                     {searchResults.length} recette{searchResults.length > 1 ? 's' : ''} trouvée{searchResults.length > 1 ? 's' : ''}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => setSearchQuery('')}
+                    onPress={() => {
+                      setSearchQuery('');
+                      setIsSearchOpen(false);
+                    }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.clearSearchText}>Effacer</Text>
@@ -190,6 +224,7 @@ export const HomeScreen: React.FC = () => {
         ) : (
           /* ================= Vue Principale Home Feed ================= */
           <ScrollView
+            scrollEnabled={!isSearchOpen}
             style={{ backgroundColor: isDark ? AppColors.backgroundDark : '#FFFFFF' }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -251,6 +286,13 @@ export const HomeScreen: React.FC = () => {
                 </View>
               ))}
             </ScrollView>
+
+            {/* 4b. Section Catégories de Plats avec Cartes Illustrées */}
+            <DishCategoriesRail
+              onSelectCategory={(cat) => {
+                navigation.navigate('CategoryRecipes', { category: cat.id });
+              }}
+            />
 
             {/* 5. Section Dynamique Vertical Grid (2 colonnes) par Région */}
             <RegionalDishesGrid
@@ -389,6 +431,12 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     paddingVertical: 4,
+  },
+  searchBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    top: 68,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    zIndex: 900,
   },
 });
 

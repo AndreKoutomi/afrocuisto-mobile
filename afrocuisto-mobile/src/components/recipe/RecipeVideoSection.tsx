@@ -134,7 +134,7 @@ export const RecipeVideoSection: React.FC<RecipeVideoSectionProps> = ({ recipe, 
   const youtubeWebUrl = `https://www.youtube.com/watch?v=${videoData.id}`;
 
   const handleOpenExternalYouTube = () => {
-    Linking.openURL(youtubeWebUrl).catch(() => {});
+    Linking.openURL(youtubeWebUrl).catch(() => { });
   };
 
   const renderPlayer = (isFullscreen: boolean = false) => {
@@ -404,8 +404,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.01,
     shadowRadius: 10,
     elevation: 3,
   },

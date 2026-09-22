@@ -21,7 +21,7 @@ import { AuthButton } from '../../components/auth/AuthButton';
 export const OtpScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { login } = useAuth();
+  const { verifyOtp, resendOtp, login } = useAuth();
   const { isDark } = useTheme();
 
   const userEmail = route.params?.email || 'andre@afrocuisto.app';
@@ -85,13 +85,22 @@ export const OtpScreen: React.FC = () => {
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!canResend) return;
     setTimer(30);
     setCanResend(false);
     setOtp(['', '', '', '', '', '']);
     setError(null);
     inputsRef.current[0]?.focus();
+
+    try {
+      const res = await resendOtp(userEmail, fromReset ? 'email_change' : 'signup');
+      if (!res.success && res.error) {
+        setError(res.error);
+      }
+    } catch (e: any) {
+      setError(e.message || 'Erreur lors du renvoi du code.');
+    }
   };
 
   const handleSubmit = async () => {
@@ -103,16 +112,19 @@ export const OtpScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 600));
+      const response = await verifyOtp(userEmail, code, fromReset);
+      if (!response.success) {
+        setError(response.error || 'Code incorrect. Veuillez réessayer.');
+        return;
+      }
 
       if (fromReset) {
-        navigation.navigate('ResetPassword', { email: userEmail });
+        navigation.navigate('ResetPassword', { email: userEmail, token: code });
       } else {
-        await login();
         navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
       }
-    } catch (e) {
-      setError('Code incorrect. Veuillez réessayer.');
+    } catch (e: any) {
+      setError(e.message || 'Code incorrect. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }

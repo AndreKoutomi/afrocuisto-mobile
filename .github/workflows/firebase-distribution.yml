@@ -1,0 +1,190 @@
+name: Build & Deploy to Firebase App Distribution
+
+on:
+  push:
+    branches:
+      - beta
+      - production
+      - main
+  workflow_dispatch:
+    inputs:
+      branch_target:
+        description: 'Target Environment'
+        required: true
+        default: 'beta'
+        type: choice
+        options:
+          - beta
+          - production
+
+jobs:
+  build-and-distribute:
+    name: Build & Distribute Android App
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: afrocuisto-mobile/package-lock.json
+
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🐘 Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
+
+      - name: 🔢 Configure Versioning & Environment
+        id: env_config
+        working-directory: afrocuisto-mobile
+        run: |
+          # Determine environment based on branch or manual input
+          REF_NAME="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET_ENV="${{ github.event.inputs.branch_target }}"
+          elif [ "$REF_NAME" = "production" ] || [ "$REF_NAME" = "main" ]; then
+            TARGET_ENV="production"
+          else
+            TARGET_ENV="beta"
+          fi
+
+          echo "TARGET_ENV=$TARGET_ENV" >> $GITHUB_ENV
+
+          # Configure version in app.json
+          node -e "
+            const fs = require('fs');
+            const appJson = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            const buildNumber = parseInt(process.env.BUILD_NUM || '${{ github.run_number }}', 10);
+            const baseVersion = appJson.expo.version || '1.0.0';
+            
+            if (!appJson.expo.android) appJson.expo.android = {};
+            appJson.expo.android.versionCode = buildNumber;
+            
+            fs.writeFileSync('app.json', JSON.stringify(appJson, null, 2));
+            console.log('Target Env:', '$TARGET_ENV', '| versionCode:', buildNumber, '| versionName:', baseVersion);
+          "
+
+          APP_VER=$(node -p "require('./app.json').expo.version || '1.0.0'")
+          echo "APP_VERSION=$APP_VER" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: 📦 Install Dependencies
+        working-directory: afrocuisto-mobile
+        run: npm ci --legacy-peer-deps --prefer-offline
+
+      - name: 🏗️ Expo Prebuild (Android)
+        working-directory: afrocuisto-mobile
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - name: 🔐 Configure Keystore & Signing
+        working-directory: afrocuisto-mobile
+        run: |
+          mkdir -p android/app
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "Using custom Keystore from GitHub Secrets..."
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+            KEYSTORE_PASS="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}"
+            KEY_PASS="${{ secrets.ANDROID_KEY_PASSWORD }}"
+          else
+            echo "Generating automated Keystore..."
+            keytool -genkeypair -v -storetype PKCS12 \
+              -keystore android/app/release.keystore \
+              -alias afrocuisto-release \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass afrocuisto123 \
+              -keypass afrocuisto123 \
+              -dname "CN=AfroCuisto, OU=Mobile, O=AfroCuisto, L=Paris, S=IDF, C=FR"
+            KEYSTORE_PASS="afrocuisto123"
+            KEY_ALIAS="afrocuisto-release"
+            KEY_PASS="afrocuisto123"
+          fi
+
+          cat <<EOT >> android/gradle.properties
+          AFROCUISTO_RELEASE_STORE_FILE=release.keystore
+          AFROCUISTO_RELEASE_KEY_ALIAS=$KEY_ALIAS
+          AFROCUISTO_RELEASE_STORE_PASSWORD=$KEYSTORE_PASS
+          AFROCUISTO_RELEASE_KEY_PASSWORD=$KEY_PASS
+          EOT
+
+          node -e "
+            const fs = require('fs');
+            let gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+            
+            const releaseConfig = \`
+            release {
+                if (project.hasProperty('AFROCUISTO_RELEASE_STORE_FILE')) {
+                    storeFile file(AFROCUISTO_RELEASE_STORE_FILE)
+                    storePassword AFROCUISTO_RELEASE_STORE_PASSWORD
+                    keyAlias AFROCUISTO_RELEASE_KEY_ALIAS
+                    keyPassword AFROCUISTO_RELEASE_KEY_PASSWORD
+                    v1SigningEnabled true
+                    v2SigningEnabled true
+                }
+            }\`;
+            
+            gradle = gradle.replace(/signingConfigs\s*\{/, 'signingConfigs {' + releaseConfig);
+            gradle = gradle.replace(/signingConfig signingConfigs\.debug/g, 'signingConfig signingConfigs.release');
+            
+            fs.writeFileSync('android/app/build.gradle', gradle);
+          "
+
+      - name: 🔑 Set gradlew permissions
+        working-directory: afrocuisto-mobile
+        run: chmod +x android/gradlew
+
+      - name: ⚡ Build Standalone Android Release APK
+        working-directory: afrocuisto-mobile
+        run: |
+          cd android
+          ./gradlew assembleRelease \
+            --no-daemon \
+            --parallel \
+            --build-cache \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+UseParallelGC" \
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64
+
+      - name: 🏷️ Prepare & Rename APK Artifact
+        run: |
+          mkdir -p build-output
+          find afrocuisto-mobile/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} build-output/AfroCuisto-${{ env.TARGET_ENV }}-v${{ env.APP_VERSION }}-b${{ env.BUILD_NUMBER }}.apk \;
+          echo "Generated APK:"
+          ls -la build-output/
+
+      - name: 📤 Upload APK Artifact to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: AfroCuisto-${{ env.TARGET_ENV }}-v${{ env.APP_VERSION }}-b${{ env.BUILD_NUMBER }}
+          path: build-output/*.apk
+          retention-days: 14
+
+      - name: 🚀 Deploy to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          groups: ${{ env.TARGET_ENV == 'production' && 'production-testers' || 'beta-testers' }}
+          file: build-output/AfroCuisto-${{ env.TARGET_ENV }}-v${{ env.APP_VERSION }}-b${{ env.BUILD_NUMBER }}.apk
+          releaseNotes: |
+            🚀 AfroCuisto [${{ env.TARGET_ENV }}]
+            Version: ${{ env.APP_VERSION }} (Build #${{ env.BUILD_NUMBER }})
+            Commit: ${{ github.sha }}
+            Branche: ${{ github.ref_name }}
+            Date: ${{ github.event.head_commit.timestamp || 'N/A' }}
+            Message: ${{ github.event.head_commit.message || 'Build déclenché manuellement' }}
+

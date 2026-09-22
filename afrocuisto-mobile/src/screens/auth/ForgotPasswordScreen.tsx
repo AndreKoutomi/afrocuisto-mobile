@@ -17,8 +17,11 @@ import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { AuthButton } from '../../components/auth/AuthButton';
 
+import { useAuth } from '../../context/AuthContext';
+
 export const ForgotPasswordScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { sendPasswordReset } = useAuth();
   const { isDark } = useTheme();
 
   const [email, setEmail] = useState('');
@@ -42,12 +45,17 @@ export const ForgotPasswordScreen: React.FC = () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 600));
+      const res = await sendPasswordReset(email.trim());
+      if (!res.success) {
+        setError(res.error || 'Erreur lors de l’envoi de l’email.');
+        return;
+      }
       navigation.navigate('Otp', {
         email: email.trim(),
         fromReset: true,
       });
+    } catch (e: any) {
+      setError(e.message || 'Impossible d’envoyer le code.');
     } finally {
       setLoading(false);
     }

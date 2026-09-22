@@ -24,7 +24,7 @@ export const FavoritesScreen: React.FC = () => {
   const { isScreenLoading } = useNavigationTransition();
 
   const favoriteRecipes = recipes.filter(r => favorites.includes(r.id));
-  const showSkeleton = isScreenLoading('Favorites') || (isLoading && recipes.length === 0);
+  const showSkeleton = isLoading && recipes.length === 0;
 
   return (
     <SafeAreaView

@@ -22,6 +22,7 @@ import { CommunityScreen } from './src/screens/CommunityScreen';
 import { AiChefScreen } from './src/screens/AiChefScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { AnimationLabScreen } from './src/screens/AnimationLabScreen';
+import { CategoryRecipesScreen } from './src/screens/CategoryRecipesScreen';
 import { LoginScreen } from './src/screens/auth/LoginScreen';
 import { OtpScreen } from './src/screens/auth/OtpScreen';
 import { RegisterScreen } from './src/screens/auth/RegisterScreen';
@@ -29,6 +30,8 @@ import { ForgotPasswordScreen } from './src/screens/auth/ForgotPasswordScreen';
 import { ResetPasswordScreen } from './src/screens/auth/ResetPasswordScreen';
 import { ResetSuccessScreen } from './src/screens/auth/ResetSuccessScreen';
 import { OnboardingScreen } from './src/screens/auth/OnboardingScreen';
+import { StoryCreatorScreen } from './src/screens/StoryCreatorScreen';
+import { PostDetailScreen } from './src/screens/PostDetailScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -99,6 +102,9 @@ const RootNavigation: React.FC = () => {
         <Stack.Screen name="AiChef" component={AiChefScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="AnimationLab" component={AnimationLabScreen} />
+        <Stack.Screen name="CategoryRecipes" component={CategoryRecipesScreen} />
+        <Stack.Screen name="StoryCreator" component={StoryCreatorScreen} />
+        <Stack.Screen name="PostDetail" component={PostDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -106,6 +112,7 @@ const RootNavigation: React.FC = () => {
 
 import { NavigationTransitionProvider } from './src/context/NavigationTransitionContext';
 import { CookingTimerProvider } from './src/context/CookingTimerContext';
+import { CommunityProvider } from './src/context/CommunityContext';
 import { InteractiveTimerPill } from './src/components/common/InteractiveTimerPill';
 
 export default function App() {
@@ -116,12 +123,14 @@ export default function App() {
           <RecipeProvider>
             <ShoppingProvider>
               <CookingTimerProvider>
-                <NavigationTransitionProvider>
-                  <WebDeviceFrame>
-                    <RootNavigation />
-                    <InteractiveTimerPill />
-                  </WebDeviceFrame>
-                </NavigationTransitionProvider>
+                <CommunityProvider>
+                  <NavigationTransitionProvider>
+                    <WebDeviceFrame>
+                      <RootNavigation />
+                      <InteractiveTimerPill />
+                    </WebDeviceFrame>
+                  </NavigationTransitionProvider>
+                </CommunityProvider>
               </CookingTimerProvider>
             </ShoppingProvider>
           </RecipeProvider>

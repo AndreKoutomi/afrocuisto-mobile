@@ -11,16 +11,16 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
   interpolate,
-  runOnJS,
   Easing,
 } from 'react-native-reanimated';
 import { User, Bell, Search, Sparkles, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { AppColors } from '../../theme/colors';
+import { Recipe } from '../../types/recipe';
+import { SearchSuggestionsDropdown } from './SearchSuggestionsDropdown';
 
 interface HomeHeaderProps {
   onProfilePress: () => void;
@@ -28,9 +28,14 @@ interface HomeHeaderProps {
   searchQuery?: string;
   onSearchChange?: (text: string) => void;
   onSearchClear?: () => void;
+  isSearchOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
   onFocus?: () => void;
   onBlur?: () => void;
   onAiPress?: () => void;
+  onSelectRecipe?: (recipe: Recipe) => void;
+  onSelectAiSearch?: (query: string) => void;
+  onSelectCategory?: (category: string) => void;
 }
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
@@ -39,43 +44,66 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   searchQuery = '',
   onSearchChange,
   onSearchClear,
+  isSearchOpen,
+  onOpenChange,
   onFocus,
   onBlur,
   onAiPress,
+  onSelectRecipe,
+  onSelectAiSearch,
+  onSelectCategory,
 }) => {
   const { user } = useAuth();
   const { isDark } = useTheme();
 
-  const [isOpen, setIsOpen] = useState(searchQuery.length > 0);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  const searchProgress = useSharedValue(searchQuery.length > 0 ? 1 : 0);
+  // Use isSearchOpen prop directly (controlled by parent) instead of internal state
+  const isOpen = isSearchOpen ?? searchQuery.length > 0;
+
+  const searchProgress = useSharedValue(isOpen ? 1 : 0);
 
   const userName = user?.name ? user.name.split(' ')[0] : 'André';
 
-  // Synchronisation si searchQuery est modifié depuis l'extérieur
+  // Animate searchProgress when isOpen changes (controlled by parent)
+  useEffect(() => {
+    if (isOpen) {
+      searchProgress.value = withTiming(1, {
+        duration: 160,
+        easing: Easing.out(Easing.cubic),
+      });
+    } else {
+      searchProgress.value = withTiming(
+        0,
+        {
+          duration: 130,
+          easing: Easing.in(Easing.cubic),
+        }
+      );
+    }
+  }, [isOpen]);
+
+  // Synchronisation si searchQuery est modifié depuis l'extérieur (ouvrir la recherche si du texte)
   useEffect(() => {
     if (searchQuery.length > 0 && !isOpen) {
-      setIsOpen(true);
-      searchProgress.value = withSpring(1, {
-        damping: 24,
-        stiffness: 260,
-        mass: 0.8,
-      });
+      onOpenChange?.(true);
     }
-  }, [searchQuery]);
+  }, [searchQuery, isOpen, onOpenChange]);
 
   const handleOpenSearch = () => {
-    setIsOpen(true);
-    searchProgress.value = withSpring(1, {
-      damping: 24,
-      stiffness: 260,
-      mass: 0.8,
+    // 1. Déclencher l'animation UI thread immédiatement (0ms de latence)
+    searchProgress.value = withTiming(1, {
+      duration: 160,
+      easing: Easing.out(Easing.cubic),
     });
+    onOpenChange?.(true);
+
+    // 2. Sur Android, différer le focus du clavier après l'animation pour éviter le blocage synchrone du thread UI
+    const focusDelay = Platform.OS === 'android' ? 160 : 30;
     setTimeout(() => {
       inputRef.current?.focus();
-    }, 120);
+    }, focusDelay);
   };
 
   const handleCloseSearch = () => {
@@ -85,11 +113,11 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
     searchProgress.value = withTiming(
       0,
       {
-        duration: 220,
-        easing: Easing.inOut(Easing.ease),
+        duration: 130,
+        easing: Easing.in(Easing.cubic),
       },
       () => {
-        runOnJS(setIsOpen)(false);
+        onOpenChange?.(false);
       }
     );
   };
@@ -104,11 +132,11 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
     onBlur?.();
   };
 
-  // Styles animés pour le contenu normal du Header (Avatar, Salutation, Boutons)
+  // Styles animés synchronisés pour le contenu classique du Header
   const headerContentAnimatedStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(searchProgress.value, [0, 0.4, 1], [1, 0.2, 0]);
-    const translateX = interpolate(searchProgress.value, [0, 1], [0, -20]);
-    const scale = interpolate(searchProgress.value, [0, 1], [1, 0.94]);
+    const opacity = interpolate(searchProgress.value, [0, 0.5, 1], [1, 0.3, 0], 'clamp');
+    const translateX = interpolate(searchProgress.value, [0, 1], [0, -15], 'clamp');
+    const scale = interpolate(searchProgress.value, [0, 1], [1, 0.96], 'clamp');
 
     return {
       opacity,
@@ -116,15 +144,27 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
     };
   });
 
-  // Styles animés pour la barre de recherche dépliée
+  // Styles animés synchronisés pour la barre de recherche dépliée
   const searchBarAnimatedStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(searchProgress.value, [0, 0.3, 1], [0, 0.7, 1]);
-    const translateX = interpolate(searchProgress.value, [0, 1], [30, 0]);
-    const scale = interpolate(searchProgress.value, [0, 1], [0.92, 1]);
+    const opacity = interpolate(searchProgress.value, [0, 0.3, 1], [0, 0.7, 1], 'clamp');
+    const translateX = interpolate(searchProgress.value, [0, 1], [25, 0], 'clamp');
+    const scale = interpolate(searchProgress.value, [0, 1], [0.94, 1], 'clamp');
 
     return {
       opacity,
       transform: [{ translateX }, { scale }],
+    };
+  });
+
+  // Styles animés synchronisés pour le Dropdown Menu attaché
+  const dropdownAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(searchProgress.value, [0.2, 1], [0, 1], 'clamp');
+    const translateY = interpolate(searchProgress.value, [0.1, 1], [-12, 0], 'clamp');
+    const scale = interpolate(searchProgress.value, [0.1, 1], [0.96, 1], 'clamp');
+
+    return {
+      opacity,
+      transform: [{ translateY }, { scale }],
     };
   });
 
@@ -291,6 +331,35 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
           </TouchableOpacity>
         </Animated.View>
       </View>
+
+      {/* 3. Dropdown Menu de suggestions - TOUJOURS MONTÉ pour éviter les bugs de hooks lors de l'animation */}
+      <Animated.View
+        style={[
+          styles.dropdownAnchor,
+          dropdownAnimatedStyle,
+          // Cacher du layout quand fermé (opacity 0 + pointerEvents none)
+          { pointerEvents: isOpen ? 'auto' : 'none' },
+        ]}
+      >
+        <SearchSuggestionsDropdown
+          searchQuery={searchQuery}
+          onSelectRecipe={recipe => {
+            handleCloseSearch();
+            onSelectRecipe?.(recipe);
+          }}
+          onSelectAiSearch={query => {
+            handleCloseSearch();
+            onSelectAiSearch?.(query);
+          }}
+          onSelectCategory={category => {
+            handleCloseSearch();
+            onSelectCategory?.(category);
+          }}
+          onSelectSuggestionText={text => {
+            onSearchChange?.(text);
+          }}
+        />
+      </Animated.View>
     </View>
   );
 };
@@ -300,11 +369,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 10,
+    position: 'relative',
+    zIndex: 9999,
   },
   headerRowWrapper: {
     position: 'relative',
     height: 48,
     justifyContent: 'center',
+    zIndex: 9999,
+  },
+  dropdownAnchor: {
+    position: 'absolute',
+    top: 56,
+    left: 20,
+    right: 20,
+    zIndex: 99999,
   },
   topRow: {
     flexDirection: 'row',

@@ -103,15 +103,15 @@ export const FigmaRecipeCarousel: React.FC<FigmaRecipeCarouselProps> = ({ onSele
               <FavoriteIconButton
                 isFavorite={isFav}
                 onToggle={() => toggleFavorite(recipe.id)}
-                size={38}
-                iconSize={18}
+                size={28}
+                iconSize={14}
                 iconType="heart"
-                activeColor="#FFFFFF"
-                inactiveColor="#FFFFFF"
-                activeBgColor={AppColors.likeRed}
-                inactiveBgColor="rgba(0,0,0,0.35)"
+                activeColor={AppColors.likeRed}
+                inactiveColor="#E6E1E5"
+                inactiveBgColor="rgba(232, 222, 248, 0.2)"
+                activeBgColor="rgba(255, 83, 42, 0.25)"
                 showBorder
-                borderColor="rgba(255,255,255,0.30)"
+                borderColor="rgba(255, 255, 255, 0.30)"
               />
             </View>
           </View>

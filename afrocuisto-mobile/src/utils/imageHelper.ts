@@ -57,7 +57,15 @@ export const getImageSource = (imgPath: string | null | undefined): any => {
     return DEFAULT_FOOD_IMAGES[hash];
   }
 
-  if (imgPath.startsWith('http://') || imgPath.startsWith('https://')) {
+  if (
+    imgPath.startsWith('http://') ||
+    imgPath.startsWith('https://') ||
+    imgPath.startsWith('file://') ||
+    imgPath.startsWith('content://') ||
+    imgPath.startsWith('ph://') ||
+    imgPath.startsWith('data:') ||
+    imgPath.startsWith('blob:')
+  ) {
     return { uri: imgPath };
   }
 

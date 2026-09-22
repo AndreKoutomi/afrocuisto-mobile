@@ -13,11 +13,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.afrocuisto.mobile"
+      "bundleIdentifier": "com.afrocuisto.app"
     },
     "android": {
-      "package": "com.afrocuisto.mobile",
+      "package": "com.afrocuisto.app",
       "versionCode": 1,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#121110"

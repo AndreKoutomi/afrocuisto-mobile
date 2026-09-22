@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Keyboard } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Keyboard } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -111,40 +118,42 @@ const AnimatedTabItem: React.FC<{
   isDark: boolean;
   totalCount: number;
   onPress: () => void;
-}> = ({ tab, isFocused, isDark, totalCount, onPress }) => {
-  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+}> = React.memo(({ tab, isFocused, isDark, totalCount, onPress }) => {
+  const scale = useSharedValue(1);
 
   React.useEffect(() => {
     if (isFocused) {
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 0.90,
-          duration: 70,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 5,
-          tension: 280,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-      ]).start();
+      // Bounce rapide entièrement sur UI Thread — 0ms latence sur Android
+      scale.value = withTiming(0.88, {
+        duration: 55,
+        easing: Easing.in(Easing.cubic),
+      }, () => {
+        scale.value = withSpring(1, {
+          damping: 14,
+          stiffness: 420,
+          mass: 0.3,
+        });
+      });
     }
   }, [isFocused]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const iconColor = isFocused ? '#FFFFFF' : (isDark ? '#8C8A87' : '#79747E');
 
   return (
     <TouchableOpacity
       style={styles.tabItem}
-      activeOpacity={isFocused ? 1 : 0.75}
+      activeOpacity={isFocused ? 1 : 0.7}
       onPress={isFocused ? undefined : onPress}
     >
       <Animated.View
         style={[
           styles.iconWrapper,
           isFocused && styles.activePill,
-          { transform: [{ scale: scaleAnim }] },
+          animatedStyle,
         ]}
       >
         <tab.Icon color={iconColor} size={22} />
@@ -178,7 +187,7 @@ const AnimatedTabItem: React.FC<{
       </Text>
     </TouchableOpacity>
   );
-};
+});
 
 export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
   state,
@@ -188,7 +197,6 @@ export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const { totalCount } = useShopping();
-  const { triggerScreenLoading } = useNavigationTransition();
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 20);
@@ -243,6 +251,23 @@ export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
   const tabBarStyle = focusedOptions?.tabBarStyle as any;
   const isTabBarHiddenByOption = tabBarStyle?.display === 'none' || (Array.isArray(tabBarStyle) && tabBarStyle.some((s: any) => s?.display === 'none'));
 
+  const handleTabPress = useCallback(
+    (tabName: string, index: number, isFocused: boolean) => {
+      if (isFocused) return;
+
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: state.routes[index]?.key || tabName,
+        canPreventDefault: true,
+      });
+
+      if (!event.defaultPrevented) {
+        navigation.navigate(tabName);
+      }
+    },
+    [navigation, state.routes]
+  );
+
   // Masquer la barre si le clavier est actif ou si l'écran le demande explicitement
   if (
     isKeyboardVisible ||
@@ -274,23 +299,6 @@ export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
       {tabs.map((tab, index) => {
         const isFocused = state.index === index;
 
-        const onPress = () => {
-          if (isFocused) {
-            return;
-          }
-
-          triggerScreenLoading(tab.name);
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: state.routes[index]?.key || tab.name,
-            canPreventDefault: true,
-          });
-
-          if (!event.defaultPrevented) {
-            navigation.navigate(tab.name);
-          }
-        };
-
         return (
           <AnimatedTabItem
             key={tab.name}
@@ -298,7 +306,7 @@ export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
             isFocused={isFocused}
             isDark={isDark}
             totalCount={totalCount}
-            onPress={onPress}
+            onPress={() => handleTabPress(tab.name, index, isFocused)}
           />
         );
       })}

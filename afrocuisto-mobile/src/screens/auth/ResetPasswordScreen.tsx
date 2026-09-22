@@ -16,9 +16,12 @@ import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { AuthButton } from '../../components/auth/AuthButton';
 
+import { useAuth } from '../../context/AuthContext';
+
 export const ResetPasswordScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const { updatePassword } = useAuth();
   const { isDark } = useTheme();
 
   const userEmail = route.params?.email || 'andre@afrocuisto.app';
@@ -51,9 +54,14 @@ export const ResetPasswordScreen: React.FC = () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      // Simulate password update
-      await new Promise(resolve => setTimeout(resolve, 700));
+      const res = await updatePassword(password);
+      if (!res.success) {
+        setErrors({ password: res.error || 'Erreur lors du changement de mot de passe.' });
+        return;
+      }
       navigation.navigate('ResetSuccess', { email: userEmail });
+    } catch (e: any) {
+      setErrors({ password: e.message || 'Impossible de mettre à jour le mot de passe.' });
     } finally {
       setLoading(false);
     }

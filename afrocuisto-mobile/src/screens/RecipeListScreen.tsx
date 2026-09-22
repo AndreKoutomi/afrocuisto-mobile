@@ -10,7 +10,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import {
-  ChevronLeft,
   Search,
   X,
   Flame,
@@ -36,6 +35,7 @@ const CATEGORY_FILTERS = [
   { id: 'pates', label: 'Wɔ̌ & Céréales', icon: '🌽', category: 'Pâtes et Céréales (Wɔ̌)' },
   { id: 'street', label: 'Street Food', icon: '🍢', category: 'Street Food & Snacks (Amuse-bouche)' },
   { id: 'resistance', label: 'Grands Plats', icon: '🥘', category: 'Plats de Résistance & Ragoûts' },
+  { id: 'poissons', label: 'Poissons & Mer', icon: '🐟', category: 'Poissons & Fruits de mer' },
   { id: 'drinks', label: 'Boissons & Jus', icon: '🍹', category: 'Boissons & Douceurs' },
 ];
 
@@ -50,9 +50,9 @@ export const RecipeListScreen: React.FC = () => {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'default' | 'rating' | 'quick'>('default');
 
-  const showSkeleton = isScreenLoading('Recipes') || (isLoading && recipes.length === 0);
+  const showSkeleton = isLoading && recipes.length === 0;
 
-  // Focus automatique du champ de recherche quand on vient de la Home (param autoFocusSearch)
+  // Focus automatique du champ de recherche ou sélection de catégorie quand on vient de la Home
   const route = useRoute<any>();
   const searchInputRef = useRef<TextInput>(null);
 
@@ -60,11 +60,14 @@ export const RecipeListScreen: React.FC = () => {
     useCallback(() => {
       if (route.params?.autoFocusSearch) {
         const timer = setTimeout(() => searchInputRef.current?.focus(), 300);
-        // Consommer le paramètre pour ne pas refocaliser à chaque retour sur l'écran
         navigation.setParams({ autoFocusSearch: undefined });
         return () => clearTimeout(timer);
       }
-    }, [route.params?.autoFocusSearch, navigation])
+      if (route.params?.category) {
+        setActiveCategory(route.params.category);
+        navigation.setParams({ category: undefined });
+      }
+    }, [route.params?.autoFocusSearch, route.params?.category, navigation])
   );
 
   // Extract unique regions dynamically
@@ -162,29 +165,8 @@ export const RecipeListScreen: React.FC = () => {
       ]}
     >
       <AnimatedScreenWrapper>
-        {/* 1. Header Page Title with Back Button */}
+        {/* 1. Header Page Title */}
       <View style={styles.header}>
-        {navigation.canGoBack() && (
-          <TouchableOpacity
-            style={[
-              styles.backButton,
-              {
-                backgroundColor: isDark ? '#211F1D' : '#FFFFFF',
-                borderColor: isDark ? '#2E2C29' : '#E8E4DC',
-              },
-            ]}
-            activeOpacity={0.7}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel="Retour"
-            accessibilityRole="button"
-          >
-            <ChevronLeft
-              size={22}
-              color={isDark ? '#FFFFFF' : AppColors.textPrimary}
-              strokeWidth={2.4}
-            />
-          </TouchableOpacity>
-        )}
         <View style={styles.headerTitleGroup}>
           <Text
             style={[
@@ -529,19 +511,6 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 8,
     gap: 12,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
   },
   headerTitleGroup: {
     flex: 1,

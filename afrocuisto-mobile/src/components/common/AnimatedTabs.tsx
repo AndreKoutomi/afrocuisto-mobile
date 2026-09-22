@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -90,7 +90,7 @@ export const AnimatedTabs: React.FC<AnimatedTabsProps> = ({
       )}
 
       {/* Tab Triggers */}
-      {tabs.map((tab, idx) => {
+      {tabs.map((tab) => {
         const isActive = tab.key === activeTab;
         const countText = tab.count !== undefined ? ` (${tab.count})` : '';
 
@@ -148,7 +148,9 @@ export const AnimatedTabContent: React.FC<AnimatedTabContentProps> = ({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(8)).current;
 
-  useEffect(() => {
+  // Use useLayoutEffect to reset animations BEFORE the browser paints
+  // This prevents the visual glitch/flash when switching tabs
+  useLayoutEffect(() => {
     fadeAnim.setValue(0);
     slideAnim.setValue(8);
 
@@ -168,14 +170,16 @@ export const AnimatedTabContent: React.FC<AnimatedTabContentProps> = ({
   }, [tabKey]);
 
   return (
-    <Animated.View
-      style={{
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }],
-      }}
-    >
-      {children}
-    </Animated.View>
+    <View style={{ overflow: 'hidden' }}>
+      <Animated.View
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        }}
+      >
+        {children}
+      </Animated.View>
+    </View>
   );
 };
 

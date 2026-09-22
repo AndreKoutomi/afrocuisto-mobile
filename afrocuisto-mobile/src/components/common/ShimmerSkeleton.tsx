@@ -1,5 +1,13 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, DimensionValue, ViewStyle, StyleProp, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, DimensionValue, ViewStyle, StyleProp } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
 
 interface ShimmerSkeletonProps {
@@ -16,27 +24,24 @@ export const ShimmerSkeleton: React.FC<ShimmerSkeletonProps> = ({
   style,
 }) => {
   const { isDark } = useTheme();
-  const opacityAnim = useRef(new Animated.Value(0.4)).current;
+  const opacity = useSharedValue(0.35);
 
   useEffect(() => {
-    const isWeb = Platform.OS === 'web';
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacityAnim, {
-          toValue: 0.90,
-          duration: 240,
-          useNativeDriver: !isWeb,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0.35,
-          duration: 240,
-          useNativeDriver: !isWeb,
-        }),
-      ])
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.85, { duration: 850, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.35, { duration: 850, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true // true pour inverser (reverse) de manière fluide au lieu de false
     );
-    animation.start();
-    return () => animation.stop();
   }, []);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value,
+    };
+  });
 
   return (
     <Animated.View
@@ -47,8 +52,8 @@ export const ShimmerSkeleton: React.FC<ShimmerSkeletonProps> = ({
           height,
           borderRadius,
           backgroundColor: isDark ? '#332F2B' : '#E8E5DF',
-          opacity: opacityAnim,
         },
+        animatedStyle,
         style,
       ]}
     />

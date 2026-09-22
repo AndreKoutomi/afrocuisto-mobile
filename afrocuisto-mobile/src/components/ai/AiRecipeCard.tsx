@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import {
   Clock,
   Flame,
   CheckCircle2,
   ShoppingCart,
-  Bookmark,
   Star,
-  ChefHat,
   Sparkles,
   Utensils,
-  Plus,
   Check,
+  Timer,
+  Volume2,
+  VolumeX,
+  GlassWater,
   Share2,
 } from 'lucide-react-native';
 import { AiChefRecipeResult } from '../../types/aiChef';
@@ -20,18 +21,28 @@ import { useRecipes } from '../../context/RecipeContext';
 import { useShopping } from '../../context/ShoppingContext';
 import { AppColors } from '../../theme/colors';
 import { Recipe } from '../../types/recipe';
+import { cookingTimerService } from '../../services/cookingTimerService';
+import { expressiveVoiceService } from '../../services/expressiveVoiceService';
 
 interface AiRecipeCardProps {
   recipe: AiChefRecipeResult;
+  onSpeak?: (text: string) => void;
+  onAskVariation?: (recipe: AiChefRecipeResult) => void;
 }
 
-export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({ recipe }) => {
+export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({
+  recipe,
+  onSpeak,
+  onAskVariation,
+}) => {
   const { isDark } = useTheme();
   const { isFavorite, toggleFavorite } = useRecipes();
   const { addIngredients } = useShopping();
 
   const isSaved = isFavorite(recipe.id);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [timerStarted, setTimerStarted] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const getDifficultyColor = (diff: string) => {
     switch (diff) {
@@ -51,7 +62,6 @@ export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({ recipe }) => {
   const handleAddMissingToCart = async () => {
     if (addedToCart || recipe.missingIngredients.length === 0) return;
 
-    // Convert to Recipe format expected by ShoppingContext
     const minimalRecipe: Recipe = {
       id: recipe.id,
       name: recipe.dishName,
@@ -73,6 +83,54 @@ export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({ recipe }) => {
     setTimeout(() => {
       setAddedToCart(false);
     }, 3500);
+  };
+
+  // Lancer le minuteur de cuisson avec cookingTimerService
+  const handleStartTimer = async () => {
+    try {
+      // Extraire le nombre de minutes depuis cookTime ou totalTime
+      const rawTime = recipe.cookTime || recipe.totalTime;
+      const numMatch = rawTime.match(/\d+/);
+      const minutes = numMatch ? parseInt(numMatch[0], 10) : 25;
+      const durationSeconds = minutes * 60;
+
+      await cookingTimerService.startTimer({
+        durationSeconds,
+        recipeName: recipe.dishName,
+        recipeId: recipe.id,
+        currentStepIndex: 0,
+        totalSteps: recipe.steps.length,
+      });
+
+      setTimerStarted(true);
+      if (Platform.OS !== 'web') {
+        Alert.alert('⏱️ Minuteur Démarré', `Minuteur de cuisson réglé sur ${minutes} minutes.`);
+      }
+      setTimeout(() => {
+        setTimerStarted(false);
+      }, 5000);
+    } catch (e) {
+      console.error('Erreur démarrage minuteur:', e);
+    }
+  };
+
+  // Lecture audio expressive de la recette (Voix Gemini Live / Naturelle)
+  const handleReadRecipe = () => {
+    if (isSpeaking) {
+      expressiveVoiceService.stop();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const stepsText = recipe.steps.map((s, idx) => `Étape ${idx + 1} : ${s}`).join('. ');
+    const chefNarration = `Ah, voici une excellente recette du terroir pour vous régaler : ${recipe.dishName}, spécialité de ${recipe.region} ! Temps de préparation : ${recipe.totalTime}. ${stepsText}. Et pour finir, mon astuce de chef : ${recipe.chefTip || 'Cuisinez avec passion et régalez-vous !'}`;
+
+    expressiveVoiceService.speak({
+      text: chefNarration,
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
   };
 
   return (
@@ -135,19 +193,49 @@ export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({ recipe }) => {
         </View>
       </View>
 
-      {/* 2. Main Title */}
+      {/* 2. Main Title & Quick Audio button */}
       <View style={styles.titleSection}>
-        <Text
+        <View style={{ flex: 1 }}>
+          <Text
+            style={[
+              styles.dishTitle,
+              { color: isDark ? AppColors.textDarkPrimary : AppColors.textPrimary },
+            ]}
+          >
+            {recipe.dishName}
+          </Text>
+          {recipe.category && (
+            <Text style={styles.categorySub}>{recipe.category}</Text>
+          )}
+        </View>
+
+        <TouchableOpacity
           style={[
-            styles.dishTitle,
-            { color: isDark ? AppColors.textDarkPrimary : AppColors.textPrimary },
+            styles.voicePillBtn,
+            isSpeaking && styles.voicePillBtnActive,
+            {
+              backgroundColor: isDark
+                ? isSpeaking ? AppColors.primary : 'rgba(255,255,255,0.08)'
+                : isSpeaking ? AppColors.primary : '#F5F3EF',
+            },
           ]}
+          onPress={handleReadRecipe}
+          accessibilityLabel="Écouter la recette"
         >
-          {recipe.dishName}
-        </Text>
-        {recipe.category && (
-          <Text style={styles.categorySub}>{recipe.category}</Text>
-        )}
+          {isSpeaking ? (
+            <VolumeX size={14} color="#FFFFFF" strokeWidth={2.5} />
+          ) : (
+            <Volume2 size={14} color={AppColors.primary} strokeWidth={2.5} />
+          )}
+          <Text
+            style={[
+              styles.voicePillText,
+              { color: isSpeaking ? '#FFFFFF' : AppColors.primary },
+            ]}
+          >
+            {isSpeaking ? 'Stop' : 'Écouter'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* 3. Section Ingrédients: Utilisés ✅ vs Manquants / Placard 🛒 */}
@@ -317,6 +405,30 @@ export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({ recipe }) => {
         </View>
       )}
 
+      {/* 5b. Accord Boisson Locale */}
+      {recipe.wineOrDrinkPairing && (
+        <View
+          style={[
+            styles.drinkPairingBox,
+            {
+              backgroundColor: isDark ? 'rgba(234, 88, 12, 0.10)' : '#FFF7ED',
+              borderColor: isDark ? 'rgba(234, 88, 12, 0.28)' : '#FFEDD5',
+            },
+          ]}
+        >
+          <GlassWater size={14} color="#EA580C" />
+          <Text
+            style={[
+              styles.drinkPairingText,
+              { color: isDark ? '#FED7AA' : '#9A3412' },
+            ]}
+          >
+            <Text style={{ fontWeight: '700' }}>Accord Boisson du Terroir : </Text>
+            {recipe.wineOrDrinkPairing}
+          </Text>
+        </View>
+      )}
+
       {/* 6. Astuce du Chef */}
       {recipe.chefTip && (
         <View
@@ -343,8 +455,48 @@ export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({ recipe }) => {
         </View>
       )}
 
-      {/* 7. Deux Boutons d'Action au Bas de la Carte */}
+      {/* 7. Barre d'Actions Intelligentes (Minuteur, Sauvegarde, Panier) */}
       <View style={styles.actionsFooter}>
+        {/* Minuteur */}
+        <TouchableOpacity
+          style={[
+            styles.actionBtn,
+            styles.timerBtn,
+            timerStarted && styles.timerBtnActive,
+            {
+              borderColor: timerStarted
+                ? '#16A34A'
+                : isDark
+                ? AppColors.borderDark
+                : '#E2DFD8',
+            },
+          ]}
+          activeOpacity={0.82}
+          onPress={handleStartTimer}
+        >
+          <Timer
+            size={15}
+            color={timerStarted ? '#16A34A' : AppColors.primary}
+            strokeWidth={2.4}
+          />
+          <Text
+            style={[
+              styles.actionBtnText,
+              {
+                color: timerStarted
+                  ? '#16A34A'
+                  : isDark
+                  ? '#F0EDE6'
+                  : AppColors.textPrimary,
+                fontWeight: timerStarted ? '800' : '600',
+              },
+            ]}
+          >
+            {timerStarted ? 'Chrono lancé !' : 'Minuteur'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Sauvegarder */}
         <TouchableOpacity
           style={[
             styles.actionBtn,
@@ -362,7 +514,7 @@ export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({ recipe }) => {
           onPress={handleSaveRecipe}
         >
           <Star
-            size={16}
+            size={15}
             color={isSaved ? AppColors.starGold : isDark ? '#D6D3CD' : '#4A4846'}
             fill={isSaved ? AppColors.starGold : 'none'}
           />
@@ -383,6 +535,7 @@ export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({ recipe }) => {
           </Text>
         </TouchableOpacity>
 
+        {/* Panier */}
         <TouchableOpacity
           style={[
             styles.actionBtn,
@@ -394,13 +547,13 @@ export const AiRecipeCard: React.FC<AiRecipeCardProps> = ({ recipe }) => {
         >
           {addedToCart ? (
             <>
-              <Check size={16} color="#FFFFFF" strokeWidth={2.8} />
+              <Check size={15} color="#FFFFFF" strokeWidth={2.8} />
               <Text style={styles.cartBtnText}>Ajouté !</Text>
             </>
           ) : (
             <>
-              <ShoppingCart size={16} color="#FFFFFF" strokeWidth={2.2} />
-              <Text style={styles.cartBtnText}>Ajouter manquants</Text>
+              <ShoppingCart size={15} color="#FFFFFF" strokeWidth={2.2} />
+              <Text style={styles.cartBtnText}>Courses</Text>
             </>
           )}
         </TouchableOpacity>
@@ -449,7 +602,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 9,
-    paddingVertical: 4.5,
+    paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
   },
@@ -458,44 +611,67 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   regionBadge: {
-    backgroundColor: 'rgba(0,0,0,0.04)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.04)',
   },
   regionText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8C8A87',
+    color: '#73706B',
   },
   titleSection: {
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   dishTitle: {
-    fontSize: 18,
+    fontSize: 16.5,
     fontWeight: '900',
-    letterSpacing: -0.4,
-    lineHeight: 23,
+    letterSpacing: -0.3,
+    lineHeight: 22,
   },
   categorySub: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#8C8A87',
+    color: AppColors.primary,
+    marginTop: 2,
+  },
+  voicePillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    alignSelf: 'flex-start',
+  },
+  voicePillBtnActive: {
+    shadowColor: AppColors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  voicePillText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  ingredientsSection: {
+    gap: 6,
   },
   sectionHeader: {
     fontSize: 10.5,
-    fontWeight: '900',
+    fontWeight: '800',
     letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  ingredientsSection: {
-    gap: 4,
   },
   ingredientsContainer: {
     gap: 6,
   },
   ingredientGroup: {
-    gap: 6,
+    gap: 5,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -577,6 +753,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#D97706',
   },
+  drinkPairingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  drinkPairingText: {
+    flex: 1,
+    fontSize: 11.5,
+    lineHeight: 16,
+    fontWeight: '500',
+  },
   tipBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -593,17 +783,24 @@ const styles = StyleSheet.create({
   actionsFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 2,
+    gap: 8,
+    marginTop: 4,
   },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 14,
-    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 13,
+    gap: 5,
+  },
+  timerBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.2,
+  },
+  timerBtnActive: {
+    backgroundColor: 'rgba(22, 163, 74, 0.08)',
   },
   saveBtn: {
     backgroundColor: 'transparent',
@@ -613,7 +810,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(251, 86, 7, 0.08)',
   },
   actionBtnText: {
-    fontSize: 12.5,
+    fontSize: 11.5,
   },
   cartBtn: {
     backgroundColor: AppColors.primary,
@@ -629,7 +826,7 @@ const styles = StyleSheet.create({
   },
   cartBtnText: {
     color: '#FFFFFF',
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: '800',
   },
 });

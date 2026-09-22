@@ -19,7 +19,7 @@ export const NavigationTransitionProvider: React.FC<{ children: React.ReactNode 
     setLoadingScreen(screenName);
     timeoutRef.current = setTimeout(() => {
       setLoadingScreen(null);
-    }, 40);
+    }, 20);
   }, []);
 
   const isScreenLoading = useCallback((screenName: string) => {

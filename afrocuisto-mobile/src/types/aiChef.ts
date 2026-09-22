@@ -18,6 +18,7 @@ export interface AiChefRecipeResult {
   steps: string[];
   suggestedSides: string[];
   chefTip?: string;
+  wineOrDrinkPairing?: string;
 }
 
 export interface AiChefMessage {
@@ -27,4 +28,7 @@ export interface AiChefMessage {
   recipe?: AiChefRecipeResult;
   isGuardrail?: boolean;
   timestamp?: number;
+  quickSuggestions?: string[];
+  reactionEmoji?: string;
+  audioSpoken?: boolean;
 }
