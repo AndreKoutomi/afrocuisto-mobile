@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { Recipe } from '../types/recipe';
 import { RecipeService } from '../services/recipeService';
 import { StorageService } from '../services/storage';
-import { getRecipeDurationInfo } from '../utils/durationHelper';
+// Helper de calcul et fiabilisation des durées
+import { getRecipeDurationInfo } from '../utils/recipeScaling';
 
 interface RecipeContextType {
   recipes: Recipe[];

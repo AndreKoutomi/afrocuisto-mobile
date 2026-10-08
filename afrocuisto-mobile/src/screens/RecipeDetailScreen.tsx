@@ -58,12 +58,11 @@ import { AnimatedTabs, AnimatedTabContent } from '../components/common/AnimatedT
 import { FavoriteIconButton } from '../components/common/FavoriteIconButton';
 import { RecipeDetailSkeleton } from '../components/common/Skeletons';
 import { CookModeModal } from '../components/recipe/CookModeModal';
-import { scaleQuantity, getNutritionEstimate, getDrinkPairing } from '../utils/recipeScaling';
+import { scaleQuantity, getNutritionEstimate, getDrinkPairing, getRecipeDurationInfo } from '../utils/recipeScaling';
 import { useCookingTimer } from '../context/CookingTimerContext';
 import { MorphIcon, Play as LucidePlay, Pause as LucidePause } from '../components/common/MorphIcon';
 import { GlowEffect } from '../components/core/glow-effect';
 import { RecipeVideoSection } from '../components/recipe/RecipeVideoSection';
-import { getRecipeDurationInfo } from '../utils/durationHelper';
 import { RelatedDishesSection } from '../components/recipe/RelatedDishesSection';
 import { CookingPotAnimatedIcon } from '../components/common/CookingPotAnimatedIcon';
 

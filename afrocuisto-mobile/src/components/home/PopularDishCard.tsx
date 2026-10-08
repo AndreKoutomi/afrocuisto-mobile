@@ -7,7 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { AppColors } from '../../theme/colors';
 import { getImageSource } from '../../utils/imageHelper';
 import { FavoriteIconButton } from '../common/FavoriteIconButton';
-import { getRecipeDurationInfo } from '../../utils/durationHelper';
+import { getRecipeDurationInfo } from '../../utils/recipeScaling';
 
 interface PopularDishCardProps {
   recipe: Recipe;

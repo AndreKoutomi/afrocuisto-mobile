@@ -26,7 +26,7 @@ import { RecipeCardSkeleton, RecipeGridSkeleton } from '../components/common/Ske
 import { AnimatedScreenWrapper } from '../components/common/AnimatedScreenWrapper';
 import { useNavigationTransition } from '../context/NavigationTransitionContext';
 import { Recipe } from '../types/recipe';
-import { getRecipeDurationInfo } from '../utils/durationHelper';
+import { getRecipeDurationInfo } from '../utils/recipeScaling';
 
 const CATEGORY_FILTERS = [
   { id: 'all', label: 'Toutes', icon: '🍽️' },

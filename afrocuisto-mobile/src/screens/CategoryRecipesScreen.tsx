@@ -27,7 +27,7 @@ import { AppColors } from '../theme/colors';
 import { PopularDishCard } from '../components/home/PopularDishCard';
 import { AnimatedScreenWrapper } from '../components/common/AnimatedScreenWrapper';
 import { RecipeCardSkeleton } from '../components/common/Skeletons';
-import { getRecipeDurationInfo } from '../utils/durationHelper';
+import { getRecipeDurationInfo } from '../utils/recipeScaling';
 
 const DISH_CATEGORIES = [
   {
