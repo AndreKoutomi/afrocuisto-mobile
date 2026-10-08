@@ -123,8 +123,12 @@ export const CategoryRecipesScreen: React.FC = () => {
   const { recipes, isLoading } = useRecipes();
   const { isDark } = useTheme();
 
-  const categoryId = route.params?.category as string;
-  const category = DISH_CATEGORIES.find(c => c.id === categoryId);
+  const categoryParam = route.params?.category;
+  const rawId = (
+    typeof categoryParam === 'string'
+      ? categoryParam
+      : categoryParam?.id || ''
+  ).toLowerCase().trim();
 
   // Forçage du skeleton de chargement à 1.5 secondes sur la navigation
   const [isForcedLoading, setIsForcedLoading] = useState(true);
@@ -139,37 +143,76 @@ export const CategoryRecipesScreen: React.FC = () => {
 
   const showSkeleton = isForcedLoading || (isLoading && recipes.length === 0);
 
+  // Résolution robuste de la catégorie sélectionnée (support des alias express, quick, etc.)
+  const activeCategory = useMemo(() => {
+    // 1. Recherche par identifiant exact
+    const exact = DISH_CATEGORIES.find(c => c.id.toLowerCase() === rawId);
+    if (exact) return exact;
+
+    // 2. Recherche par alias rapide / express / 30 min
+    if (
+      rawId === 'express' ||
+      rawId === 'quick' ||
+      rawId === 'quick_express' ||
+      rawId.includes('express') ||
+      rawId.includes('rapide') ||
+      rawId.includes('30 min') ||
+      rawId.includes('30min') ||
+      rawId.includes('< 30') ||
+      rawId.includes('30')
+    ) {
+      return DISH_CATEGORIES.find(c => c.isQuick) || DISH_CATEGORIES[0];
+    }
+
+    // 3. Recherche par nom ou filtre
+    if (rawId) {
+      const match = DISH_CATEGORIES.find(c => {
+        const name = c.name.toLowerCase();
+        const short = c.shortName.toLowerCase();
+        const filter = (c.categoryFilter || '').toLowerCase();
+        return (
+          name.includes(rawId) ||
+          rawId.includes(name) ||
+          short.includes(rawId) ||
+          rawId.includes(short) ||
+          (filter && (filter.includes(rawId) || rawId.includes(filter)))
+        );
+      });
+      if (match) return match;
+    }
+
+    // 4. Catégorie par défaut (jamais d'écran blanc ni de null)
+    return DISH_CATEGORIES.find(c => c.isQuick) || DISH_CATEGORIES[0];
+  }, [rawId]);
+
   const filteredRecipes = useMemo(() => {
-    if (!category) return [];
-    if (category.isQuick) {
+    if (activeCategory.isQuick) {
       return recipes.filter(r => {
         const { totalMinutes } = getRecipeDurationInfo(r.prepTime, r.cookTime);
         return totalMinutes > 0 && totalMinutes <= 30;
       });
-    } else if (category.categoryFilter) {
+    } else if (activeCategory.categoryFilter) {
       return recipes.filter(r => {
         const rCat = (r.category || '').toLowerCase();
-        const target = category.categoryFilter!.toLowerCase();
+        const target = activeCategory.categoryFilter!.toLowerCase();
         const rName = (r.name || '').toLowerCase();
         return (
           rCat.includes(target) ||
           target.includes(rCat) ||
-          (category.id === 'poissons' &&
+          (activeCategory.id === 'poissons' &&
             (rName.includes('poisson') || rName.includes('crabe') || rName.includes('crevette')))
         );
       });
     }
     return [];
-  }, [recipes, category]);
+  }, [recipes, activeCategory]);
 
   const handleRecipePress = useCallback((recipe: Recipe) => {
     navigation.navigate('RecipeDetail', { recipe });
   }, [navigation]);
 
-  if (!category) return null;
-
-  const IconComponent = category.icon;
-  const gradient = isDark ? category.gradientDark : category.gradientLight;
+  const IconComponent = activeCategory.icon;
+  const gradient = isDark ? activeCategory.gradientDark : activeCategory.gradientLight;
 
   return (
     <View
@@ -236,7 +279,7 @@ export const CategoryRecipesScreen: React.FC = () => {
                     },
                   ]}
                 >
-                  <IconComponent size={28} color={category.iconColor} strokeWidth={2.2} />
+                  <IconComponent size={28} color={activeCategory.iconColor} strokeWidth={2.2} />
                 </View>
                 <View style={styles.categoryTextGroup}>
                   <Text
@@ -245,7 +288,7 @@ export const CategoryRecipesScreen: React.FC = () => {
                       { color: isDark ? '#FFFFFF' : '#1C1917' },
                     ]}
                   >
-                    {category.name}
+                    {activeCategory.name}
                   </Text>
                   <Text
                     style={[
@@ -287,7 +330,7 @@ export const CategoryRecipesScreen: React.FC = () => {
                     { color: isDark ? '#A8A29E' : '#73706B' },
                   ]}
                 >
-                  Revenez plus tard pour découvrir de nouvelles spécialités {category.name.toLowerCase()}.
+                  Revenez plus tard pour découvrir de nouvelles spécialités {activeCategory.name.toLowerCase()}.
                 </Text>
               </View>
             ) : (

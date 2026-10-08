@@ -88,9 +88,10 @@ export const HomeScreen: React.FC = () => {
           onSelectAiSearch={query =>
             navigation.navigate('AiChef', { initialIngredient: query })
           }
-          onSelectCategory={(category: any) =>
-            navigation.navigate('CategoryRecipes', { category: typeof category === 'string' ? category : category?.id })
-          }
+          onSelectCategory={(category: any) => {
+            const catId = typeof category === 'string' ? category : category?.id || 'quick';
+            navigation.navigate('CategoryRecipes', { category: catId });
+          }}
         />
 
         {/* 2. Backdrop pour fermer la recherche au clic extérieur sans activer les éléments en arrière-plan */}

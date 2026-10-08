@@ -96,7 +96,7 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
         badge: 'Rapide',
         tag: 'Filtre',
         type: 'category',
-        data: 'express',
+        data: 'quick',
       },
       {
         id: 'popular_amiwo',
@@ -161,6 +161,26 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
       type: 'ai',
       data: debouncedQuery.trim(),
     });
+
+    // 1b. Raccourci Plats Express si la recherche évoque la rapidité
+    if (
+      q.includes('express') ||
+      q.includes('rapid') ||
+      q.includes('30 min') ||
+      q.includes('30min') ||
+      q.includes('vite')
+    ) {
+      items.push({
+        id: 'quick_express_search',
+        label: 'Plats Express (< 30 min)',
+        description: 'Toutes les recettes prêtes en moins de 30 minutes',
+        icon: <Zap size={16} color="#EAB308" />,
+        badge: 'Rapide',
+        tag: 'Filtre',
+        type: 'category',
+        data: 'quick',
+      });
+    }
 
     // 2. Recherche parmi les recettes réelles
     const matchingRecipes = recipes.filter(
