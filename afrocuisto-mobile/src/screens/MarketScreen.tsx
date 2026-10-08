@@ -7,8 +7,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
-import { Trash2, ShoppingBag } from 'lucide-react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Trash2, ShoppingBag, ChefHat } from 'lucide-react-native';
 import { useShopping } from '../context/ShoppingContext';
 import { useTheme } from '../context/ThemeContext';
 import { AppColors } from '../theme/colors';
@@ -18,11 +18,12 @@ import { AnimatedScreenWrapper } from '../components/common/AnimatedScreenWrappe
 import { useNavigationTransition } from '../context/NavigationTransitionContext';
 
 export const MarketScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { items, toggleItem, removeItem, clearCompleted, totalCount } = useShopping();
   const { isDark } = useTheme();
   const { isScreenLoading } = useNavigationTransition();
 
-  const showSkeleton = false;
+  const showSkeleton = isScreenLoading('Market');
 
   return (
     <SafeAreaView
@@ -60,7 +61,9 @@ export const MarketScreen: React.FC = () => {
         <MarketScreenSkeleton />
       ) : items.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <ShoppingBag size={48} color="#8C8A87" />
+          <View style={styles.emptyIconCircle}>
+            <ShoppingBag size={42} color="#8C8A87" />
+          </View>
           <Text
             style={[
               styles.emptyTitle,
@@ -70,8 +73,16 @@ export const MarketScreen: React.FC = () => {
             Votre panier est vide
           </Text>
           <Text style={styles.emptyDesc}>
-            Ajoutez des ingrédients directement depuis les fiches de recettes pour préparer vos courses.
+            Ajoutez des ingrédients directement depuis les fiches de recettes pour préparer vos courses en toute simplicité.
           </Text>
+          <TouchableOpacity
+            style={styles.emptyActionBtn}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('Recipes')}
+          >
+            <ChefHat size={16} color="#FFFFFF" strokeWidth={2.5} />
+            <Text style={styles.emptyActionBtnText}>Explorer les recettes</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -129,10 +140,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
-    gap: 10,
+    gap: 12,
+  },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
   },
   emptyDesc: {
@@ -140,9 +160,30 @@ const styles = StyleSheet.create({
     color: '#8C8A87',
     textAlign: 'center',
     lineHeight: 18,
+    maxWidth: 280,
+  },
+  emptyActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: AppColors.primary,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 22,
+    marginTop: 10,
+    shadowColor: AppColors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  emptyActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '800',
   },
   list: {
     padding: 16,
-    gap: 10,
+    paddingBottom: 135,
   },
 });

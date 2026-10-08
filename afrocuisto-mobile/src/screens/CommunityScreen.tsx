@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   StyleSheet,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -22,8 +23,10 @@ import { Recipe } from '../types/recipe';
 import { useTheme } from '../context/ThemeContext';
 import { useRecipes } from '../context/RecipeContext';
 import { useCommunity } from '../context/CommunityContext';
+import { useNavigationTransition } from '../context/NavigationTransitionContext';
 import { AppColors } from '../theme/colors';
 import { AnimatedScreenWrapper } from '../components/common/AnimatedScreenWrapper';
+import { CommunityScreenSkeleton } from '../components/common/Skeletons';
 import { CommunityStoriesRail } from '../components/community/CommunityStoriesRail';
 import { CommunityStoryModal } from '../components/community/CommunityStoryModal';
 import { CommunityChallengeBanner } from '../components/community/CommunityChallengeBanner';
@@ -38,6 +41,8 @@ export const CommunityScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { isDark } = useTheme();
   const { recipes } = useRecipes();
+  const { isScreenLoading } = useNavigationTransition();
+  const showSkeleton = isScreenLoading('Community');
   const {
     posts,
     stories,
@@ -182,87 +187,96 @@ export const CommunityScreen: React.FC = () => {
           />
         </View>
 
-        {/* 3. Flux Principal de Publications (Défilable) */}
-        <FlatList
-          data={posts}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.mainListContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor={AppColors.primary}
-              colors={[AppColors.primary]}
-            />
-          }
-          ListHeaderComponent={
-            <View>
-              {/* Bannière Défi de la semaine */}
-              <CommunityChallengeBanner
-                challenge={challenge}
-                onPress={() => {}}
-                onParticipate={() => setIsCreateModalVisible(true)}
+        {/* 3. Flux Principal de Publications (Défilable) ou Skeleton de transition */}
+        {showSkeleton ? (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 135 }}
+          >
+            <CommunityScreenSkeleton />
+          </ScrollView>
+        ) : (
+          <FlatList
+            data={posts}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.mainListContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={AppColors.primary}
+                colors={[AppColors.primary]}
               />
+            }
+            ListHeaderComponent={
+              <View>
+                {/* Bannière Défi de la semaine */}
+                <CommunityChallengeBanner
+                  challenge={challenge}
+                  onPress={() => {}}
+                  onParticipate={() => setIsCreateModalVisible(true)}
+                />
 
-              <View style={styles.feedSectionHeader}>
+                <View style={styles.feedSectionHeader}>
+                  <Text
+                    style={[
+                      styles.feedTitle,
+                      { color: isDark ? '#FFFFFF' : AppColors.textPrimary },
+                    ]}
+                  >
+                    Fil d’actualité & Partages
+                  </Text>
+                  <Text style={styles.feedCountText}>
+                    {posts.length} publication{posts.length > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
+            }
+            renderItem={({ item }) => (
+              <CommunityPostCard
+                post={item}
+                onToggleLike={handleToggleLike}
+                onToggleBookmark={handleToggleBookmark}
+                onOpenComments={post => setCommentPost(post)}
+                onSelectRecipe={handleSelectRecipe}
+                onImagePress={post => setSelectedImagePost(post)}
+                onPress={post =>
+                  navigation.navigate('PostDetail', {
+                    post,
+                    onToggleLike: handleToggleLike,
+                    onToggleBookmark: handleToggleBookmark,
+                    onAddComment: handleAddComment,
+                  })
+                }
+              />
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Sparkles size={40} color={AppColors.primary} />
                 <Text
                   style={[
-                    styles.feedTitle,
-                    { color: isDark ? '#FFFFFF' : AppColors.textPrimary },
+                    styles.emptyTitle,
+                    { color: isDark ? '#FFFFFF' : '#1E1D1D' },
                   ]}
                 >
-                  Fil d’actualité & Partages
+                  Aucune publication trouvée
                 </Text>
-                <Text style={styles.feedCountText}>
-                  {posts.length} publication{posts.length > 1 ? 's' : ''}
+                <Text style={styles.emptySubtitle}>
+                  Soyez le premier à partager une réalisation ou une astuce !
                 </Text>
+                <TouchableOpacity
+                  style={styles.emptyCreateBtn}
+                  activeOpacity={0.85}
+                  onPress={() => setIsCreateModalVisible(true)}
+                >
+                  <Plus size={16} color="#FFFFFF" strokeWidth={3} />
+                  <Text style={styles.emptyCreateBtnText}>Partager mon plat</Text>
+                </TouchableOpacity>
               </View>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <CommunityPostCard
-              post={item}
-              onToggleLike={handleToggleLike}
-              onToggleBookmark={handleToggleBookmark}
-              onOpenComments={post => setCommentPost(post)}
-              onSelectRecipe={handleSelectRecipe}
-              onImagePress={post => setSelectedImagePost(post)}
-              onPress={post =>
-                navigation.navigate('PostDetail', {
-                  post,
-                  onToggleLike: handleToggleLike,
-                  onToggleBookmark: handleToggleBookmark,
-                  onAddComment: handleAddComment,
-                })
-              }
-            />
-          )}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Sparkles size={40} color={AppColors.primary} />
-              <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: isDark ? '#FFFFFF' : '#1E1D1D' },
-                ]}
-              >
-                Aucune publication trouvée
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                Soyez le premier à partager une réalisation ou une astuce !
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyCreateBtn}
-                activeOpacity={0.85}
-                onPress={() => setIsCreateModalVisible(true)}
-              >
-                <Plus size={16} color="#FFFFFF" strokeWidth={3} />
-                <Text style={styles.emptyCreateBtnText}>Partager mon plat</Text>
-              </TouchableOpacity>
-            </View>
-          }
-        />
+            }
+          />
+        )}
 
         {/* 3. Modales Interactives */}
         {/* Visualiseur de Photo de Post plein écran avec ratio préservé */}
@@ -392,7 +406,7 @@ const styles = StyleSheet.create({
   mainListContent: {
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 100,
+    paddingBottom: 135,
   },
   feedSectionHeader: {
     flexDirection: 'row',

@@ -11,8 +11,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, Zap } from 'lucide-react-native';
 import { HomeHeader } from '../components/home/HomeHeader';
+import { FirstChoiceGuide } from '../components/home/FirstChoiceGuide';
 import { FigmaRecipeCarousel } from '../components/home/FigmaRecipeCarousel';
 import { MagicFridgeCard } from '../components/home/MagicFridgeCard';
 import { PopularDishCard } from '../components/home/PopularDishCard';
@@ -31,16 +32,17 @@ const QUICK_SEARCH_SUGGESTIONS = ['Gboman', 'Alloco', 'Dja', 'Amiwô', 'Riz au g
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { recipes, popularRecipes, isLoading, refreshRecipes } = useRecipes();
+  const { recipes, featuredRecipes, popularRecipes, quickRecipes, isLoading, refreshRecipes } = useRecipes();
   const { isDark } = useTheme();
-  const { isScreenLoading } = useNavigationTransition();
+  const { isScreenLoading, triggerScreenLoading } = useNavigationTransition();
 
   // Recherche avec animation d'ouverture du Header & auto-suggestions
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const isSearching = searchQuery.trim().length > 0;
 
-  const showSkeleton = isLoading && recipes.length === 0;
+  const isNavLoading = isScreenLoading('Home');
+  const showSkeleton = isNavLoading || (isLoading && recipes.length === 0);
 
   const handleRecipePress = (recipe: Recipe) => {
     navigation.navigate('RecipeDetail', { recipe });
@@ -236,26 +238,46 @@ export const HomeScreen: React.FC = () => {
               />
             }
           >
-            {/* 2. Carousel Plats en Vedette (Figma Node 3:8) */}
-            <FigmaRecipeCarousel onSelectRecipe={handleRecipePress} />
-
-            {/* 3. Widget Frigo Magique IA */}
-            <MagicFridgeCard
-              onPress={ingredient =>
-                navigation.navigate('AiChef', ingredient ? { initialIngredient: ingredient } : undefined)
-              }
+            {/* 1. Guide du Premier Choix : invitation claire & 3 accès directs */}
+            <FirstChoiceGuide
+              onSearchPress={() => setIsSearchOpen(true)}
+              onMagicFridgePress={() => navigation.navigate('AiChef')}
+              onQuickPress={() => navigation.navigate('CategoryRecipes', { category: 'quick' })}
             />
 
-            {/* 4. Section "Les Plus Populaires" (Figma Node 10-634) */}
+            {/* 2. Section Nouveautés & Coups de Cœur (Carousel) */}
             <View style={styles.sectionHeader}>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: isDark ? '#FFFFFF' : AppColors.textPrimary },
-                ]}
-              >
-                Les Plus Populaires
-              </Text>
+              <View>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    { color: isDark ? '#FFFFFF' : AppColors.textPrimary },
+                  ]}
+                >
+                  Sélection & Nouveautés
+                </Text>
+                <Text style={styles.sectionSubtitle}>
+                  Les plats signatures mis en lumière par nos chefs
+                </Text>
+              </View>
+            </View>
+            <FigmaRecipeCarousel onSelectRecipe={handleRecipePress} />
+
+            {/* 3. Section "Les Plus Populaires" (Incontournables sans répétition) */}
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    { color: isDark ? '#FFFFFF' : AppColors.textPrimary },
+                  ]}
+                >
+                  Les Plus Populaires
+                </Text>
+                <Text style={styles.sectionSubtitle}>
+                  Les grands classiques de la cuisine béninoise
+                </Text>
+              </View>
               <TouchableOpacity
                 style={[
                   styles.seeAllPill,
@@ -265,7 +287,10 @@ export const HomeScreen: React.FC = () => {
                   },
                 ]}
                 activeOpacity={0.7}
-                onPress={() => navigation.navigate('RecipeList')}
+                onPress={() => {
+                  triggerScreenLoading('RecipeList', 1500);
+                  navigation.navigate('RecipeList');
+                }}
               >
                 <Text style={styles.seeAllText}>Voir Tout</Text>
                 <ChevronRight size={13} color={AppColors.primary} strokeWidth={2.5} />
@@ -287,25 +312,83 @@ export const HomeScreen: React.FC = () => {
               ))}
             </ScrollView>
 
-            {/* 4b. Section Catégories de Plats avec Cartes Illustrées */}
+            {/* 4. Section Plats Rapides & Express (< 30 min) */}
+            {quickRecipes.length > 0 && (
+              <View style={{ marginTop: 10 }}>
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Zap size={16} color="#059669" />
+                      <Text
+                        style={[
+                          styles.sectionTitle,
+                          { color: isDark ? '#FFFFFF' : AppColors.textPrimary },
+                        ]}
+                      >
+                        Prêt en moins de 30 min
+                      </Text>
+                    </View>
+                    <Text style={styles.sectionSubtitle}>
+                      Idéal pour cuisiner vite et bien au quotidien
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.seeAllPill,
+                      {
+                        backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : '#ECFDF5',
+                        borderColor: isDark ? 'rgba(16, 185, 129, 0.25)' : '#D1FAE5',
+                      },
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('CategoryRecipes', { category: 'quick' })}
+                  >
+                    <Text style={[styles.seeAllText, { color: '#059669' }]}>Express</Text>
+                    <ChevronRight size={13} color="#059669" strokeWidth={2.5} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalList}
+                >
+                  {quickRecipes.slice(0, 6).map(item => (
+                    <View key={item.id} style={styles.cardWrapper}>
+                      <PopularDishCard
+                        recipe={item}
+                        onPress={() => handleRecipePress(item)}
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* 5. Section Catégories de Plats avec Cartes Illustrées */}
             <DishCategoriesRail
               onSelectCategory={(cat) => {
                 navigation.navigate('CategoryRecipes', { category: cat.id });
               }}
             />
 
-            {/* 5. Section Dynamique Vertical Grid (2 colonnes) par Région */}
+            {/* 6. Section Spécialités par Région (Terroirs sans doublons) */}
             <RegionalDishesGrid
               recipes={recipes}
               onSelectRecipe={handleRecipePress}
+              excludeIds={[
+                ...featuredRecipes.map(r => r.id),
+                ...popularRecipes.slice(0, 4).map(r => r.id),
+              ]}
             />
 
-            {/* 6. Teaser Communauté */}
+            {/* 7. Teaser Communauté */}
             <CommunityLiveTeaser
               onPress={() => navigation.navigate('Community')}
             />
 
-            <View style={{ height: 80 }} />
+            {/* Marge de défilement généreuse pour ne jamais être masqué par la bottom bar */}
+            <View style={{ height: 135 }} />
           </ScrollView>
         )}
       </AnimatedScreenWrapper>
@@ -409,6 +492,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    fontSize: 11.5,
+    color: '#8C8A87',
+    marginTop: 2,
+    fontWeight: '500',
   },
   seeAllPill: {
     flexDirection: 'row',

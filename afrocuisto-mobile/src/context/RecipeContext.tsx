@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { Recipe } from '../types/recipe';
 import { RecipeService } from '../services/recipeService';
 import { StorageService } from '../services/storage';
+import { getRecipeDurationInfo } from '../utils/durationHelper';
 
 interface RecipeContextType {
   recipes: Recipe[];
   featuredRecipes: Recipe[];
   popularRecipes: Recipe[];
+  quickRecipes: Recipe[];
   favorites: string[];
   isLoading: boolean;
   toggleFavorite: (recipeId: string) => Promise<void>;
@@ -47,15 +49,33 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const isFavorite = (recipeId: string) => favorites.includes(recipeId);
 
-  const featuredRecipes = recipes.filter(r => r.isFeatured);
-  const popularRecipes = recipes.slice(0, 8);
+  // 1. Plats en vedette (Carrousel / Nouveautés & Coups de cœur)
+  const featuredRecipes = useMemo(() => {
+    const list = recipes.filter(r => r.isFeatured);
+    return list.length > 0 ? list : recipes.slice(0, 4);
+  }, [recipes]);
+
+  // 2. Plats populaires (Incontournables) - Exclusion stricte des plats du carrousel pour éviter les répétitions
+  const popularRecipes = useMemo(() => {
+    const featuredIds = new Set(featuredRecipes.map(r => r.id));
+    return recipes.filter(r => !featuredIds.has(r.id)).slice(0, 8);
+  }, [recipes, featuredRecipes]);
+
+  // 3. Plats rapides & express (Temps total <= 30 min)
+  const quickRecipes = useMemo(() => {
+    return recipes.filter(r => {
+      const { totalMinutes } = getRecipeDurationInfo(r.prepTime, r.cookTime);
+      return totalMinutes > 0 && totalMinutes <= 30;
+    });
+  }, [recipes]);
 
   return (
     <RecipeContext.Provider
       value={{
         recipes,
-        featuredRecipes: featuredRecipes.length > 0 ? featuredRecipes : recipes.slice(0, 5),
+        featuredRecipes,
         popularRecipes,
+        quickRecipes,
         favorites,
         isLoading,
         toggleFavorite,

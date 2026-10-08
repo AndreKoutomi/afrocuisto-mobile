@@ -24,7 +24,8 @@ export const FavoritesScreen: React.FC = () => {
   const { isScreenLoading } = useNavigationTransition();
 
   const favoriteRecipes = recipes.filter(r => favorites.includes(r.id));
-  const showSkeleton = isLoading && recipes.length === 0;
+  const isNavLoading = isScreenLoading('Favorites');
+  const showSkeleton = isNavLoading || (isLoading && recipes.length === 0);
 
   return (
     <SafeAreaView
@@ -185,6 +186,7 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: 12,
     paddingVertical: 16,
+    paddingBottom: 135,
   },
   columnWrapper: {
     justifyContent: 'space-between',

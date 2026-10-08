@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import { AppColors } from '../theme/colors';
 import { PopularDishCard } from '../components/home/PopularDishCard';
 import { AnimatedScreenWrapper } from '../components/common/AnimatedScreenWrapper';
 import { RecipeCardSkeleton } from '../components/common/Skeletons';
+import { getRecipeDurationInfo } from '../utils/durationHelper';
 
 const DISH_CATEGORIES = [
   {
@@ -125,14 +126,25 @@ export const CategoryRecipesScreen: React.FC = () => {
   const categoryId = route.params?.category as string;
   const category = DISH_CATEGORIES.find(c => c.id === categoryId);
 
-  const showSkeleton = isLoading && recipes.length === 0;
+  // Forçage du skeleton de chargement à 1.5 secondes sur la navigation
+  const [isForcedLoading, setIsForcedLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsForcedLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const showSkeleton = isForcedLoading || (isLoading && recipes.length === 0);
 
   const filteredRecipes = useMemo(() => {
     if (!category) return [];
     if (category.isQuick) {
       return recipes.filter(r => {
-        const minutes = parseInt(r.prepTime?.replace(/[^0-9]/g, '') || '0', 10);
-        return minutes > 0 && minutes <= 30;
+        const { totalMinutes } = getRecipeDurationInfo(r.prepTime, r.cookTime);
+        return totalMinutes > 0 && totalMinutes <= 30;
       });
     } else if (category.categoryFilter) {
       return recipes.filter(r => {
@@ -310,7 +322,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 100,
+    paddingBottom: 135,
   },
   heroSection: {
     position: 'relative',

@@ -63,6 +63,7 @@ import { useCookingTimer } from '../context/CookingTimerContext';
 import { MorphIcon, Play as LucidePlay, Pause as LucidePause } from '../components/common/MorphIcon';
 import { GlowEffect } from '../components/core/glow-effect';
 import { RecipeVideoSection } from '../components/recipe/RecipeVideoSection';
+import { getRecipeDurationInfo } from '../utils/durationHelper';
 import { RelatedDishesSection } from '../components/recipe/RelatedDishesSection';
 import { CookingPotAnimatedIcon } from '../components/common/CookingPotAnimatedIcon';
 
@@ -70,9 +71,16 @@ export const RecipeDetailScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const recipe: Recipe = route.params?.recipe;
+  const { recipes, isLoading: isRecipesLoading, isFavorite, toggleFavorite } = useRecipes();
 
-  const { isFavorite, toggleFavorite } = useRecipes();
+  const routeRecipe: Recipe | undefined = route.params?.recipe;
+  const targetId = routeRecipe?.id || route.params?.recipeId || route.params?.id;
+  const isRouteLoading = route.params?.isLoading === true;
+  const recipe: Recipe | undefined =
+    routeRecipe ||
+    (targetId ? recipes.find(r => r.id === targetId) : undefined) ||
+    (!routeRecipe && !isRouteLoading && !targetId && recipes.length > 0 ? recipes[0] : undefined);
+  const isDataLoading = isRouteLoading || (!recipe && isRecipesLoading);
   const { addIngredients } = useShopping();
   const { isDark } = useTheme();
 
@@ -153,14 +161,36 @@ export const RecipeDetailScreen: React.FC = () => {
     stopTimer();
   };
 
-  const [isReady, setIsReady] = useState(false);
+  // Forçage du skeleton de chargement à 1.5 secondes
+  const [isForcedLoading, setIsForcedLoading] = useState(true);
 
   useEffect(() => {
-    const interactionPromise = InteractionManager.runAfterInteractions(() => {
-      setIsReady(true);
-    });
-    return () => interactionPromise.cancel();
+    const timer = setTimeout(() => {
+      setIsForcedLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, []);
+
+  const [isReady, setIsReady] = useState(Platform.OS === 'web');
+
+  useEffect(() => {
+    if (isReady) return;
+    let isMounted = true;
+    const timer = setTimeout(() => {
+      if (isMounted) setIsReady(true);
+    }, 150);
+
+    const interactionPromise = InteractionManager.runAfterInteractions(() => {
+      if (isMounted) setIsReady(true);
+    });
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+      interactionPromise.cancel();
+    };
+  }, [isReady]);
 
   // Injection CSS pour le web (OpenUI / Expo Web) - Effet de vague multidirectionnelle Gemini Live
   useEffect(() => {
@@ -195,7 +225,58 @@ export const RecipeDetailScreen: React.FC = () => {
     }
   }, []);
 
-  if (!recipe) return null;
+  const showSkeleton = isForcedLoading || isDataLoading;
+
+  if (showSkeleton) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: isDark ? AppColors.surfaceDark : '#FFFFFF' },
+        ]}
+      >
+        <RecipeDetailSkeleton />
+      </View>
+    );
+  }
+
+  if (!recipe) {
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: isDark ? AppColors.surfaceDark : '#FFFFFF',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+          },
+        ]}
+      >
+        <Text
+          style={{
+            color: isDark ? '#FFFFFF' : AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: '700',
+            marginBottom: 12,
+          }}
+        >
+          Recette introuvable
+        </Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{
+            backgroundColor: AppColors.primary,
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 12,
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retour</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
   const isFav = isFavorite(recipe.id);
 
   const selectedIngredientIndexes = Object.keys(checkedIngredients)
@@ -281,14 +362,17 @@ export const RecipeDetailScreen: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Parsing numbers & units for characteristic capsules
-  const rawPrep = recipe.prepTime || '20 min';
-  const prepNumber = rawPrep.replace(/[^0-9]/g, '') || '20';
-  const prepUnit = rawPrep.toLowerCase().includes('h') ? 'heures' : 'mins';
+  // Parsing précis des durées via durationHelper
+  const durationInfo = getRecipeDurationInfo(recipe.prepTime, recipe.cookTime);
+  const prepNumber = durationInfo.prepMinutes >= 60
+    ? (durationInfo.prepMinutes % 60 === 0 ? `${durationInfo.prepMinutes / 60}` : durationInfo.formattedPrep)
+    : `${durationInfo.prepMinutes || 20}`;
+  const prepUnit = durationInfo.prepMinutes >= 60 ? (durationInfo.prepMinutes === 60 ? 'heure' : 'heures') : 'mins';
 
-  const rawCook = recipe.cookTime || '30 min';
-  const cookNumber = rawCook.replace(/[^0-9]/g, '') || '30';
-  const cookUnit = rawCook.toLowerCase().includes('h') ? 'heures' : 'mins';
+  const cookNumber = durationInfo.cookMinutes >= 60
+    ? (durationInfo.cookMinutes % 60 === 0 ? `${durationInfo.cookMinutes / 60}` : durationInfo.formattedCook)
+    : `${durationInfo.cookMinutes || 0}`;
+  const cookUnit = durationInfo.cookMinutes >= 60 ? (durationInfo.cookMinutes === 60 ? 'heure' : 'heures') : 'mins';
 
   const difficultyVal = recipe.difficulty || 'Moyen';
   const ratingVal = recipe.rating ? recipe.rating.toFixed(1) : '4.8';
@@ -418,6 +502,7 @@ export const RecipeDetailScreen: React.FC = () => {
                   >
                     {recipe.region ? `${recipe.region} • ` : ''}
                     {recipe.category || 'Recette Traditionnelle'}
+                    {durationInfo.totalMinutes > 0 ? ` • Total ${durationInfo.formattedTotal}` : ''}
                   </Text>
                 </View>
 

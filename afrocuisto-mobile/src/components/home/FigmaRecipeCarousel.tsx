@@ -17,6 +17,7 @@ import { useRecipes } from '../../context/RecipeContext';
 import { AppColors } from '../../theme/colors';
 import { getImageSource } from '../../utils/imageHelper';
 import { FavoriteIconButton } from '../common/FavoriteIconButton';
+import { getRecipeDurationInfo } from '../../utils/durationHelper';
 
 interface FigmaRecipeCarouselProps {
   onSelectRecipe: (recipe: Recipe) => void;
@@ -129,12 +130,16 @@ export const FigmaRecipeCarousel: React.FC<FigmaRecipeCarouselProps> = ({ onSele
             <View style={styles.metaRow}>
               <View style={styles.metaItem}>
                 <Clock size={15} color="#FFFFFF" />
-                <Text style={styles.metaText}>{recipe.prepTime} prep.</Text>
+                <Text style={styles.metaText}>
+                  {getRecipeDurationInfo(recipe.prepTime, recipe.cookTime).displayLabel}
+                </Text>
               </View>
 
               <View style={styles.metaItem}>
                 <Star size={15} color={AppColors.starGold} fill={AppColors.starGold} />
-                <Text style={styles.ratingText}>4.8</Text>
+                <Text style={styles.ratingText}>
+                  {recipe.rating ? recipe.rating.toFixed(1) : '4.8'}
+                </Text>
               </View>
             </View>
           </View>

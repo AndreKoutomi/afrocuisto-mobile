@@ -197,6 +197,7 @@ export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const { totalCount } = useShopping();
+  const { triggerScreenLoading } = useNavigationTransition();
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 20);
@@ -255,6 +256,8 @@ export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
     (tabName: string, index: number, isFocused: boolean) => {
       if (isFocused) return;
 
+      triggerScreenLoading(tabName, 1500);
+
       const event = navigation.emit({
         type: 'tabPress',
         target: state.routes[index]?.key || tabName,
@@ -265,7 +268,7 @@ export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
         navigation.navigate(tabName);
       }
     },
-    [navigation, state.routes]
+    [navigation, state.routes, triggerScreenLoading]
   );
 
   // Masquer la barre si le clavier est actif ou si l'écran le demande explicitement

@@ -26,6 +26,7 @@ import { RecipeCardSkeleton, RecipeGridSkeleton } from '../components/common/Ske
 import { AnimatedScreenWrapper } from '../components/common/AnimatedScreenWrapper';
 import { useNavigationTransition } from '../context/NavigationTransitionContext';
 import { Recipe } from '../types/recipe';
+import { getRecipeDurationInfo } from '../utils/durationHelper';
 
 const CATEGORY_FILTERS = [
   { id: 'all', label: 'Toutes', icon: '🍽️' },
@@ -50,7 +51,8 @@ export const RecipeListScreen: React.FC = () => {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'default' | 'rating' | 'quick'>('default');
 
-  const showSkeleton = isLoading && recipes.length === 0;
+  const isNavLoading = isScreenLoading('Recipes') || isScreenLoading('RecipeList');
+  const showSkeleton = isNavLoading || (isLoading && recipes.length === 0);
 
   // Focus automatique du champ de recherche ou sélection de catégorie quand on vient de la Home
   const route = useRoute<any>();
@@ -86,11 +88,11 @@ export const RecipeListScreen: React.FC = () => {
     return recipes.filter(r => r.isFeatured || (r.rating && r.rating >= 4.7)).slice(0, 6);
   }, [recipes]);
 
-  // Quick recipes (<= 30 min)
+  // Quick recipes (<= 30 min temps total)
   const quickRecipes = useMemo(() => {
     return recipes.filter(r => {
-      const minutes = parseInt(r.prepTime?.replace(/[^0-9]/g, '') || '0', 10);
-      return minutes > 0 && minutes <= 30;
+      const { totalMinutes } = getRecipeDurationInfo(r.prepTime, r.cookTime);
+      return totalMinutes > 0 && totalMinutes <= 30;
     }).slice(0, 6);
   }, [recipes]);
 
@@ -108,8 +110,8 @@ export const RecipeListScreen: React.FC = () => {
       // Category filter
       let matchesCategory = true;
       if (activeCategory === 'quick') {
-        const minutes = parseInt(r.prepTime?.replace(/[^0-9]/g, '') || '0', 10);
-        matchesCategory = minutes > 0 && minutes <= 30;
+        const { totalMinutes } = getRecipeDurationInfo(r.prepTime, r.cookTime);
+        matchesCategory = totalMinutes > 0 && totalMinutes <= 30;
       } else if (activeCategory === 'popular') {
         matchesCategory = (r.rating && r.rating >= 4.6) || false;
       } else if (activeCategory !== 'all') {
@@ -133,8 +135,8 @@ export const RecipeListScreen: React.FC = () => {
       list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
     } else if (sortBy === 'quick') {
       list = [...list].sort((a, b) => {
-        const tA = parseInt(a.prepTime?.replace(/[^0-9]/g, '') || '999', 10);
-        const tB = parseInt(b.prepTime?.replace(/[^0-9]/g, '') || '999', 10);
+        const tA = getRecipeDurationInfo(a.prepTime, a.cookTime).totalMinutes;
+        const tB = getRecipeDurationInfo(b.prepTime, b.cookTime).totalMinutes;
         return tA - tB;
       });
     }
@@ -590,7 +592,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   scrollContent: {
-    paddingBottom: 110,
+    paddingBottom: 135,
   },
   sectionBlock: {
     marginBottom: 24,

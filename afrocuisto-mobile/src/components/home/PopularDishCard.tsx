@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { AppColors } from '../../theme/colors';
 import { getImageSource } from '../../utils/imageHelper';
 import { FavoriteIconButton } from '../common/FavoriteIconButton';
+import { getRecipeDurationInfo } from '../../utils/durationHelper';
 
 interface PopularDishCardProps {
   recipe: Recipe;
@@ -31,7 +32,7 @@ export const PopularDishCard: React.FC<PopularDishCardProps> = ({
   const cardWidth = Math.floor((screenWidth - 32 - 10) / 2);
 
   const regionText = (recipe.region || 'NATIONAL').toUpperCase();
-  const prepTimeText = recipe.prepTime ? `${recipe.prepTime.replace(/[^0-9]/g, '')} min` : '30 min';
+  const durationInfo = getRecipeDurationInfo(recipe.prepTime, recipe.cookTime);
   const ratingText = recipe.rating ? recipe.rating.toFixed(1) : '4.8';
 
   return (
@@ -105,7 +106,7 @@ export const PopularDishCard: React.FC<PopularDishCardProps> = ({
         {recipe.name.toUpperCase()}
       </Text>
 
-      {/* 3. Description (Compact & well formatted) */}
+      {/* 3. Description (Lisible et spacieuse) */}
       <Text
         style={[
           styles.description,
@@ -116,7 +117,7 @@ export const PopularDishCard: React.FC<PopularDishCardProps> = ({
         {recipe.description || 'Spécialité culinaire authentique préparée avec des ingrédients frais.'}
       </Text>
 
-      {/* 4. Bottom Pills Row (Prep Time Pill & Rating Pill) */}
+      {/* 4. Bottom Pills Row (Temps Total / Prép & Note) */}
       <View style={styles.bottomRow}>
         <View
           style={[
@@ -127,14 +128,14 @@ export const PopularDishCard: React.FC<PopularDishCardProps> = ({
             },
           ]}
         >
-          <Clock size={11} color={AppColors.primary} strokeWidth={2.4} />
+          <Clock size={11.5} color={AppColors.primary} strokeWidth={2.4} />
           <Text
             style={[
               styles.metaText,
               { color: isDark ? '#E6E1E5' : '#2C2A28' },
             ]}
           >
-            {prepTimeText}
+            {durationInfo.displayLabel}
           </Text>
         </View>
 
@@ -148,7 +149,7 @@ export const PopularDishCard: React.FC<PopularDishCardProps> = ({
           ]}
         >
           <Star
-            size={11}
+            size={11.5}
             color="#F59E0B"
             fill="#F59E0B"
           />
@@ -168,7 +169,7 @@ export const PopularDishCard: React.FC<PopularDishCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    height: 250,
+    height: 274,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 8,
@@ -185,22 +186,22 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     width: '100%',
-    height: 250,
+    height: 274,
     borderRadius: 18,
     padding: 8,
     marginVertical: 0,
   },
   imageContainer: {
     width: '100%',
-    height: 120,
-    borderRadius: 10,
+    height: 124,
+    borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#1E1D1B',
   },
   gridImageContainer: {
-    height: 120,
-    borderRadius: 10,
+    height: 124,
+    borderRadius: 12,
   },
   image: {
     width: '100%',
@@ -228,40 +229,41 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#000000',
-    fontSize: 13,
-    fontWeight: '900',
+    fontSize: 13.5,
+    fontWeight: '800',
     textAlign: 'center',
-    marginTop: 4,
-    lineHeight: 16,
+    marginTop: 6,
+    lineHeight: 17,
     letterSpacing: -0.2,
   },
   description: {
     color: '#49454F',
-    fontSize: 9.5,
-    lineHeight: 13,
+    fontSize: 11,
+    lineHeight: 15,
     textAlign: 'center',
     marginTop: 2,
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
+    minHeight: 30,
   },
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 6,
     paddingHorizontal: 2,
   },
   metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3.5,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
   },
   metaText: {
     color: '#1D192B',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
   },
 });

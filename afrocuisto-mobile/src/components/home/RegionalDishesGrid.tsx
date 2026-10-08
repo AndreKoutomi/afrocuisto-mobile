@@ -29,11 +29,13 @@ const REGIONS = [
 interface RegionalDishesGridProps {
   recipes: Recipe[];
   onSelectRecipe: (recipe: Recipe) => void;
+  excludeIds?: string[];
 }
 
 export const RegionalDishesGrid: React.FC<RegionalDishesGridProps> = ({
   recipes,
   onSelectRecipe,
+  excludeIds = [],
 }) => {
   const { isDark } = useTheme();
   const [selectedRegionId, setSelectedRegionId] = useState<string>('sud');
@@ -43,12 +45,14 @@ export const RegionalDishesGrid: React.FC<RegionalDishesGridProps> = ({
   }, [selectedRegionId]);
 
   const regionalRecipes = useMemo(() => {
-    const matched = recipes.filter(r => {
+    const excludeSet = new Set(excludeIds);
+    const available = recipes.filter(r => !excludeSet.has(r.id));
+    const matched = available.filter(r => {
       const reg = (r.region || '').toLowerCase();
       return selectedRegion.match.some(m => reg.includes(m.toLowerCase()));
     });
-    return matched.length >= 2 ? matched : recipes.slice(0, 6);
-  }, [recipes, selectedRegion]);
+    return matched.length >= 2 ? matched : available.slice(0, 6);
+  }, [recipes, selectedRegion, excludeIds]);
 
   const handleRegionChange = (newRegionId: string) => {
     if (newRegionId === selectedRegionId) return;
