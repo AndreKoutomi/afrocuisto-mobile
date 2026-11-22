@@ -11,10 +11,17 @@ yarn-error.log*
 web-build/
 dist/
 
-# Native builds
+# Native builds & Android
 *.orig.*
 android/
 ios/
+.gradle/
+**/.gradle/
+**/build/
+local.properties
+**/local.properties
+.kotlin/
+**/.kotlin/
 
 # Environment Variables
 .env
