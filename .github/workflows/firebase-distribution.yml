@@ -36,9 +36,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -87,12 +84,13 @@ jobs:
             KEY_PASS="afrocuisto123"
           fi
 
-          cat <<EOT >> gradle.properties
-          AFROCUISTO_RELEASE_STORE_FILE=release.keystore
-          AFROCUISTO_RELEASE_KEY_ALIAS=$KEY_ALIAS
-          AFROCUISTO_RELEASE_STORE_PASSWORD=$KEYSTORE_PASS
-          AFROCUISTO_RELEASE_KEY_PASSWORD=$KEY_PASS
-          EOT
+          {
+            echo ""
+            echo "AFROCUISTO_RELEASE_STORE_FILE=release.keystore"
+            echo "AFROCUISTO_RELEASE_KEY_ALIAS=$KEY_ALIAS"
+            echo "AFROCUISTO_RELEASE_STORE_PASSWORD=$KEYSTORE_PASS"
+            echo "AFROCUISTO_RELEASE_KEY_PASSWORD=$KEY_PASS"
+          } >> gradle.properties
 
       - name: Set gradlew permissions
         working-directory: afrocuisto-android
