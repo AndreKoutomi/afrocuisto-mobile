@@ -210,10 +210,6 @@ fun NavGraph(
         activeRecipeId = null
     }
 
-    BackHandler(enabled = activeRecipeId != null) {
-        closeRecipeDetail(withHaptic = true)
-    }
-
     fun openRecipeDetail(recipeId: String, withHaptic: Boolean = true) {
         if (recipeId.isBlank()) return
         if (withHaptic) haptics.navigationTap()
@@ -681,6 +677,11 @@ fun NavGraph(
             ) {
                 val targetId = displayedRecipeId
                 if (!targetId.isNullOrBlank()) {
+                    // Registered AFTER NavHost so LIFO BackHandler intercepts back gestures before NavController
+                    // on sub-tabs like Recipes and Favorites (where NavController's own callback is enabled).
+                    BackHandler(enabled = isRecipeDetailOpen) {
+                        closeRecipeDetail(withHaptic = true)
+                    }
                     RecipeDetailScreen(
                         recipeId = targetId,
                         onBack = { closeRecipeDetail(withHaptic = true) },
