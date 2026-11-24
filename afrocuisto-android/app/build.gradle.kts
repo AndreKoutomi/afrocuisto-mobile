@@ -22,10 +22,6 @@ val cmsEnvProps = Properties().apply {
 val geminiApiKey: String = localProps.getProperty("GEMINI_API_KEY", "").trim()
     .ifEmpty { cmsEnvProps.getProperty("VITE_GEMINI_API_KEY", "").trim() }
     .ifEmpty { System.getenv("GEMINI_API_KEY")?.trim().orEmpty() }
-val firebaseOtaUrl: String = localProps.getProperty("FIREBASE_OTA_URL", "").trim()
-    .ifEmpty { cmsEnvProps.getProperty("VITE_FIREBASE_OTA_URL", "").trim() }
-    .ifEmpty { System.getenv("FIREBASE_OTA_URL")?.trim().orEmpty() }
-    .ifEmpty { "https://afrocuisto-app.web.app/ota/version.json" }
 val supabaseUrl: String = localProps.getProperty("SUPABASE_URL", "").trim()
     .ifEmpty { cmsEnvProps.getProperty("VITE_SUPABASE_URL", "").trim() }
     .ifEmpty { System.getenv("SUPABASE_URL")?.trim().orEmpty() }
@@ -46,6 +42,12 @@ val ciVersionName: String = project.findProperty("AFROCUISTO_VERSION_NAME")
 val appEnv: String = project.findProperty("AFROCUISTO_APP_ENV")
     ?.toString()?.trim()?.lowercase().orEmpty()
 val defaultAppLabel: String = if (appEnv == "beta") "AfroCuisto Beta" else "AfroCuisto"
+val defaultOtaChannel: String = if (appEnv == "beta") "beta" else "production"
+
+val firebaseOtaUrl: String = localProps.getProperty("FIREBASE_OTA_URL", "").trim()
+    .ifEmpty { cmsEnvProps.getProperty("VITE_FIREBASE_OTA_URL", "").trim() }
+    .ifEmpty { System.getenv("FIREBASE_OTA_URL")?.trim().orEmpty() }
+    .ifEmpty { "https://afrocuisto-b023d.web.app/ota/$defaultOtaChannel/version.json" }
 
 android {
     namespace = "com.afrocuisto.app"
@@ -93,6 +95,11 @@ android {
                 applicationIdSuffix = ".beta"
             }
             manifestPlaceholders["appLabel"] = "AfroCuisto Beta"
+            buildConfigField(
+                "String",
+                "FIREBASE_OTA_URL",
+                "\"https://afrocuisto-b023d.web.app/ota/beta/version.json\""
+            )
         }
         release {
             val hasReleaseKeystore = !project.findProperty("AFROCUISTO_RELEASE_STORE_FILE")

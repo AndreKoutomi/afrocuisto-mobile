@@ -142,6 +142,14 @@ class OtaUpdateManager(private val context: Context) {
                 }
             } catch (ce: CancellationException) {
                 throw ce
+            } catch (e: OtaNotPublishedException) {
+                _state.update {
+                    it.copy(
+                        status = OtaStatus.UP_TO_DATE,
+                        availableRelease = null,
+                        message = "Vous profitez déjà de la dernière version d'AfroCuisto (${BuildConfig.VERSION_NAME})."
+                    )
+                }
             } catch (_: Throwable) {
                 _state.update {
                     it.copy(
@@ -247,16 +255,21 @@ class OtaUpdateManager(private val context: Context) {
         return true
     }
 
+    private class OtaNotPublishedException : Exception()
+
     private fun fetchFirebaseRelease(url: String): OtaReleaseInfo? {
         if (url.isBlank()) return null
         val req = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
+            .header("Cache-Control", "no-cache, no-store")
+            .header("Pragma", "no-cache")
             .header("User-Agent", "AfroCuisto-Android/${BuildConfig.VERSION_NAME}")
             .build()
 
         client.newCall(req).execute().use { resp ->
-            if (!resp.isSuccessful) return null
+            if (resp.code == 404) throw OtaNotPublishedException()
+            check(resp.isSuccessful) { "HTTP ${resp.code}" }
             val body = resp.body?.string()?.trim().orEmpty()
             if (body.isEmpty() || body == "null") return null
             val root = json.parseToJsonElement(body).jsonObject

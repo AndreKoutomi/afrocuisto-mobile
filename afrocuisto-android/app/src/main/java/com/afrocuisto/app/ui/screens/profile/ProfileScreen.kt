@@ -353,6 +353,18 @@ fun ProfileScreen(
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
     var selectedSettingsGroup by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(Unit) {
+        if (otaState.status == OtaStatus.IDLE) {
+            otaManager.checkForUpdates(coroutineScope)
+        }
+    }
+
+    LaunchedEffect(showOtaUpdateSheet) {
+        if (showOtaUpdateSheet && (otaState.status == OtaStatus.IDLE || otaState.status == OtaStatus.ERROR)) {
+            otaManager.checkForUpdates(coroutineScope)
+        }
+    }
+
     BackHandler(enabled = selectedSettingsGroup != null) {
         afroHaptics.navigationTap()
         selectedSettingsGroup = null

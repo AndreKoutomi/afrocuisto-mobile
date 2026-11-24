@@ -137,3 +137,48 @@ jobs:
             AfroCuisto [${{ env.TARGET_ENV }}] — v${{ env.APP_VERSION }} (Build #${{ env.BUILD_NUMBER }})
             Refonte UI Solar & 28.dp, Chef IA vocal temps réel, Mon Marché, Communauté plein écran, Profil modulaire, et navigation 120 FPS.
             Branche: ${{ github.ref_name }} (${{ github.sha }})
+
+      - name: Publish OTA APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ota-${{ env.TARGET_ENV }}-v${{ env.APP_VERSION }}-b${{ env.BUILD_NUMBER }}
+          name: AfroCuisto ${{ env.TARGET_ENV }} v${{ env.APP_VERSION }} (#${{ env.BUILD_NUMBER }})
+          prerelease: ${{ env.TARGET_ENV != 'production' }}
+          files: build-output/AfroCuisto-${{ env.TARGET_ENV }}-v${{ env.APP_VERSION }}-b${{ env.BUILD_NUMBER }}.apk
+          body: |
+            Version ${{ env.APP_VERSION }} (Build #${{ env.BUILD_NUMBER }}) — Canal ${{ env.TARGET_ENV }}
+
+      - name: Prepare Firebase Hosting OTA Manifests
+        run: |
+          APK_NAME="AfroCuisto-${{ env.TARGET_ENV }}-v${{ env.APP_VERSION }}-b${{ env.BUILD_NUMBER }}.apk"
+          APK_SIZE=$(stat -c%s "build-output/${APK_NAME}")
+          APK_URL="https://github.com/${{ github.repository }}/releases/download/ota-${{ env.TARGET_ENV }}-v${{ env.APP_VERSION }}-b${{ env.BUILD_NUMBER }}/${APK_NAME}"
+
+          mkdir -p firebase-hosting/ota/beta firebase-hosting/ota/production
+
+          if [ "${{ env.TARGET_ENV }}" = "production" ]; then
+            OTHER_ENV="beta"
+          else
+            OTHER_ENV="production"
+          fi
+
+          # Preserve the other environment's existing version.json from Firebase Hosting
+          curl -fsSL "https://afrocuisto-b023d.web.app/ota/${OTHER_ENV}/version.json" -o "firebase-hosting/ota/${OTHER_ENV}/version.json" || true
+
+          cat > "firebase-hosting/ota/${{ env.TARGET_ENV }}/version.json" <<EOF
+          {
+            "versionCode": ${{ env.BUILD_NUMBER }},
+            "versionName": "${{ env.APP_VERSION }}",
+            "apkUrl": "${APK_URL}",
+            "sizeBytes": ${APK_SIZE},
+            "releaseNotes": "AfroCuisto (${{ env.TARGET_ENV }}) v${{ env.APP_VERSION }} — Build #${{ env.BUILD_NUMBER }}"
+          }
+          EOF
+
+      - name: Deploy OTA Manifest to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: afrocuisto-b023d
