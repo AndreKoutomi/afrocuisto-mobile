@@ -211,12 +211,49 @@ fun AuthTopControlsBar(
 }
 
 @Composable
+fun AuthFixedBackground(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(276.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.img_splash_bg),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0.0f to Color.Black.copy(alpha = 0.42f),
+                            0.42f to Color.Black.copy(alpha = 0.50f),
+                            0.82f to Color.Black.copy(alpha = 0.96f),
+                            1.0f to Color.Black
+                        )
+                    )
+            )
+        }
+    }
+}
+
+@Composable
 fun AuthHeroHeader(
     palette: AuthPalette,
     canNavigateBack: Boolean,
     onBack: () -> Unit,
     stepBadge: String? = null,
-    showTopControls: Boolean = true
+    showTopControls: Boolean = true,
+    showBackground: Boolean = true
 ) {
     val view = LocalView.current
     SideEffect {
@@ -230,27 +267,29 @@ fun AuthHeroHeader(
         modifier = Modifier
             .fillMaxWidth()
             .height(228.dp)
-            .background(Color.Black)
+            .background(if (showBackground) Color.Black else Color.Transparent)
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.img_splash_bg),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        if (showBackground) {
+            Image(
+                painter = painterResource(id = R.drawable.img_splash_bg),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0.0f to Color.Black.copy(alpha = 0.42f),
-                        0.42f to Color.Black.copy(alpha = 0.45f),
-                        0.80f to Color.Black.copy(alpha = 0.94f),
-                        1.0f to Color.Black
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0.0f to Color.Black.copy(alpha = 0.42f),
+                            0.42f to Color.Black.copy(alpha = 0.45f),
+                            0.80f to Color.Black.copy(alpha = 0.94f),
+                            1.0f to Color.Black
+                        )
                     )
-                )
-        )
+            )
+        }
 
         if (showTopControls) {
             AuthTopControlsBar(

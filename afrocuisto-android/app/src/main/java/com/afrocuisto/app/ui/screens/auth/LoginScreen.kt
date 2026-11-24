@@ -192,6 +192,9 @@ fun LoginScreen(
             .fillMaxSize()
             .background(palette.canvas)
     ) {
+        // Fixed background that never scrolls with the page content
+        AuthFixedBackground()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -206,7 +209,9 @@ fun LoginScreen(
             AuthHeroHeader(
                 palette = palette,
                 canNavigateBack = canNavigateBack,
-                onBack = onBack
+                onBack = onBack,
+                showTopControls = false,
+                showBackground = false
             )
 
             Column(
@@ -401,6 +406,12 @@ fun LoginScreen(
                 }
             }
         }
+
+        AuthTopControlsBar(
+            canNavigateBack = canNavigateBack,
+            onBack = onBack,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 
     if (showForgotPasswordSheet) {

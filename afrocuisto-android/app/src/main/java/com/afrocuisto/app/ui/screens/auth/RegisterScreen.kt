@@ -242,6 +242,9 @@ fun RegisterScreen(
             .fillMaxSize()
             .background(palette.canvas)
     ) {
+        // Fixed background that never scrolls with the page content
+        AuthFixedBackground()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -264,7 +267,8 @@ fun RegisterScreen(
                     }
                 },
                 stepBadge = if (pendingConfirmationEmail == null) "Étape $currentStep / 2" else null,
-                showTopControls = false
+                showTopControls = false,
+                showBackground = false
             )
 
             Column(
