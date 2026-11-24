@@ -53,6 +53,9 @@ android {
 
     defaultConfig {
         applicationId = "com.afrocuisto.app"
+        if (appEnv == "beta") {
+            applicationIdSuffix = ".beta"
+        }
         minSdk = 26
         targetSdk = 36
         versionCode = ciVersionCode
@@ -86,6 +89,9 @@ android {
 
     buildTypes {
         debug {
+            if (appEnv != "beta") {
+                applicationIdSuffix = ".beta"
+            }
             manifestPlaceholders["appLabel"] = "AfroCuisto Beta"
         }
         release {

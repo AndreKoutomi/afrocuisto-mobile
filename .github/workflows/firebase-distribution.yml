@@ -129,7 +129,7 @@ jobs:
       - name: Deploy to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
+          appId: ${{ env.TARGET_ENV == 'production' && secrets.FIREBASE_APP_ID || '1:983989027916:android:27120d6e848c4a164c60e9' }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           groups: ${{ env.TARGET_ENV == 'production' && 'production-testers' || 'beta-testers' }}
           file: build-output/AfroCuisto-${{ env.TARGET_ENV }}-v${{ env.APP_VERSION }}-b${{ env.BUILD_NUMBER }}.apk
