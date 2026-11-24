@@ -27,7 +27,10 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import okhttp3.ConnectionPool
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
 import java.io.File
 import java.io.RandomAccessFile
@@ -87,6 +90,22 @@ class OtaUpdateManager(private val context: Context) {
     private val client = OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
         .readTimeout(45, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
+
+    // Dedicated high-throughput client: 8+ parallel HTTP/1.1 TCP sockets to saturate full Wi-Fi/5G bandwidth
+    private val downloadClient = OkHttpClient.Builder()
+        .dispatcher(
+            Dispatcher().apply {
+                maxRequests = 32
+                maxRequestsPerHost = 12
+            }
+        )
+        .connectionPool(ConnectionPool(16, 2, TimeUnit.MINUTES))
+        .protocols(listOf(Protocol.HTTP_1_1))
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
         .build()
@@ -364,12 +383,24 @@ class OtaUpdateManager(private val context: Context) {
     }
 
     private suspend fun downloadApkHighSpeed(apkUrl: String, destFile: File) {
-        val headReq = Request.Builder().url(apkUrl).head().build()
+        var resolvedUrl = apkUrl
         var contentLength = -1L
         var supportsRanges = false
+
+        // Probe with `Range: bytes=0-0` to follow CDN redirects once & reliably detect 206 Partial Content support
         try {
-            client.newCall(headReq).execute().use { resp ->
-                if (resp.isSuccessful) {
+            val probeReq = Request.Builder()
+                .url(apkUrl)
+                .header("Range", "bytes=0-0")
+                .header("Accept-Encoding", "identity")
+                .build()
+            downloadClient.newCall(probeReq).execute().use { resp ->
+                resolvedUrl = resp.request.url.toString()
+                if (resp.code == 206) {
+                    supportsRanges = true
+                    val contentRange = resp.header("Content-Range").orEmpty()
+                    contentLength = contentRange.substringAfterLast('/', "").toLongOrNull() ?: -1L
+                } else if (resp.isSuccessful) {
                     contentLength = resp.header("Content-Length")?.toLongOrNull() ?: -1L
                     supportsRanges = resp.header("Accept-Ranges")?.contains("bytes", ignoreCase = true) == true
                 }
@@ -377,7 +408,26 @@ class OtaUpdateManager(private val context: Context) {
         } catch (_: Throwable) {
         }
 
-        val streamCount = if (supportsRanges && contentLength > 2L * 1024L * 1024L) 4 else 1
+        if (contentLength <= 0L) {
+            try {
+                val headReq = Request.Builder()
+                    .url(resolvedUrl)
+                    .header("Accept-Encoding", "identity")
+                    .head()
+                    .build()
+                downloadClient.newCall(headReq).execute().use { resp ->
+                    if (resp.isSuccessful) {
+                        resolvedUrl = resp.request.url.toString()
+                        contentLength = resp.header("Content-Length")?.toLongOrNull() ?: -1L
+                        supportsRanges = supportsRanges ||
+                            resp.header("Accept-Ranges")?.contains("bytes", ignoreCase = true) == true
+                    }
+                }
+            } catch (_: Throwable) {
+            }
+        }
+
+        val streamCount = if (supportsRanges && contentLength > 2L * 1024L * 1024L) 8 else 1
         _state.update {
             it.copy(
                 totalBytes = contentLength.coerceAtLeast(it.totalBytes),
@@ -392,7 +442,7 @@ class OtaUpdateManager(private val context: Context) {
         fun reportProgress(total: Long) {
             val now = System.nanoTime()
             val prev = lastUiEmitNs.get()
-            if (now - prev >= 120_000_000L && lastUiEmitNs.compareAndSet(prev, now)) {
+            if (now - prev >= 100_000_000L && lastUiEmitNs.compareAndSet(prev, now)) {
                 val elapsedSec = ((now - startTimeNs) / 1_000_000_000.0).coerceAtLeast(0.1)
                 val done = downloadedCounter.get()
                 val speed = (done / elapsedSec).toLong()
@@ -401,7 +451,7 @@ class OtaUpdateManager(private val context: Context) {
                         downloadedBytes = done,
                         totalBytes = total.coerceAtLeast(done),
                         speedBytesPerSec = speed,
-                        message = "Téléchargement rapide en cours..."
+                        message = "Téléchargement haut débit ($streamCount flux)..."
                     )
                 }
             }
@@ -418,13 +468,14 @@ class OtaUpdateManager(private val context: Context) {
                     val rangeEnd = if (idx == streamCount - 1) contentLength - 1L else (rangeStart + chunkSize - 1L)
                     async(Dispatchers.IO) {
                         val req = Request.Builder()
-                            .url(apkUrl)
+                            .url(resolvedUrl)
                             .header("Range", "bytes=$rangeStart-$rangeEnd")
+                            .header("Accept-Encoding", "identity")
                             .build()
-                        client.newCall(req).execute().use { resp ->
+                        downloadClient.newCall(req).execute().use { resp ->
                             check(resp.isSuccessful) { "HTTP ${resp.code}" }
                             val input = resp.body?.byteStream() ?: error("Empty stream")
-                            val buffer = ByteArray(256 * 1024)
+                            val buffer = ByteArray(512 * 1024)
                             RandomAccessFile(destFile, "rw").use { raf ->
                                 raf.seek(rangeStart)
                                 var read: Int
@@ -443,13 +494,16 @@ class OtaUpdateManager(private val context: Context) {
                 it.copy(downloadedBytes = contentLength, totalBytes = contentLength)
             }
         } else {
-            val req = Request.Builder().url(apkUrl).build()
-            client.newCall(req).execute().use { resp ->
+            val req = Request.Builder()
+                .url(resolvedUrl)
+                .header("Accept-Encoding", "identity")
+                .build()
+            downloadClient.newCall(req).execute().use { resp ->
                 check(resp.isSuccessful) { "HTTP ${resp.code}" }
                 val body = resp.body ?: error("Empty response body")
                 val total = body.contentLength().takeIf { it > 0L } ?: contentLength
-                val buffer = ByteArray(256 * 1024)
-                destFile.outputStream().use { out ->
+                val buffer = ByteArray(512 * 1024)
+                destFile.outputStream().buffered(512 * 1024).use { out ->
                     body.byteStream().use { input ->
                         var read: Int
                         while (input.read(buffer).also { read = it } != -1) {
