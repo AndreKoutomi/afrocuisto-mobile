@@ -313,6 +313,18 @@ fun NavGraph(
         onForceDarkSystemBarsChange(isDarkSystemBarRoute)
     }
 
+    // Automatic safety redirect: any authenticated session on Login/Register immediately enters Home
+    LaunchedEffect(authSession.isAuthenticated, currentRoute) {
+        if (authSession.isAuthenticated &&
+            (currentRoute == Screen.Login.route || currentRoute == Screen.Register.route)
+        ) {
+            navController.navigate(Screen.Home.route) {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
     val appleEaseOut = remember { CubicBezierEasing(0.22f, 1f, 0.36f, 1f) }
     val bottomBarHideProgress by animateFloatAsState(
         targetValue = if (showBottomBar) 0f else 1f,
