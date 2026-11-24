@@ -109,6 +109,7 @@ jobs:
             --build-cache \
             -PAFROCUISTO_VERSION_CODE=${{ env.BUILD_NUMBER }} \
             -PAFROCUISTO_VERSION_NAME=${{ env.APP_VERSION }} \
+            -PAFROCUISTO_APP_ENV=${{ env.TARGET_ENV }} \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+UseParallelGC"
 
       - name: Prepare & Rename APK Artifact

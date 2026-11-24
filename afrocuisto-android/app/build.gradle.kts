@@ -43,6 +43,9 @@ val ciVersionCode: Int = project.findProperty("AFROCUISTO_VERSION_CODE")
     ?.toString()?.toIntOrNull() ?: 2
 val ciVersionName: String = project.findProperty("AFROCUISTO_VERSION_NAME")
     ?.toString()?.takeIf { it.isNotBlank() } ?: "1.1.0"
+val appEnv: String = project.findProperty("AFROCUISTO_APP_ENV")
+    ?.toString()?.trim()?.lowercase().orEmpty()
+val defaultAppLabel: String = if (appEnv == "beta") "AfroCuisto Beta" else "AfroCuisto"
 
 android {
     namespace = "com.afrocuisto.app"
@@ -56,6 +59,7 @@ android {
         versionName = ciVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["appLabel"] = defaultAppLabel
         buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKey.replace("\"", "\\\"")}\"")
         buildConfigField("String", "FIREBASE_OTA_URL", "\"${firebaseOtaUrl.replace("\"", "\\\"")}\"")
         buildConfigField("String", "SUPABASE_URL", "\"${supabaseUrl.replace("\"", "\\\"")}\"")
@@ -81,6 +85,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["appLabel"] = "AfroCuisto Beta"
+        }
         release {
             val hasReleaseKeystore = !project.findProperty("AFROCUISTO_RELEASE_STORE_FILE")
                 ?.toString().isNullOrBlank() &&
