@@ -167,6 +167,8 @@ jobs:
 
           cat > "firebase-hosting/ota/${{ env.TARGET_ENV }}/version.json" <<EOF
           {
+            "channel": "${{ env.TARGET_ENV }}",
+            "applicationId": "${{ env.TARGET_ENV == 'production' && 'com.afrocuisto.app' || 'com.afrocuisto.app.beta' }}",
             "versionCode": ${{ env.BUILD_NUMBER }},
             "versionName": "${{ env.APP_VERSION }}",
             "apkUrl": "${APK_URL}",

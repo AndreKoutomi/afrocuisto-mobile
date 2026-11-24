@@ -65,6 +65,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appLabel"] = defaultAppLabel
+        buildConfigField("String", "APP_CHANNEL", "\"$defaultOtaChannel\"")
         buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKey.replace("\"", "\\\"")}\"")
         buildConfigField("String", "FIREBASE_OTA_URL", "\"${firebaseOtaUrl.replace("\"", "\\\"")}\"")
         buildConfigField("String", "SUPABASE_URL", "\"${supabaseUrl.replace("\"", "\\\"")}\"")
@@ -95,6 +96,7 @@ android {
                 applicationIdSuffix = ".beta"
             }
             manifestPlaceholders["appLabel"] = "AfroCuisto Beta"
+            buildConfigField("String", "APP_CHANNEL", "\"beta\"")
             buildConfigField(
                 "String",
                 "FIREBASE_OTA_URL",

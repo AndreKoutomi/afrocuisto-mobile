@@ -39,7 +39,9 @@ data class OtaReleaseInfo(
     val versionName: String,
     val apkUrl: String,
     val releaseNotes: String,
-    val sizeBytes: Long = 0L
+    val sizeBytes: Long = 0L,
+    val channel: String = "",
+    val applicationId: String = ""
 )
 
 enum class OtaStatus {
@@ -120,8 +122,9 @@ class OtaUpdateManager(private val context: Context) {
 
                 val isNewer = release.versionCode > BuildConfig.VERSION_CODE ||
                     compareSemVer(release.versionName, BuildConfig.VERSION_NAME) > 0
+                val isMatchingChannel = isCompatibleRelease(release)
 
-                if (isNewer && release.apkUrl.isNotBlank()) {
+                if (isNewer && isMatchingChannel && release.apkUrl.isNotBlank()) {
                     _state.update {
                         it.copy(
                             status = OtaStatus.UPDATE_AVAILABLE,
@@ -231,6 +234,23 @@ class OtaUpdateManager(private val context: Context) {
         val apkFile = File(path)
         if (!apkFile.exists()) return false
 
+        // Safety check: verify the downloaded APK's packageName strictly matches this app (Beta vs Production)
+        @Suppress("DEPRECATION")
+        val archivePackage = appContext.packageManager
+            .getPackageArchiveInfo(apkFile.absolutePath, 0)
+            ?.packageName
+        if (!archivePackage.isNullOrBlank() && archivePackage != appContext.packageName) {
+            apkFile.delete()
+            _state.update {
+                it.copy(
+                    status = OtaStatus.ERROR,
+                    downloadedApkPath = null,
+                    message = "Mise à jour ignorée : le paquet ne correspond pas à cette version de l'application."
+                )
+            }
+            return false
+        }
+
         if (!canInstallPackages() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val permIntent = Intent(
                 Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
@@ -299,9 +319,23 @@ class OtaUpdateManager(private val context: Context) {
                     ?: "Améliorations de performance et nouvelles fonctionnalités.",
                 sizeBytes = root["sizeBytes"]?.jsonPrimitive?.longOrNull
                     ?: root["size_bytes"]?.jsonPrimitive?.longOrNull
-                    ?: 0L
+                    ?: 0L,
+                channel = root["channel"]?.jsonPrimitive?.contentOrNull.orEmpty().trim().lowercase(),
+                applicationId = root["applicationId"]?.jsonPrimitive?.contentOrNull
+                    ?: root["application_id"]?.jsonPrimitive?.contentOrNull.orEmpty().trim()
             )
         }
+    }
+
+    private fun isCompatibleRelease(release: OtaReleaseInfo): Boolean {
+        val expectedChannel = BuildConfig.APP_CHANNEL.trim().lowercase()
+        val expectedPackage = appContext.packageName
+        if (release.channel.isNotBlank() && release.channel != expectedChannel) return false
+        if (release.applicationId.isNotBlank() && release.applicationId != expectedPackage) return false
+        val lowerUrl = release.apkUrl.lowercase()
+        if (expectedChannel == "production" && ("-beta-" in lowerUrl || ".beta." in lowerUrl)) return false
+        if (expectedChannel == "beta" && "-production-" in lowerUrl) return false
+        return true
     }
 
     private fun parseFirestoreRelease(fields: JsonObject): OtaReleaseInfo? {
