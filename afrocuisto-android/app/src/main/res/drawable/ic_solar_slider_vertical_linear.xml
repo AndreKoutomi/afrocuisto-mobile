@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4 7C4 4.79086 5.79086 3 8 3H16C18.2091 3 20 4.79086 20 7V17C20 19.2091 18.2091 21 16 21H8C5.79086 21 4 19.2091 4 17V7Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000" />
+    <path
+        android:pathData="M8 7H16M8 12H16M8 17H12"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round" />
+</vector>

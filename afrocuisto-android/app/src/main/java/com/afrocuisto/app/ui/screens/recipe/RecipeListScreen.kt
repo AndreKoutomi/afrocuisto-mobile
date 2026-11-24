@@ -1,41 +1,35 @@
 package com.afrocuisto.app.ui.screens.recipe
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,224 +42,247 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import com.afrocuisto.app.data.model.Recipe
 import com.afrocuisto.app.data.repository.RecipeRepository
-import com.afrocuisto.app.ui.theme.SunYellow
+import com.afrocuisto.app.ui.components.EditorialPageHeader
+import com.afrocuisto.app.ui.components.EditorialSearchBar
+import com.afrocuisto.app.ui.components.afroStaggeredEntrance
+import com.afrocuisto.app.ui.components.rememberAfroHaptics
+import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
+import com.afrocuisto.app.ui.screens.home.SunRecipeCard
+import com.afrocuisto.app.ui.theme.isAfroDarkTheme
+import java.util.Locale
+
+private val RECIPE_FILTER_TABS = listOf("Tout", "Sauces", "Pâtes", "Grillades")
 
 @Composable
 fun RecipeListScreen(
     onNavigateToRecipeDetail: (String) -> Unit,
     repository: RecipeRepository = remember { RecipeRepository() }
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = isAfroDarkTheme()
+    val haptics = rememberAfroHaptics()
     val recipes by repository.recipes.collectAsState(initial = emptyList())
     val favoriteIds by repository.favoriteIds.collectAsState(initial = emptySet())
 
     var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("Tous") }
+    var selectedTab by remember { mutableStateOf("Tout") }
 
-    val categories = listOf("Tous", "Pâtes & Céréales", "Sauces & Potages", "Grillades & Viandes", "Boissons & Cocktails")
-
-    val filteredRecipes = remember(recipes, searchQuery, selectedCategory) {
+    val filteredRecipes = remember(recipes, searchQuery, selectedTab) {
         recipes.filter { recipe ->
-            val matchesQuery = searchQuery.isBlank() ||
-                    recipe.name.contains(searchQuery, ignoreCase = true) ||
-                    recipe.region.contains(searchQuery, ignoreCase = true)
-            val matchesCategory = selectedCategory == "Tous" || recipe.category == selectedCategory
-            matchesQuery && matchesCategory
+            val q = searchQuery.trim()
+            val matchesQuery = q.isBlank() ||
+                recipe.name.contains(q, ignoreCase = true) ||
+                recipe.region.contains(q, ignoreCase = true) ||
+                recipe.category.contains(q, ignoreCase = true) ||
+                recipe.ingredients.any { it.name.contains(q, ignoreCase = true) }
+
+            val catLower = recipe.category.lowercase(Locale.FRENCH)
+            val matchesTab = when (selectedTab) {
+                "Tout" -> true
+                "Sauces" -> catLower.contains("sauce") || catLower.contains("potage")
+                "Pâtes" -> catLower.contains("pâte") || catLower.contains("pate") || catLower.contains("céréale")
+                "Grillades" -> catLower.contains("grillade") || catLower.contains("viande")
+                else -> true
+            }
+            matchesQuery && matchesTab
         }
     }
+
+    val canvasBg = if (isDark) colorScheme.background else Color(0xFFF8F9FA)
+    val titleColor = if (isDark) colorScheme.onBackground else Color(0xFF1E1E2D)
+    val placeholderColor = if (isDark) colorScheme.onSurfaceVariant else Color(0xFF94A3B8)
+    val segTrackColor = if (isDark) colorScheme.surfaceVariant else Color(0xFFF1F2F6)
+    val segActiveBg = if (isDark) colorScheme.surface else Color.White
+    val segInactiveText = if (isDark) colorScheme.onSurfaceVariant else Color(0xFF8F92A1)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(canvasBg)
     ) {
-        // Top Header
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = Color.White,
-            shadowElevation = 2.dp
-        ) {
-            Column(
+        EditorialPageHeader(title = "Toutes les recettes") {
+            EditorialSearchBar(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = "Plat, pays ou ingrédient..."
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            AppleSlidingSegmentedFilter(
+                tabs = RECIPE_FILTER_TABS,
+                selectedTab = selectedTab,
+                onTabSelected = { tab ->
+                    if (tab != selectedTab) {
+                        haptics.selectionTick()
+                        selectedTab = tab
+                    }
+                },
+                trackColor = segTrackColor,
+                activePillColor = segActiveBg,
+                activeTextColor = titleColor,
+                inactiveTextColor = segInactiveText
+            )
+        }
+
+        if (filteredRecipes.isEmpty()) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp)
+                    .fillMaxSize()
+                    .padding(bottom = 120.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Toutes les Recettes 📖",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF111827)
-                )
-                Text(
-                    text = "Explorez les trésors de la gastronomie africaine",
-                    fontSize = 13.sp,
-                    color = Color(0xFF6B7280)
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Rechercher un plat...") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF6B7280))
-                    },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedContainerColor = Color(0xFFF3F4F6),
-                        unfocusedContainerColor = Color(0xFFF3F4F6)
-                    ),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(categories) { cat ->
-                        val isSelected = selectedCategory == cat
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedCategory = cat },
-                            label = { Text(cat, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = SunYellow,
-                                selectedLabelColor = Color(0xFF111827),
-                                containerColor = Color(0xFFF3F4F6),
-                                labelColor = Color(0xFF4B5563)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Aucune recette trouvée",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = titleColor
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Essayez un autre plat, pays ou ingrédient",
+                        fontSize = 13.sp,
+                        color = placeholderColor
+                    )
+                }
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                flingBehavior = rememberSmoothFlingBehavior(),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                itemsIndexed(
+                    items = filteredRecipes,
+                    key = { _, recipe -> recipe.id },
+                    contentType = { _, _ -> "recipe_card" }
+                ) { index, recipe ->
+                    Box(
+                        modifier = Modifier
+                            .animateItem(
+                                fadeInSpec = tween(220),
+                                placementSpec = spring(
+                                    dampingRatio = 0.78f,
+                                    stiffness = Spring.StiffnessMediumLow
+                                ),
+                                fadeOutSpec = tween(160)
                             )
+                            .afroStaggeredEntrance(index = index, triggerKey = selectedTab)
+                    ) {
+                        SunRecipeCard(
+                            recipe = recipe,
+                            isFavorite = favoriteIds.contains(recipe.id),
+                            onToggleFavorite = { repository.toggleFavorite(recipe.id) },
+                            onClick = { onNavigateToRecipeDetail(recipe.id) }
                         )
                     }
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Grid of Recipes
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 120.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(filteredRecipes) { recipe ->
-                RecipeGridItem(
-                    recipe = recipe,
-                    isFavorite = favoriteIds.contains(recipe.id),
-                    onToggleFavorite = { repository.toggleFavorite(recipe.id) },
-                    onClick = { onNavigateToRecipeDetail(recipe.id) }
-                )
             }
         }
     }
 }
 
 @Composable
-fun RecipeGridItem(
-    recipe: Recipe,
-    isFavorite: Boolean,
-    onToggleFavorite: () -> Unit,
-    onClick: () -> Unit
+private fun AppleSlidingSegmentedFilter(
+    tabs: List<String>,
+    selectedTab: String,
+    onTabSelected: (String) -> Unit,
+    trackColor: Color,
+    activePillColor: Color,
+    activeTextColor: Color,
+    inactiveTextColor: Color,
+    modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(22.dp))
-            ) {
-                AsyncImage(
-                    model = recipe.image,
-                    contentDescription = recipe.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+    val selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0)
 
-                // Rating Tag (Sun Yellow Pill)
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = SunYellow,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(42.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = trackColor
+    ) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(4.dp)
+        ) {
+            val tabWidth = maxWidth / tabs.size
+            val indicatorOffset by animateDpAsState(
+                targetValue = tabWidth * selectedIndex,
+                animationSpec = spring(
+                    dampingRatio = 0.76f,
+                    stiffness = Spring.StiffnessMedium
+                ),
+                label = "appleSegmentSlide"
+            )
+
+            Surface(
+                modifier = Modifier
+                    .offset(x = indicatorOffset)
+                    .width(tabWidth)
+                    .fillMaxHeight(),
+                shape = RoundedCornerShape(13.dp),
+                color = activePillColor,
+                shadowElevation = 2.dp
+            ) {}
+
+            Row(modifier = Modifier.fillMaxSize()) {
+                tabs.forEach { tab ->
+                    val isSelected = tab == selectedTab
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val isPressed by interactionSource.collectIsPressedAsState()
+                    val labelScale by animateFloatAsState(
+                        targetValue = when {
+                            isPressed -> 0.92f
+                            isSelected -> 1.03f
+                            else -> 1f
+                        },
+                        animationSpec = spring(
+                            dampingRatio = 0.65f,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        label = "segmentLabelScale"
+                    )
+                    val textColor by animateColorAsState(
+                        targetValue = if (isSelected) activeTextColor else inactiveTextColor,
+                        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                        label = "appleSegmentText"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(13.dp))
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null
+                            ) { onTabSelected(tab) },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = Color(0xFF111827),
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = String.format("%.1f", recipe.rating),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF111827)
+                            text = tab,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = textColor,
+                            maxLines = 1,
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = labelScale
+                                scaleY = labelScale
+                            }
                         )
                     }
                 }
-
-                // Bookmark Icon Button
-                IconButton(
-                    onClick = onToggleFavorite,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(32.dp)
-                        .background(Color.White, CircleShape)
-                ) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = "Favori",
-                        tint = Color(0xFF111827),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
-                Text(
-                    text = recipe.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = Color(0xFF111827)
-                )
-
-                Text(
-                    text = "${recipe.region} • ${recipe.category}",
-                    fontSize = 12.sp,
-                    color = Color(0xFF6B7280),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
             }
         }
     }

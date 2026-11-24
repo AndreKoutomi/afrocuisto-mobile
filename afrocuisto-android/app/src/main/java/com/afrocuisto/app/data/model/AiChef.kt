@@ -32,10 +32,22 @@ data class AiChefMessage(
     val id: String = "",
     val sender: String = "ai", // "ai" | "user"
     val text: String? = null,
+    val thoughtSummary: String? = null,
+    val thinkingDurationMs: Long = 0L,
+    val isThinkingActive: Boolean = false,
+    val isStreaming: Boolean = false,
     val recipe: AiChefRecipeResult? = null,
     val isGuardrail: Boolean = false,
     val timestamp: Long = System.currentTimeMillis(),
     val quickSuggestions: List<String> = emptyList(),
     val reactionEmoji: String? = null,
     val audioSpoken: Boolean = false
+)
+
+@Serializable
+data class AiChefConversationHistory(
+    val id: String,
+    val title: String,
+    val updatedAt: Long,
+    val messages: List<AiChefMessage>
 )

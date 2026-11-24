@@ -34,6 +34,8 @@ data class CommunityPost(
     val commentsCount: Int = 0,
     val sharesCount: Int = 0,
     val isLiked: Boolean = false,
+    val myReaction: String? = null,
+    val reactionCounts: Map<String, Int> = emptyMap(),
     val isBookmarked: Boolean = false,
     val createdAt: String = "",
     val comments: List<PostComment> = emptyList()

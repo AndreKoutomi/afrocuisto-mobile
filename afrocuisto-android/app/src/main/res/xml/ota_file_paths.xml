@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path
+        name="ota_cache_updates"
+        path="ota_updates/" />
+    <files-path
+        name="ota_files_updates"
+        path="ota_updates/" />
+</paths>

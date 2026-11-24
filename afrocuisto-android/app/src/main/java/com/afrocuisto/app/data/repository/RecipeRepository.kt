@@ -105,7 +105,7 @@ class RecipeRepository {
                 difficulty = "Facile",
                 prepTime = "15 min",
                 cookTime = "45 min",
-                image = "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=600&q=80",
+                image = "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&q=80",
                 ingredients = listOf(
                     Ingredient(name = "Haricots rouges ou œil noir", amount = "300", unit = "g"),
                     Ingredient(name = "Riz parfumé long grain", amount = "300", unit = "g"),
@@ -173,6 +173,37 @@ class RecipeRepository {
                     "Sucrer et parfumer, puis placer au réfrigérateur au moins 3 heures."
                 ),
                 isFeatured = false,
+                rating = 4.9
+            ),
+            Recipe(
+                id = "M04",
+                name = "Mafé au Poulet & Arachide",
+                alias = "Tiga Dèguè Na",
+                region = "Sénégal & Mali",
+                category = "Sauces & Potages",
+                difficulty = "Facile",
+                prepTime = "20 min",
+                cookTime = "40 min",
+                image = "https://images.unsplash.com/photo-1574484284002-952d92456975?w=600&q=80",
+                ingredients = listOf(
+                    Ingredient(name = "Poulet fermier découpé", amount = "800", unit = "g"),
+                    Ingredient(name = "Pâte d'arachide pure non sucrée", amount = "180", unit = "g"),
+                    Ingredient(name = "Purée de tomates fraîches", amount = "3", unit = "c. à soupe"),
+                    Ingredient(name = "Patate douce & carottes", amount = "350", unit = "g"),
+                    Ingredient(name = "Oignons, ail & gingembre", amount = "2", unit = "pièces")
+                ),
+                techniqueTitle = "Onctuosité de la Sauce Arachide",
+                techniqueDescription = "Délayer la pâte d'arachide hors du feu dans un peu de bouillon tiède avant de la laisser mijoter doucement jusqu'à remontée d'une fine huile dorée.",
+                description = "Grand classique ouest-africain au poulet fondant mijoté dans une sauce veloutée au beurre d'arachide, tomates et légumes racines.",
+                steps = listOf(
+                    "Faire dorer les morceaux de poulet avec oignons, ail et concentré de tomate.",
+                    "Délayer la pâte d'arachide dans l'eau tiède puis verser sur le poulet.",
+                    "Ajouter patate douce et carottes en gros morceaux puis mijoter 30 min à feu doux.",
+                    "Servir bien chaud sur un lit de riz blanc parfumé."
+                ),
+                diasporaSubstitutes = "Utiliser du beurre de cacahuète 100 % pur sans sucre ni huile ajoutée.",
+                suggestedSides = listOf("Riz blanc parfumé", "Jus de Bissap Glacé"),
+                isFeatured = true,
                 rating = 4.9
             )
         )

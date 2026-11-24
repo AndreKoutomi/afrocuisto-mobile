@@ -1,15 +1,10 @@
 package com.afrocuisto.app.ui.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.RestaurantMenu
-import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
+import com.afrocuisto.app.R
 
 sealed class Screen(val route: String) {
+    object Splash : Screen("splash")
     object Home : Screen("home")
     object Recipes : Screen("recipes")
     object Favorites : Screen("favorites")
@@ -33,13 +28,39 @@ sealed class Screen(val route: String) {
 data class BottomNavItem(
     val route: String,
     val title: String,
-    val icon: ImageVector
+    @DrawableRes val selectedIconRes: Int,
+    @DrawableRes val unselectedIconRes: Int
 )
 
 val bottomNavItems = listOf(
-    BottomNavItem(Screen.Home.route, "Accueil", Icons.Default.Home),
-    BottomNavItem(Screen.Recipes.route, "Recettes", Icons.Default.RestaurantMenu),
-    BottomNavItem(Screen.Favorites.route, "Favoris", Icons.Default.Bookmark),
-    BottomNavItem(Screen.Market.route, "Marché", Icons.Default.ShoppingBag),
-    BottomNavItem(Screen.Community.route, "Communauté", Icons.Default.People)
+    BottomNavItem(
+        route = Screen.Home.route,
+        title = "Accueil",
+        selectedIconRes = R.drawable.ic_solar_home_bold,
+        unselectedIconRes = R.drawable.ic_solar_home_linear
+    ),
+    BottomNavItem(
+        route = Screen.Recipes.route,
+        title = "Recettes",
+        selectedIconRes = R.drawable.ic_solar_recipes_bold,
+        unselectedIconRes = R.drawable.ic_solar_recipes_linear
+    ),
+    BottomNavItem(
+        route = Screen.Favorites.route,
+        title = "Favoris",
+        selectedIconRes = R.drawable.ic_solar_bookmark_bold,
+        unselectedIconRes = R.drawable.ic_solar_bookmark_linear
+    ),
+    BottomNavItem(
+        route = Screen.Market.route,
+        title = "Marché",
+        selectedIconRes = R.drawable.ic_solar_bag_bold,
+        unselectedIconRes = R.drawable.ic_solar_bag_linear
+    ),
+    BottomNavItem(
+        route = Screen.Community.route,
+        title = "Communauté",
+        selectedIconRes = R.drawable.ic_solar_users_bold,
+        unselectedIconRes = R.drawable.ic_solar_users_linear
+    )
 )
