@@ -88,7 +88,8 @@ fun NavGraph(
     onExternalRecipeConsumed: () -> Unit = {},
     externalOAuthUri: Uri? = null,
     onExternalOAuthConsumed: () -> Unit = {},
-    onForceDarkSystemBarsChange: (Boolean) -> Unit = {}
+    onForceDarkSystemBarsChange: (Boolean) -> Unit = {},
+    onReadyForPermissions: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val haptics = rememberAfroHaptics()
@@ -253,6 +254,12 @@ fun NavGraph(
     }
     var showSplash by rememberSaveable { mutableStateOf(!skipInitialSplash) }
     var mountMainScaffold by rememberSaveable { mutableStateOf(skipInitialSplash) }
+
+    LaunchedEffect(showSplash) {
+        if (!showSplash) {
+            onReadyForPermissions()
+        }
+    }
 
     LaunchedEffect(externalRecipeId) {
         if (!externalRecipeId.isNullOrBlank()) {

@@ -1,7 +1,9 @@
 package com.afrocuisto.app
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.hardware.display.DisplayManager
 import android.net.Uri
@@ -12,6 +14,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +39,32 @@ class MainActivity : ComponentActivity() {
 
     private var deepLinkRecipeId by mutableStateOf<String?>(null)
     private var oauthCallbackUri by mutableStateOf<Uri?>(null)
+
+    private val startupPermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        // Results are persisted by the Android OS permission controller
+    }
+
+    private fun requestStartupPermissionsIfNeeded() {
+        val prefs = getSharedPreferences("afrocuisto_startup_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("startup_permissions_requested", false)) return
+
+        val required = buildList {
+            add(Manifest.permission.RECORD_AUDIO)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        val missing = required.filter { perm ->
+            ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED
+        }
+
+        prefs.edit().putBoolean("startup_permissions_requested", true).apply()
+        if (missing.isNotEmpty()) {
+            startupPermissionsLauncher.launch(missing.toTypedArray())
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,7 +124,8 @@ class MainActivity : ComponentActivity() {
                         onExternalRecipeConsumed = { deepLinkRecipeId = null },
                         externalOAuthUri = oauthCallbackUri,
                         onExternalOAuthConsumed = { oauthCallbackUri = null },
-                        onForceDarkSystemBarsChange = { forceDarkSystemBars = it }
+                        onForceDarkSystemBarsChange = { forceDarkSystemBars = it },
+                        onReadyForPermissions = { requestStartupPermissionsIfNeeded() }
                     )
                 }
             }
