@@ -682,138 +682,6 @@ fun ProfileScreen(
 
             if (selectedSettingsGroup == null) {
                 ProfileSectionCard(
-                    title = "Compte AfroCuisto",
-                    subtitle = if (authSession.isAuthenticated) {
-                        "Connecté en tant que ${authSession.email}"
-                    } else {
-                        "Mode invité · Synchronisez vos favoris et votre profil"
-                    },
-                    palette = palette,
-                    trailingAction = {
-                        Surface(
-                            shape = ExpressivePillShape,
-                            color = if (authSession.isAuthenticated) {
-                                AccentEmerald.copy(alpha = 0.14f)
-                            } else {
-                                AfroOrange.copy(alpha = 0.12f)
-                            }
-                        ) {
-                            Text(
-                                text = if (authSession.isAuthenticated) "Synchronisé" else "Invité",
-                                color = if (authSession.isAuthenticated) AccentEmerald else AfroOrange,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                ) {
-                    if (authSession.isAuthenticated) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                SettingLeadingIcon(R.drawable.ic_solar_shield_check_linear, palette)
-                                Column {
-                                    Text(
-                                        text = authSession.displayName.ifBlank { userPrefs.displayName },
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = palette.title,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = authSession.email,
-                                        fontSize = 11.5.sp,
-                                        color = palette.muted,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Surface(
-                                shape = ExpressivePillShape,
-                                color = palette.subtleSurface,
-                                border = BorderStroke(1.dp, palette.border),
-                                modifier = Modifier
-                                    .clip(ExpressivePillShape)
-                                    .clickable {
-                                        afroHaptics.navigationTap()
-                                        showSignOutConfirmDialog = true
-                                    }
-                            ) {
-                                Text(
-                                    text = "Déconnexion",
-                                    color = Color(0xFFEF4444),
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
-                                )
-                            }
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    afroHaptics.navigationTap()
-                                    onNavigateToLogin()
-                                },
-                                shape = RoundedCornerShape(28.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = AfroOrange,
-                                    contentColor = Color.White
-                                ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                            ) {
-                                Text(
-                                    text = "Se connecter",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                            }
-
-                            Surface(
-                                shape = RoundedCornerShape(28.dp),
-                                color = palette.subtleSurface,
-                                border = BorderStroke(1.dp, palette.border),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                                    .clip(RoundedCornerShape(28.dp))
-                                    .clickable {
-                                        afroHaptics.navigationTap()
-                                        onNavigateToRegister()
-                                    }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = "Créer un compte",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = palette.title
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                ProfileSectionCard(
                     title = "Paramètres",
                     subtitle = "Vos réglages regroupés par thème",
                     palette = palette
@@ -901,6 +769,29 @@ fun ProfileScreen(
                     ) {
                         afroHaptics.navigationTap()
                         showOtaUpdateSheet = true
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = Color(0xFFEF4444).copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.25f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .clickable {
+                            afroHaptics.navigationTap()
+                            showSignOutConfirmDialog = true
+                        }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Déconnexion",
+                            color = Color(0xFFEF4444),
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
                     }
                 }
             }
