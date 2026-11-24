@@ -23,8 +23,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -67,23 +67,12 @@ fun SplashScreen(
 ) {
     val view = LocalView.current
 
-    // Light system bar icons over the dark top photography & pure black bottom, restored on exit
-    DisposableEffect(view) {
+    // Light system bar icons over the dark top photography & pure black bottom
+    SideEffect {
         val window = (view.context as? Activity)?.window
         val insetsController = window?.let { WindowCompat.getInsetsController(it, view) }
-        val prevLightStatus = insetsController?.isAppearanceLightStatusBars
-        val prevLightNav = insetsController?.isAppearanceLightNavigationBars
         insetsController?.isAppearanceLightStatusBars = false
         insetsController?.isAppearanceLightNavigationBars = false
-
-        onDispose {
-            if (prevLightStatus != null) {
-                insetsController.isAppearanceLightStatusBars = prevLightStatus
-            }
-            if (prevLightNav != null) {
-                insetsController.isAppearanceLightNavigationBars = prevLightNav
-            }
-        }
     }
 
     val contentAlpha = remember { Animatable(1f) }

@@ -38,7 +38,7 @@ export function Dashboard() {
                     .select('*', { count: 'exact', head: true });
 
                 const { count: usersCount } = await supabase
-                    .from('user_profiles')
+                    .from('profiles')
                     .select('*', { count: 'exact', head: true });
 
                 setStats({

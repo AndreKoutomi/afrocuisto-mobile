@@ -32,6 +32,12 @@ class RecipeRepository {
         return _favoriteIds.value.contains(recipeId)
     }
 
+    fun currentFavorites(): Set<String> = _favoriteIds.value
+
+    fun setFavorites(ids: Set<String>) {
+        _favoriteIds.value = ids
+    }
+
     companion object {
         fun getMockRecipes(): List<Recipe> = listOf(
             Recipe(

@@ -49,9 +49,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.afrocuisto.app.data.repository.RecipeRepository
 import com.afrocuisto.app.data.repository.AiChefRepository
+import com.afrocuisto.app.data.repository.AuthRepository
+import com.afrocuisto.app.data.repository.AuthResult
+import com.afrocuisto.app.data.repository.AuthSessionState
 import com.afrocuisto.app.data.repository.CommunityRepository
+import com.afrocuisto.app.data.repository.RecipeRepository
 import com.afrocuisto.app.data.repository.ShoppingRepository
 import com.afrocuisto.app.data.repository.UserPreferencesRepository
 import com.afrocuisto.app.data.repository.UserPreferencesState
@@ -59,6 +62,10 @@ import com.afrocuisto.app.service.CookingTimerService
 import com.afrocuisto.app.ui.components.InteractiveTimerPill
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
 import com.afrocuisto.app.ui.screens.aichef.AiChefScreen
+import com.afrocuisto.app.ui.screens.aichef.GeminiVoiceCatalog
+import com.afrocuisto.app.ui.screens.aichef.GeminiVoicePreferences
+import com.afrocuisto.app.ui.screens.auth.LoginScreen
+import com.afrocuisto.app.ui.screens.auth.RegisterScreen
 import com.afrocuisto.app.ui.screens.community.CommunityScreen
 import com.afrocuisto.app.ui.screens.favorites.FavoritesScreen
 import com.afrocuisto.app.ui.screens.home.HomeScreen
@@ -69,6 +76,7 @@ import com.afrocuisto.app.ui.screens.recipe.RecipeDetailScreen
 import com.afrocuisto.app.ui.screens.recipe.RecipeListScreen
 import com.afrocuisto.app.ui.screens.splash.SplashScreen
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun NavGraph(
@@ -77,21 +85,118 @@ fun NavGraph(
     shoppingRepository: ShoppingRepository = remember { ShoppingRepository() },
     userPreferencesRepository: UserPreferencesRepository? = null,
     externalRecipeId: String? = null,
-    onExternalRecipeConsumed: () -> Unit = {}
+    onExternalRecipeConsumed: () -> Unit = {},
+    externalOAuthUri: Uri? = null,
+    onExternalOAuthConsumed: () -> Unit = {},
+    onForceDarkSystemBarsChange: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val haptics = rememberAfroHaptics()
     val prefsRepo = userPreferencesRepository
         ?: remember { UserPreferencesRepository(context.applicationContext) }
+    val authRepository = remember { AuthRepository(context.applicationContext, prefsRepo) }
+    val voicePrefs = remember { GeminiVoicePreferences(context.applicationContext) }
     val aiChefRepository = remember { AiChefRepository(context.applicationContext) }
     val communityRepository = remember { CommunityRepository(context.applicationContext) }
+    val authSession by authRepository.sessionFlow.collectAsState(initial = AuthSessionState())
     val userPrefs by prefsRepo.preferencesFlow.collectAsState(initial = UserPreferencesState())
+    val selectedVoiceId by voicePrefs.selectedVoiceId.collectAsState(initial = GeminiVoiceCatalog.voices.first().id)
+    val favoriteIds by recipeRepository.favoriteIds.collectAsState(initial = emptySet())
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val homeScrollState = rememberScrollState()
     val shoppingItems by shoppingRepository.items.collectAsState()
+    val archivedShoppingItems by shoppingRepository.archivedItems.collectAsState()
+    val marketCurrency by shoppingRepository.currency.collectAsState()
     val timerState by CookingTimerService.timerState.collectAsState()
     val pendingMarketCount = remember(shoppingItems) { shoppingItems.count { !it.isChecked } }
+
+    var hydratedUserId by remember { mutableStateOf<String?>(null) }
+    var lastSyncedFavorites by remember { mutableStateOf<Set<String>?>(null) }
+    var lastSyncedCooked by remember { mutableStateOf<Set<String>?>(null) }
+    var lastSyncedPrefsKey by remember { mutableStateOf<Pair<UserPreferencesState, String>?>(null) }
+    var lastSyncedShoppingKey by remember { mutableStateOf<Triple<List<com.afrocuisto.app.data.model.ShoppingItem>, List<com.afrocuisto.app.data.model.ShoppingItem>, com.afrocuisto.app.data.model.MarketCurrency>?>(null) }
+
+    LaunchedEffect(authSession.isAuthenticated, authSession.userId) {
+        if (authSession.isAuthenticated && authSession.userId.isNotBlank()) {
+            if (hydratedUserId != authSession.userId) {
+                authRepository.hydrateUserBundle(
+                    recipeRepository = recipeRepository,
+                    shoppingRepository = shoppingRepository,
+                    voicePreferences = voicePrefs
+                )
+                val latestPrefs = prefsRepo.preferencesFlow.first()
+                val latestVoice = voicePrefs.selectedVoiceId.first()
+                lastSyncedFavorites = recipeRepository.currentFavorites()
+                lastSyncedCooked = latestPrefs.cookedRecipeIds
+                lastSyncedPrefsKey = latestPrefs to latestVoice
+                lastSyncedShoppingKey = Triple(
+                    shoppingRepository.items.value,
+                    shoppingRepository.archivedItems.value,
+                    shoppingRepository.currency.value
+                )
+                hydratedUserId = authSession.userId
+            }
+        } else {
+            hydratedUserId = null
+            lastSyncedFavorites = null
+            lastSyncedCooked = null
+            lastSyncedPrefsKey = null
+            lastSyncedShoppingKey = null
+        }
+    }
+
+    LaunchedEffect(hydratedUserId, userPrefs, selectedVoiceId) {
+        if (hydratedUserId != null && hydratedUserId == authSession.userId) {
+            val currentKey = userPrefs to selectedVoiceId
+            if (lastSyncedPrefsKey != currentKey) {
+                delay(900L)
+                authRepository.syncPreferencesToRemote(userPrefs, selectedVoiceId)
+                lastSyncedPrefsKey = currentKey
+            }
+        }
+    }
+
+    LaunchedEffect(hydratedUserId, favoriteIds) {
+        if (hydratedUserId != null && hydratedUserId == authSession.userId) {
+            val prev = lastSyncedFavorites
+            if (prev != null && prev != favoriteIds) {
+                val changed = (prev - favoriteIds) + (favoriteIds - prev)
+                changed.forEach { recipeId ->
+                    authRepository.toggleFavoriteRemote(recipeId)
+                }
+            }
+            lastSyncedFavorites = favoriteIds
+        }
+    }
+
+    LaunchedEffect(hydratedUserId, userPrefs.cookedRecipeIds) {
+        if (hydratedUserId != null && hydratedUserId == authSession.userId) {
+            val prev = lastSyncedCooked
+            if (prev != null) {
+                val newlyCooked = userPrefs.cookedRecipeIds - prev
+                newlyCooked.forEach { recipeId ->
+                    authRepository.markRecipeCookedRemote(recipeId)
+                }
+            }
+            lastSyncedCooked = userPrefs.cookedRecipeIds
+        }
+    }
+
+    LaunchedEffect(hydratedUserId, shoppingItems, archivedShoppingItems, marketCurrency) {
+        if (hydratedUserId != null && hydratedUserId == authSession.userId) {
+            val currentKey = Triple(shoppingItems, archivedShoppingItems, marketCurrency)
+            if (lastSyncedShoppingKey != currentKey) {
+                delay(900L)
+                authRepository.syncShoppingItemsRemote(
+                    activeItems = shoppingItems,
+                    archivedItems = archivedShoppingItems,
+                    currency = marketCurrency
+                )
+                lastSyncedShoppingKey = currentKey
+            }
+        }
+    }
 
     var activeRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
     var displayedRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -135,7 +240,16 @@ fun NavGraph(
     }
 
     val skipInitialSplash = remember {
-        !externalRecipeId.isNullOrBlank() || CookingTimerService.timerState.value.isActive
+        !externalRecipeId.isNullOrBlank() ||
+            externalOAuthUri != null ||
+            CookingTimerService.timerState.value.isActive
+    }
+    val initialStartDestination = remember {
+        if (!skipInitialSplash && !authRepository.hasCompletedAuthGateSync()) {
+            Screen.Login.route
+        } else {
+            Screen.Home.route
+        }
     }
     var showSplash by rememberSaveable { mutableStateOf(!skipInitialSplash) }
     var mountMainScaffold by rememberSaveable { mutableStateOf(skipInitialSplash) }
@@ -146,6 +260,29 @@ fun NavGraph(
             mountMainScaffold = true
             openRecipeDetail(externalRecipeId, withHaptic = false)
             onExternalRecipeConsumed()
+        }
+    }
+
+    LaunchedEffect(externalOAuthUri) {
+        val uri = externalOAuthUri ?: return@LaunchedEffect
+        onExternalOAuthConsumed()
+        showSplash = false
+        mountMainScaffold = true
+        when (val result = authRepository.completeOAuthCallback(uri)) {
+            is AuthResult.Success -> {
+                haptics.actionSuccess()
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(0) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+            is AuthResult.Error -> {
+                haptics.destructiveTick()
+                android.widget.Toast.makeText(context, result.message, android.widget.Toast.LENGTH_LONG).show()
+            }
+            is AuthResult.EmailConfirmationRequired -> {
+                haptics.actionSuccess()
+            }
         }
     }
 
@@ -168,6 +305,13 @@ fun NavGraph(
 
     val showBottomBar = currentRoute in bottomBarRoutes
     val isRecipeDetailOpen = activeRecipeId != null
+
+    val isDarkSystemBarRoute = showSplash ||
+        currentRoute == Screen.Login.route ||
+        currentRoute == Screen.Register.route
+    LaunchedEffect(isDarkSystemBarRoute) {
+        onForceDarkSystemBarsChange(isDarkSystemBarRoute)
+    }
 
     val appleEaseOut = remember { CubicBezierEasing(0.22f, 1f, 0.36f, 1f) }
     val bottomBarHideProgress by animateFloatAsState(
@@ -207,7 +351,7 @@ fun NavGraph(
             ) {
                 NavHost(
                     navController = navController,
-                    startDestination = Screen.Home.route,
+                    startDestination = initialStartDestination,
                     modifier = Modifier.fillMaxSize(),
                     enterTransition = {
                         val fromIdx = bottomBarRoutes.indexOf(initialState.destination.route)
@@ -380,6 +524,56 @@ fun NavGraph(
                         }
                     }
 
+                    composable(Screen.Login.route) {
+                        val hasPrevious = navController.previousBackStackEntry != null
+                        Box(Modifier.fillMaxSize()) {
+                            LoginScreen(
+                                authRepository = authRepository,
+                                canNavigateBack = hasPrevious,
+                                onBack = ::popWithHaptic,
+                                onNavigateToRegister = {
+                                    haptics.navigationTap()
+                                    navController.navigate(Screen.Register.route) {
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onAuthSuccess = {
+                                    navController.navigate(Screen.Home.route) {
+                                        popUpTo(0) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    composable(Screen.Register.route) {
+                        val hasPrevious = navController.previousBackStackEntry != null
+                        Box(Modifier.fillMaxSize()) {
+                            RegisterScreen(
+                                authRepository = authRepository,
+                                canNavigateBack = hasPrevious,
+                                onBack = ::popWithHaptic,
+                                onNavigateToLogin = {
+                                    haptics.navigationTap()
+                                    if (navController.previousBackStackEntry?.destination?.route == Screen.Login.route) {
+                                        navController.popBackStack()
+                                    } else {
+                                        navController.navigate(Screen.Login.route) {
+                                            launchSingleTop = true
+                                        }
+                                    }
+                                },
+                                onAuthSuccess = {
+                                    navController.navigate(Screen.Home.route) {
+                                        popUpTo(0) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
+                    }
+
                     composable(Screen.Profile.route) {
                         Box(standardPushModifier) {
                             ProfileScreen(
@@ -398,9 +592,23 @@ fun NavGraph(
                                     haptics.navigationTap()
                                     navController.navigate(Screen.AiChef.route)
                                 },
+                                onNavigateToLogin = {
+                                    haptics.navigationTap()
+                                    navController.navigate(Screen.Login.route) {
+                                        popUpTo(0) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onNavigateToRegister = {
+                                    haptics.navigationTap()
+                                    navController.navigate(Screen.Register.route) {
+                                        launchSingleTop = true
+                                    }
+                                },
                                 recipeRepository = recipeRepository,
                                 shoppingRepository = shoppingRepository,
-                                userPreferencesRepository = prefsRepo
+                                userPreferencesRepository = prefsRepo,
+                                authRepository = authRepository
                             )
                         }
                     }

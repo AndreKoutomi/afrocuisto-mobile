@@ -133,11 +133,10 @@ export function UsersPage() {
             if (authError) throw authError;
 
             if (data?.user) {
-                await supabase.from('user_profiles').insert([{
+                await supabaseAdmin.from('profiles').upsert([{
                     id: data.user.id,
                     name: formData.name,
-                    email: formData.email,
-                    joined_date: new Date().toISOString()
+                    email: formData.email
                 }]);
             }
 
@@ -158,7 +157,7 @@ export function UsersPage() {
         try {
             const { error: delError } = await supabaseAdmin.auth.admin.deleteUser(id);
             if (delError) throw delError;
-            await supabase.from('user_profiles').delete().eq('id', id);
+            await supabaseAdmin.from('profiles').delete().eq('id', id);
             fetchUsers();
             setSelectedUser(null);
             alert('Compte supprimé.');
@@ -177,6 +176,7 @@ export function UsersPage() {
                 user_metadata: { banned: newBanStatus },
             });
             if (banError) throw banError;
+            await supabaseAdmin.from('profiles').update({ is_banned: newBanStatus }).eq('id', user.id);
 
             fetchUsers();
             if (selectedUser?.id === user.id) {
@@ -195,8 +195,8 @@ export function UsersPage() {
         if (!selectedUser) return;
         setProcessing(true);
         try {
-            const { error: upError } = await supabase
-                .from('user_profiles')
+            const { error: upError } = await supabaseAdmin
+                .from('profiles')
                 .upsert({
                     id: selectedUser.id,
                     name: formData.name,

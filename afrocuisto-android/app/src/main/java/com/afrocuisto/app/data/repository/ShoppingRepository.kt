@@ -230,6 +230,16 @@ class ShoppingRepository {
         sharedArchivedItems.value = emptyList()
     }
 
+    fun replaceAllFromRemote(
+        active: List<ShoppingItem>,
+        archived: List<ShoppingItem>,
+        currency: MarketCurrency
+    ) {
+        sharedItems.value = active
+        sharedArchivedItems.value = archived
+        sharedCurrency.value = currency
+    }
+
     companion object {
         private val sharedCurrency = MutableStateFlow(MarketCurrency.FCFA)
 

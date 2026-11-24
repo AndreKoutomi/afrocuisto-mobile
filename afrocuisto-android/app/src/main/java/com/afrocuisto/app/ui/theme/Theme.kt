@@ -84,18 +84,20 @@ private val ExpressiveLightColorScheme = lightColorScheme(
 @Composable
 fun AfrocuistoTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    forceDarkSystemBars: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) ExpressiveDarkColorScheme else ExpressiveLightColorScheme
     val view = LocalView.current
+    val useDarkSystemBars = darkTheme || forceDarkSystemBars
 
     if (!view.isInEditMode) {
         SideEffect {
             val activity = view.context.findActivity() ?: return@SideEffect
             val window = activity.window
             val controller = WindowCompat.getInsetsController(window, view)
-            controller.isAppearanceLightStatusBars = !darkTheme
-            controller.isAppearanceLightNavigationBars = !darkTheme
+            controller.isAppearanceLightStatusBars = !useDarkSystemBars
+            controller.isAppearanceLightNavigationBars = !useDarkSystemBars
         }
     }
 

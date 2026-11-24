@@ -236,6 +236,50 @@ class UserPreferencesRepository(private val context: Context) {
         context.afroUserPrefsDataStore.edit { it[Keys.TIMER_VIBRATION] = enabled }
     }
 
+    suspend fun applyRemoteBundle(
+        displayName: String?,
+        roleTitle: String?,
+        bio: String?,
+        avatarUrl: String?,
+        favoriteTerroir: String?,
+        culinaryLevel: CulinaryLevel?,
+        spiceTolerance: SpiceTolerance?,
+        dietaryTags: Set<String>?,
+        cookedRecipeIds: Set<String>?,
+        defaultServings: Int?,
+        measurementMode: MeasurementMode?,
+        diasporaSubstitutesFirst: Boolean?,
+        keepScreenOnInRecipe: Boolean?,
+        themeMode: AppThemeMode?,
+        carouselAutoScroll: Boolean?,
+        timerVibrationEnabled: Boolean?
+    ) {
+        timerVibrationEnabled?.let { enabled ->
+            context.getSharedPreferences(SYNC_PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(SYNC_KEY_TIMER_VIBRATION, enabled)
+                .apply()
+        }
+        context.afroUserPrefsDataStore.edit { prefs ->
+            displayName?.takeIf { it.isNotBlank() }?.let { prefs[Keys.DISPLAY_NAME] = it }
+            roleTitle?.takeIf { it.isNotBlank() }?.let { prefs[Keys.ROLE_TITLE] = it }
+            bio?.let { prefs[Keys.BIO] = it }
+            avatarUrl?.takeIf { it.isNotBlank() }?.let { prefs[Keys.AVATAR_URL] = it }
+            favoriteTerroir?.takeIf { it.isNotBlank() }?.let { prefs[Keys.FAVORITE_TERROIR] = it }
+            culinaryLevel?.let { prefs[Keys.CULINARY_LEVEL] = it.id }
+            spiceTolerance?.let { prefs[Keys.SPICE_TOLERANCE] = it.id }
+            dietaryTags?.let { prefs[Keys.DIETARY_TAGS] = it }
+            cookedRecipeIds?.let { prefs[Keys.COOKED_RECIPE_IDS] = it }
+            defaultServings?.let { prefs[Keys.DEFAULT_SERVINGS] = it.coerceIn(1, 20) }
+            measurementMode?.let { prefs[Keys.MEASUREMENT_MODE] = it.id }
+            diasporaSubstitutesFirst?.let { prefs[Keys.DIASPORA_FIRST] = it }
+            keepScreenOnInRecipe?.let { prefs[Keys.KEEP_SCREEN_ON] = it }
+            themeMode?.let { prefs[Keys.THEME_MODE] = it.id }
+            carouselAutoScroll?.let { prefs[Keys.CAROUSEL_AUTO_SCROLL] = it }
+            timerVibrationEnabled?.let { prefs[Keys.TIMER_VIBRATION] = it }
+        }
+    }
+
     suspend fun resetCulinaryPreferences() {
         context.getSharedPreferences(SYNC_PREFS_NAME, Context.MODE_PRIVATE)
             .edit()

@@ -117,6 +117,8 @@ import com.afrocuisto.app.data.ota.OtaStatus
 import com.afrocuisto.app.data.ota.OtaUiState
 import com.afrocuisto.app.data.ota.OtaUpdateManager
 import com.afrocuisto.app.data.repository.AppThemeMode
+import com.afrocuisto.app.data.repository.AuthRepository
+import com.afrocuisto.app.data.repository.AuthSessionState
 import com.afrocuisto.app.data.repository.CulinaryLevel
 import com.afrocuisto.app.data.repository.MeasurementMode
 import com.afrocuisto.app.data.repository.RecipeRepository
@@ -249,9 +251,12 @@ fun ProfileScreen(
     onNavigateToFavorites: () -> Unit = {},
     onNavigateToMarket: () -> Unit = {},
     onNavigateToAiChef: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {},
+    onNavigateToRegister: () -> Unit = {},
     recipeRepository: RecipeRepository = remember { RecipeRepository() },
     shoppingRepository: ShoppingRepository = remember { ShoppingRepository() },
-    userPreferencesRepository: UserPreferencesRepository? = null
+    userPreferencesRepository: UserPreferencesRepository? = null,
+    authRepository: AuthRepository? = null
 ) {
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
@@ -262,6 +267,8 @@ fun ProfileScreen(
     val palette = rememberProfilePalette(isDark)
 
     val prefsRepo = userPreferencesRepository ?: remember { UserPreferencesRepository(context.applicationContext) }
+    val authRepo = authRepository ?: remember { AuthRepository(context.applicationContext, prefsRepo) }
+    val authSession by authRepo.sessionFlow.collectAsState(initial = AuthSessionState())
     val voicePrefs = remember { GeminiVoicePreferences(context.applicationContext) }
     val otaManager = remember { OtaUpdateManager(context.applicationContext) }
     val otaState by otaManager.state.collectAsState()
@@ -343,6 +350,7 @@ fun ProfileScreen(
     var showEditIdentitySheet by remember { mutableStateOf(false) }
     var showCookedHistorySheet by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var showSignOutConfirmDialog by remember { mutableStateOf(false) }
     var selectedSettingsGroup by remember { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = selectedSettingsGroup != null) {
@@ -673,6 +681,138 @@ fun ProfileScreen(
             }
 
             if (selectedSettingsGroup == null) {
+                ProfileSectionCard(
+                    title = "Compte AfroCuisto",
+                    subtitle = if (authSession.isAuthenticated) {
+                        "Connecté en tant que ${authSession.email}"
+                    } else {
+                        "Mode invité · Synchronisez vos favoris et votre profil"
+                    },
+                    palette = palette,
+                    trailingAction = {
+                        Surface(
+                            shape = ExpressivePillShape,
+                            color = if (authSession.isAuthenticated) {
+                                AccentEmerald.copy(alpha = 0.14f)
+                            } else {
+                                AfroOrange.copy(alpha = 0.12f)
+                            }
+                        ) {
+                            Text(
+                                text = if (authSession.isAuthenticated) "Synchronisé" else "Invité",
+                                color = if (authSession.isAuthenticated) AccentEmerald else AfroOrange,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                ) {
+                    if (authSession.isAuthenticated) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                SettingLeadingIcon(R.drawable.ic_solar_shield_check_linear, palette)
+                                Column {
+                                    Text(
+                                        text = authSession.displayName.ifBlank { userPrefs.displayName },
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = palette.title,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = authSession.email,
+                                        fontSize = 11.5.sp,
+                                        color = palette.muted,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Surface(
+                                shape = ExpressivePillShape,
+                                color = palette.subtleSurface,
+                                border = BorderStroke(1.dp, palette.border),
+                                modifier = Modifier
+                                    .clip(ExpressivePillShape)
+                                    .clickable {
+                                        afroHaptics.navigationTap()
+                                        showSignOutConfirmDialog = true
+                                    }
+                            ) {
+                                Text(
+                                    text = "Déconnexion",
+                                    color = Color(0xFFEF4444),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                                )
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    afroHaptics.navigationTap()
+                                    onNavigateToLogin()
+                                },
+                                shape = RoundedCornerShape(28.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AfroOrange,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                            ) {
+                                Text(
+                                    text = "Se connecter",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(28.dp),
+                                color = palette.subtleSurface,
+                                border = BorderStroke(1.dp, palette.border),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(28.dp))
+                                    .clickable {
+                                        afroHaptics.navigationTap()
+                                        onNavigateToRegister()
+                                    }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "Créer un compte",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = palette.title
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 ProfileSectionCard(
                     title = "Paramètres",
                     subtitle = "Vos réglages regroupés par thème",
@@ -1545,6 +1685,11 @@ fun ProfileScreen(
                         favoriteTerroir = terroir,
                         avatarUrl = avatar
                     )
+                    authRepo.syncIdentityToRemote(
+                        displayName = name,
+                        favoriteTerroir = terroir,
+                        bio = bio
+                    )
                     showEditIdentitySheet = false
                     statusBannerMessage = "Profil culinaire enregistré"
                 }
@@ -1681,6 +1826,48 @@ fun ProfileScreen(
                     }
                 ) {
                     Text("Confirmer", color = AfroOrange, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        )
+    }
+
+    if (showSignOutConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutConfirmDialog = false },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = palette.card,
+            title = {
+                Text(
+                    text = "Se déconnecter ?",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 17.sp,
+                    color = palette.title
+                )
+            },
+            text = {
+                Text(
+                    text = "Vous devrez vous reconnecter pour accéder à vos recettes, vos favoris et votre panier synchronisé.",
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                    color = palette.muted
+                )
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutConfirmDialog = false }) {
+                    Text("Annuler", color = palette.muted, fontWeight = FontWeight.Bold)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            authRepo.signOut()
+                            showSignOutConfirmDialog = false
+                            onNavigateToLogin()
+                        }
+                    }
+                ) {
+                    Text("Déconnexion", color = Color(0xFFEF4444), fontWeight = FontWeight.ExtraBold)
                 }
             }
         )

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.hardware.display.DisplayManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.Display
@@ -23,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.afrocuisto.app.data.repository.AppThemeMode
+import com.afrocuisto.app.data.repository.AuthRepository
 import com.afrocuisto.app.data.repository.UserPreferencesRepository
 import com.afrocuisto.app.data.repository.UserPreferencesState
 import com.afrocuisto.app.service.CookingTimerService
@@ -32,12 +34,16 @@ import com.afrocuisto.app.ui.theme.AfrocuistoTheme
 class MainActivity : ComponentActivity() {
 
     private var deepLinkRecipeId by mutableStateOf<String?>(null)
+    private var oauthCallbackUri by mutableStateOf<Uri?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         CookingTimerService.ensureHydrated(this)
         deepLinkRecipeId = intent?.getStringExtra(CookingTimerService.EXTRA_RECIPE_ID)
             ?.takeIf { it.isNotBlank() }
+        if (AuthRepository.isOAuthCallbackUri(intent?.data)) {
+            oauthCallbackUri = intent?.data
+        }
 
         requestPeakRefreshRate()
         enableEdgeToEdge(
@@ -55,15 +61,17 @@ class MainActivity : ComponentActivity() {
                 AppThemeMode.DARK -> true
                 AppThemeMode.SYSTEM -> systemDark
             }
+            var forceDarkSystemBars by remember { mutableStateOf(true) }
+            val effectiveDarkSystemBars = useDarkTheme || forceDarkSystemBars
 
-            DisposableEffect(useDarkTheme) {
+            DisposableEffect(effectiveDarkSystemBars) {
                 enableEdgeToEdge(
-                    statusBarStyle = if (useDarkTheme) {
+                    statusBarStyle = if (effectiveDarkSystemBars) {
                         SystemBarStyle.dark(Color.TRANSPARENT)
                     } else {
                         SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
                     },
-                    navigationBarStyle = if (useDarkTheme) {
+                    navigationBarStyle = if (effectiveDarkSystemBars) {
                         SystemBarStyle.dark(Color.TRANSPARENT)
                     } else {
                         SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
@@ -72,7 +80,10 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            AfrocuistoTheme(darkTheme = useDarkTheme) {
+            AfrocuistoTheme(
+                darkTheme = useDarkTheme,
+                forceDarkSystemBars = forceDarkSystemBars
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -80,7 +91,10 @@ class MainActivity : ComponentActivity() {
                     NavGraph(
                         userPreferencesRepository = userPreferencesRepository,
                         externalRecipeId = deepLinkRecipeId,
-                        onExternalRecipeConsumed = { deepLinkRecipeId = null }
+                        onExternalRecipeConsumed = { deepLinkRecipeId = null },
+                        externalOAuthUri = oauthCallbackUri,
+                        onExternalOAuthConsumed = { oauthCallbackUri = null },
+                        onForceDarkSystemBarsChange = { forceDarkSystemBars = it }
                     )
                 }
             }
@@ -94,6 +108,9 @@ class MainActivity : ComponentActivity() {
             ?.takeIf { it.isNotBlank() }
         if (targetId != null) {
             deepLinkRecipeId = targetId
+        }
+        if (AuthRepository.isOAuthCallbackUri(intent.data)) {
+            oauthCallbackUri = intent.data
         }
     }
 
