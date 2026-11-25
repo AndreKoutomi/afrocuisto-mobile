@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -234,6 +235,7 @@ fun RecipeDetailScreen(
     recipeId: String,
     onBack: () -> Unit,
     onNavigateToMarket: () -> Unit = {},
+    onNavigateToRecipeDetail: (String) -> Unit = {},
     repository: RecipeRepository = remember { RecipeRepository() },
     shoppingRepository: ShoppingRepository = remember { ShoppingRepository() },
     userPreferencesRepository: UserPreferencesRepository? = null,
@@ -247,10 +249,17 @@ fun RecipeDetailScreen(
     val prefsRepo = userPreferencesRepository ?: remember { UserPreferencesRepository(context.applicationContext) }
     val userPrefs by prefsRepo.preferencesFlow.collectAsState(initial = initialUserPrefs)
 
-    val recipe = remember(recipeId) { repository.getRecipeById(recipeId) }
+    val allRecipes by repository.recipes.collectAsState(initial = emptyList())
+    val recipe = remember(recipeId, allRecipes) {
+        allRecipes.find { it.id == recipeId } ?: repository.getRecipeById(recipeId)
+    }
     val favoriteIds by repository.favoriteIds.collectAsState(initial = emptySet())
     val shoppingItems by shoppingRepository.items.collectAsState()
     val timerState by CookingTimerService.timerState.collectAsState()
+
+    LaunchedEffect(recipeId) {
+        repository.refreshFromSupabase()
+    }
 
     if (recipe == null) {
         Box(modifier = Modifier.fillMaxSize().background(palette.sheet), contentAlignment = Alignment.Center) {
@@ -277,6 +286,7 @@ fun RecipeDetailScreen(
     var completedSteps by remember(recipe.id) { mutableStateOf(emptySet<Int>()) }
     var isDescriptionExpanded by remember(recipe.id) { mutableStateOf(false) }
     var isChefSecretExpanded by remember(recipe.id) { mutableStateOf(true) }
+    var isNoteInputFocused by remember(recipe.id) { mutableStateOf(false) }
     var showBelowFold by remember(recipe.id) { mutableStateOf(false) }
     LaunchedEffect(recipe.id) {
         androidx.compose.runtime.withFrameNanos { }
@@ -429,6 +439,7 @@ fun RecipeDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .verticalScroll(
                     state = scrollState,
                     flingBehavior = rememberSmoothFlingBehavior()
@@ -638,7 +649,7 @@ fun RecipeDetailScreen(
                 // 3. DYNAMIC METRICS & ANIMATED PORTIONS SCALER
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(28.dp),
                     color = palette.warmSurface,
                     border = BorderStroke(1.dp, palette.warmBorder)
                 ) {
@@ -879,7 +890,7 @@ fun RecipeDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 12.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(28.dp),
                         color = palette.warmSurface,
                         border = BorderStroke(1.dp, AfroOrange.copy(alpha = 0.35f))
                     ) {
@@ -950,7 +961,7 @@ fun RecipeDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(28.dp),
                         color = palette.emeraldSoft,
                         border = BorderStroke(1.dp, palette.emeraldBorder)
                     ) {
@@ -1029,7 +1040,7 @@ fun RecipeDetailScreen(
                             stateKey.startsWith("checked:") -> {
                                 Button(
                                     onClick = { addSelectedIngredientsToCart(checkedIngredients) },
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(28.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = AfroOrange,
                                         contentColor = Color.White
@@ -1057,12 +1068,12 @@ fun RecipeDetailScreen(
                             }
                             stateKey == "all_in_cart" -> {
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(28.dp),
                                     color = palette.emeraldSoft,
                                     border = BorderStroke(1.dp, palette.emeraldBorder),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
+                                        .clip(RoundedCornerShape(28.dp))
                                         .clickable { onNavigateToMarket() }
                                 ) {
                                     Row(
@@ -1090,12 +1101,12 @@ fun RecipeDetailScreen(
                             }
                             stateKey.startsWith("missing:") -> {
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(28.dp),
                                     color = palette.warmSurface,
                                     border = BorderStroke(1.dp, palette.warmBorder),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
+                                        .clip(RoundedCornerShape(28.dp))
                                         .clickable {
                                             addSelectedIngredientsToCart(missingIngredientIndices)
                                         }
@@ -1125,12 +1136,12 @@ fun RecipeDetailScreen(
                             }
                             else -> {
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(28.dp),
                                     color = palette.warmSurface,
                                     border = BorderStroke(1.dp, palette.warmBorder),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
+                                        .clip(RoundedCornerShape(28.dp))
                                         .clickable {
                                             addSelectedIngredientsToCart(recipe.ingredients.indices.toSet())
                                         }
@@ -1282,7 +1293,7 @@ fun RecipeDetailScreen(
                                 activeStep = (activeStep - 1).coerceAtLeast(0)
                             },
                             enabled = activeStep > 0,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(28.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = palette.elevatedCard,
                                 contentColor = palette.ink,
@@ -1305,7 +1316,7 @@ fun RecipeDetailScreen(
                                     activeStep = (activeStep + 1).coerceAtMost(recipe.steps.lastIndex)
                                 }
                             },
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(28.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isLastStep && completedSteps.size == recipe.steps.size) AccentEmerald else AfroOrange,
                                 contentColor = Color.White
@@ -1341,7 +1352,7 @@ fun RecipeDetailScreen(
                                     stiffness = Spring.StiffnessMediumLow
                                 )
                             ),
-                        shape = RoundedCornerShape(22.dp),
+                        shape = RoundedCornerShape(28.dp),
                         color = palette.warmSurface,
                         border = BorderStroke(1.dp, palette.warmBorder)
                     ) {
@@ -1482,8 +1493,37 @@ fun RecipeDetailScreen(
 
                 } // end showBelowFold
 
+                Spacer(Modifier.height(8.dp))
+            } // end MAIN EDITORIAL SHEET
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(palette.sheet)
+                    .padding(horizontal = 22.dp)
+            ) {
+                RecipeCookingVideoSection(
+                    recipe = recipe,
+                    isDark = isDark
+                )
+
+                Spacer(Modifier.height(24.dp))
+                RecipeRatingAndNoteSection(
+                    recipe = recipe,
+                    isDark = isDark,
+                    onInputFocusChanged = { isNoteInputFocused = it }
+                )
+
+                Spacer(Modifier.height(24.dp))
+                RecipeSuggestionsSection(
+                    currentRecipe = recipe,
+                    allRecipes = allRecipes,
+                    isDark = isDark,
+                    onRecipeClick = onNavigateToRecipeDetail
+                )
+
                 // Generous bottom clearance so the floating bottom dock never overlaps content
-                Spacer(Modifier.height(116.dp))
+                Spacer(Modifier.height(128.dp))
                 Spacer(Modifier.navigationBarsPadding())
             }
         }
@@ -1591,7 +1631,8 @@ fun RecipeDetailScreen(
         }
 
         // 8. SMART CONTEXTUAL FLOATING BOTTOM DOCK
-        Box(
+        if (!isNoteInputFocused) {
+            Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
@@ -1626,7 +1667,7 @@ fun RecipeDetailScreen(
                     "cart_selection" -> {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(28.dp),
                             color = AfroOrange,
                             shadowElevation = 10.dp
                         ) {
@@ -1700,7 +1741,7 @@ fun RecipeDetailScreen(
                     else -> {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(22.dp),
+                            shape = RoundedCornerShape(28.dp),
                             color = if (isDark) palette.elevatedCard else palette.sheet,
                             border = BorderStroke(1.dp, palette.border),
                             shadowElevation = 10.dp
@@ -1820,7 +1861,7 @@ fun RecipeDetailScreen(
                                             seconds = customTimerMinutes * 60
                                         )
                                     },
-                                    shape = RoundedCornerShape(14.dp),
+                                    shape = RoundedCornerShape(28.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = AfroOrange,
                                         contentColor = Color.White
@@ -1847,6 +1888,7 @@ fun RecipeDetailScreen(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -1875,9 +1917,9 @@ private fun IngredientSelectableRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(28.dp))
             .clickable(onClick = onToggle),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(28.dp),
         color = bgColor,
         border = BorderStroke(1.dp, borderColor)
     ) {
@@ -2020,9 +2062,9 @@ private fun PreparationStepCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(28.dp))
             .clickable(onClick = onSelectStep),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(28.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder)
     ) {
@@ -2252,7 +2294,8 @@ private fun AdaptiveCartTopButton(
             if (pendingCount > 0) {
                 Surface(
                     shape = CircleShape,
-                    color = AfroOrange
+                    color = AfroOrange,
+                    modifier = Modifier.height(20.dp)
                 ) {
                     AnimatedContent(
                         targetState = pendingCount,
@@ -2261,13 +2304,23 @@ private fun AdaptiveCartTopButton(
                         },
                         label = "topCartCountBadge"
                     ) { count ->
-                        Text(
-                            text = "$count",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.5.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .height(20.dp)
+                                .widthIn(min = 20.dp)
+                                .padding(horizontal = 5.dp)
+                        ) {
+                            Text(
+                                text = "$count",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                lineHeight = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
                     }
                 }
             }

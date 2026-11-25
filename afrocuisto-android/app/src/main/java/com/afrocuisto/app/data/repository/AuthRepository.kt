@@ -909,8 +909,24 @@ class AuthRepository(
             runCatching {
                 httpClient.newCall(request).execute().use { response ->
                     if (response.code == 401) {
-                        getValidSessionOrRefresh(forceRefresh = true)
-                        return@use false
+                        val refreshed = getValidSessionOrRefresh(forceRefresh = true) ?: return@use false
+                        val retryRequest = Request.Builder()
+                            .url("$baseUrl/rest/v1/rpc/get_my_user_bundle")
+                            .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+                            .addHeader("Authorization", "Bearer ${refreshed.accessToken}")
+                            .addHeader("Content-Type", "application/json")
+                            .post("{}".toRequestBody(jsonMediaType))
+                            .build()
+                        httpClient.newCall(retryRequest).execute().use { retryResponse ->
+                            if (!retryResponse.isSuccessful) return@use false
+                            val retryBody = retryResponse.body?.string() ?: return@use false
+                            return@use applyHydratedBundleJson(
+                                body = retryBody,
+                                recipeRepository = recipeRepository,
+                                shoppingRepository = shoppingRepository,
+                                voicePreferences = voicePreferences
+                            )
+                        }
                     }
                     if (response.code == 403) {
                         wipeLocalSession()
@@ -918,7 +934,24 @@ class AuthRepository(
                     }
                     if (!response.isSuccessful) return@use false
                     val body = response.body?.string() ?: return@use false
-                    val root = json.parseToJsonElement(body).jsonObject
+                    applyHydratedBundleJson(
+                        body = body,
+                        recipeRepository = recipeRepository,
+                        shoppingRepository = shoppingRepository,
+                        voicePreferences = voicePreferences
+                    )
+                }
+            }.getOrDefault(false)
+        } ?: false
+    }
+
+    private suspend fun applyHydratedBundleJson(
+        body: String,
+        recipeRepository: RecipeRepository,
+        shoppingRepository: ShoppingRepository,
+        voicePreferences: GeminiVoicePreferences
+    ): Boolean {
+        val root = json.parseToJsonElement(body).jsonObject
 
                     val profileObj = root["profile"]?.takeIf { it is JsonObject }?.jsonObject
                     val prefsObj = root["preferences"]?.takeIf { it is JsonObject }?.jsonObject
@@ -927,7 +960,7 @@ class AuthRepository(
 
                     if (profileObj?.get("is_banned")?.jsonPrimitive?.booleanOrNull == true) {
                         wipeLocalSession()
-                        return@use false
+                        return false
                     }
 
                     val remoteCooked = profileObj?.get("cooked_recipe_ids")?.jsonArray
@@ -987,10 +1020,7 @@ class AuthRepository(
                         val currency = if (currencyStr == "EUR") MarketCurrency.EUR else MarketCurrency.FCFA
                         shoppingRepository.replaceAllFromRemote(active, archived, currency)
                     }
-                    true
-                }
-            }.getOrDefault(false)
-        } ?: false
+        return true
     }
 
     suspend fun syncPreferencesToRemote(

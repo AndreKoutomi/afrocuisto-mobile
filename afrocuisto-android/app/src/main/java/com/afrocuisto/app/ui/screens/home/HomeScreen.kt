@@ -110,10 +110,12 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.afrocuisto.app.R
 import com.afrocuisto.app.data.model.Recipe
+import com.afrocuisto.app.data.repository.AppNotificationCenter
 import com.afrocuisto.app.data.repository.HomeSection
 import com.afrocuisto.app.data.repository.RecipeRepository
 import com.afrocuisto.app.ui.components.AfroHapticKind
 import com.afrocuisto.app.ui.components.AfroPullToRefreshBox
+import com.afrocuisto.app.ui.components.AppNotificationBottomSheet
 import com.afrocuisto.app.ui.components.AppleAiGlowCard
 import com.afrocuisto.app.ui.components.ProductLikeButton
 import com.afrocuisto.app.ui.components.afroCardPressMotion
@@ -154,6 +156,8 @@ fun HomeScreen(
     val recipes by repository.recipes.collectAsState(initial = emptyList())
     val homeSections by repository.homeSections.collectAsState(initial = emptyList())
     val favoriteIds by repository.favoriteIds.collectAsState(initial = emptySet())
+    val notifications by AppNotificationCenter.notifications.collectAsState()
+    val unreadNotificationCount = remember(notifications) { notifications.count { !it.isRead } }
 
     var searchQuery by remember { mutableStateOf("") }
     var isSearchFocused by remember { mutableStateOf(false) }
@@ -362,6 +366,17 @@ fun HomeScreen(
                         tint = titleColor,
                         modifier = Modifier.size(23.dp)
                     )
+                    if (unreadNotificationCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 5.dp, end = 5.dp)
+                                .size(9.dp)
+                                .clip(CircleShape)
+                                .background(AfroOrange)
+                                .border(1.5.dp, if (isDark) colorScheme.background else Color.White, CircleShape)
+                        )
+                    }
                 }
             }
 
@@ -800,103 +815,16 @@ fun HomeScreen(
     }
 
     if (showNotificationsDialog) {
-        val sheetBg = if (isDark) colorScheme.surface else Color.White
-        val subtleBg = if (isDark) colorScheme.surfaceVariant else Color(0xFFF8FAFC)
-        ModalBottomSheet(
-            onDismissRequest = { showNotificationsDialog = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            containerColor = sheetBg,
-            scrimColor = Color(0xFF0F172A).copy(alpha = 0.45f)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 22.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(subtleBg)
-                            .border(1.dp, borderColor, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_solar_bell_linear),
-                            contentDescription = null,
-                            tint = titleColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "Notifications",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 19.sp,
-                            color = titleColor,
-                            modifier = Modifier.nexaTitleEmphasis()
-                        )
-                        Text(
-                            text = "Alertes et nouveautés AfroCuisto",
-                            fontSize = 12.sp,
-                            color = subtitleColor
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = subtleBg,
-                    border = BorderStroke(1.dp, borderColor),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "Aucune nouvelle notification pour le moment.",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = titleColor
-                        )
-                        Text(
-                            text = "Vos alertes de cuisson, nouveautés de la communauté et mises à jour de l'application apparaîtront ici.",
-                            fontSize = 12.5.sp,
-                            lineHeight = 18.sp,
-                            color = subtitleColor
-                        )
-                    }
-                }
-
-                Button(
-                    onClick = { showNotificationsDialog = false },
-                    shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDark) Color.White else Color(0xFF1E1E2D),
-                        contentColor = if (isDark) Color(0xFF1E1E2D) else Color.White
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) {
-                    Text(
-                        text = "Fermer",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-            }
-        }
+        AppNotificationBottomSheet(
+            notifications = notifications,
+            recipes = recipes,
+            onDismiss = { showNotificationsDialog = false },
+            onMarkAsRead = { AppNotificationCenter.markAsRead(it) },
+            onMarkAllAsRead = { AppNotificationCenter.markAllAsRead() },
+            onDelete = { AppNotificationCenter.dismiss(it) },
+            onOpenRecipe = onNavigateToRecipeDetail,
+            onOpenMarket = onNavigateToMarket
+        )
     }
 }
 
@@ -1724,19 +1652,18 @@ fun SunRecipeCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(9.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Les pilules peuvent passer sur plusieurs lignes quand la durée est longue.
-            FlowRow(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                itemVerticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 ProductCardMetricPill(
                     backgroundColor = AfroOrange,
                     iconRes = R.drawable.ic_solar_stopwatch_linear,
-                    label = recipe.prepTime
+                    label = recipe.prepTime.ifBlank { "15 min" },
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 ProductCardMetricPill(
                     backgroundColor = ratingPillBg,
@@ -1752,14 +1679,16 @@ fun SunRecipeCard(
 private fun ProductCardMetricPill(
     backgroundColor: Color,
     iconRes: Int,
-    label: String
+    label: String,
+    modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(50),
+        modifier = modifier.height(24.dp),
+        shape = CircleShape,
         color = backgroundColor
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -1767,14 +1696,17 @@ private fun ProductCardMetricPill(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(12.dp)
+                modifier = Modifier.size(11.dp)
             )
             Text(
                 text = label,
                 fontSize = 10.sp,
+                lineHeight = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
-                maxLines = 1
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

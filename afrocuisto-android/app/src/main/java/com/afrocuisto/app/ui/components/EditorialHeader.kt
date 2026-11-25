@@ -25,7 +25,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +73,7 @@ fun EditorialPageHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(durationMillis = 220))
             .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 14.dp)
     ) {
         Row(
@@ -72,14 +81,23 @@ fun EditorialPageHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.4).sp,
-                color = titleColor,
-                modifier = Modifier.nexaTitleEmphasis()
-            )
+            AnimatedContent(
+                targetState = title,
+                transitionSpec = {
+                    (slideInVertically(tween(220)) { it / 3 } + fadeIn(tween(220)))
+                        .togetherWith(slideOutVertically(tween(160)) { -it / 3 } + fadeOut(tween(160)))
+                },
+                label = "editorialHeaderTitle"
+            ) { animatedTitle ->
+                Text(
+                    text = animatedTitle,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.4).sp,
+                    color = titleColor,
+                    modifier = Modifier.nexaTitleEmphasis()
+                )
+            }
             if (trailingAction != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

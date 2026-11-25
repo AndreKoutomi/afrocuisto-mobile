@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AdminSelect } from '../components/AdminSelect';
 import {
     KeyRound, Sparkles, CheckCircle2, AlertCircle, Eye, EyeOff,
     Save, RotateCcw, ShieldCheck, Loader2
@@ -11,14 +12,15 @@ interface GeminiModelOption {
 }
 
 const FALLBACK_MODELS: GeminiModelOption[] = [
-    { value: 'gemini-flash-latest', label: 'gemini-flash-latest (Par défaut)' },
-    { value: 'gemini-2.5-flash', label: 'gemini-2.5-flash' },
-    { value: 'gemini-2.5-pro', label: 'gemini-2.5-pro' },
+    { value: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (par défaut)' },
+    { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite' },
+    { value: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash' },
+    { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite' },
 ];
 
 export function SettingsPage() {
     const envKey = ((import.meta as any).env?.VITE_GEMINI_API_KEY || '').trim();
-    const envModel = ((import.meta as any).env?.VITE_AI_MODEL || 'gemini-flash-latest').trim();
+    const envModel = ((import.meta as any).env?.VITE_AI_MODEL || 'gemini-3.8-flash').trim();
 
     const [apiKey, setApiKey] = useState(() => getStoredGeminiKey());
     const [model, setModel] = useState(() => getStoredAiModel() || envModel);
@@ -85,7 +87,10 @@ export function SettingsPage() {
             setModels(compatible);
             if (!compatible.some(m => m.value === model)) {
                 const preferred =
-                    compatible.find(m => m.value === 'gemini-2.5-flash') ||
+                    compatible.find(m => m.value === 'gemini-3.8-flash') ||
+                    compatible.find(m => m.value === 'gemini-3.5-flash-lite') ||
+                    compatible.find(m => m.value === 'gemini-3.6-flash') ||
+                    compatible.find(m => m.value === 'gemini-3.1-flash-lite') ||
                     compatible.find(m => m.value === 'gemini-flash-latest') ||
                     compatible[0];
                 setModel(preferred.value);
@@ -230,16 +235,14 @@ export function SettingsPage() {
                                 <span className="badge badge-success">{models.length} compatibles</span>
                             )}
                         </div>
-                        <select
-                            className="form-control"
+                        <AdminSelect
+                            ariaLabel="Modèle Gemini"
                             value={model}
-                            onChange={(e) => setModel(e.target.value)}
-                            style={{ height: '46px' }}
-                        >
-                            {models.map(m => (
-                                <option key={m.value} value={m.value}>{m.label}</option>
-                            ))}
-                        </select>
+                            onChange={setModel}
+                            options={models.map(option => ({ value: option.value, label: option.label }))}
+                            style={{ width: '100%' }}
+                            triggerStyle={{ height: '46px' }}
+                        />
                     </div>
                 </div>
 

@@ -121,22 +121,24 @@ fun NavGraph(
     LaunchedEffect(authSession.isAuthenticated, authSession.userId) {
         if (authSession.isAuthenticated && authSession.userId.isNotBlank()) {
             if (hydratedUserId != authSession.userId) {
-                authRepository.hydrateUserBundle(
+                val hydrated = authRepository.hydrateUserBundle(
                     recipeRepository = recipeRepository,
                     shoppingRepository = shoppingRepository,
                     voicePreferences = voicePrefs
                 )
-                val latestPrefs = prefsRepo.preferencesFlow.first()
-                val latestVoice = voicePrefs.selectedVoiceId.first()
-                lastSyncedFavorites = recipeRepository.currentFavorites()
-                lastSyncedCooked = latestPrefs.cookedRecipeIds
-                lastSyncedPrefsKey = latestPrefs to latestVoice
-                lastSyncedShoppingKey = Triple(
-                    shoppingRepository.items.value,
-                    shoppingRepository.archivedItems.value,
-                    shoppingRepository.currency.value
-                )
-                hydratedUserId = authSession.userId
+                if (hydrated) {
+                    val latestPrefs = prefsRepo.preferencesFlow.first()
+                    val latestVoice = voicePrefs.selectedVoiceId.first()
+                    lastSyncedFavorites = recipeRepository.currentFavorites()
+                    lastSyncedCooked = latestPrefs.cookedRecipeIds
+                    lastSyncedPrefsKey = latestPrefs to latestVoice
+                    lastSyncedShoppingKey = Triple(
+                        shoppingRepository.items.value,
+                        shoppingRepository.archivedItems.value,
+                        shoppingRepository.currency.value
+                    )
+                    hydratedUserId = authSession.userId
+                }
             }
         } else {
             hydratedUserId = null
@@ -502,6 +504,9 @@ fun NavGraph(
                                 recipeId = recipeId,
                                 onBack = ::popWithHaptic,
                                 onNavigateToMarket = ::navigateToMarketTab,
+                                onNavigateToRecipeDetail = { nextId ->
+                                    navController.navigate(Screen.RecipeDetail.createRoute(nextId))
+                                },
                                 repository = recipeRepository,
                                 shoppingRepository = shoppingRepository,
                                 userPreferencesRepository = prefsRepo,
@@ -686,6 +691,7 @@ fun NavGraph(
                         recipeId = targetId,
                         onBack = { closeRecipeDetail(withHaptic = true) },
                         onNavigateToMarket = ::navigateToMarketTab,
+                        onNavigateToRecipeDetail = { nextId -> openRecipeDetail(nextId) },
                         repository = recipeRepository,
                         shoppingRepository = shoppingRepository,
                         userPreferencesRepository = prefsRepo,

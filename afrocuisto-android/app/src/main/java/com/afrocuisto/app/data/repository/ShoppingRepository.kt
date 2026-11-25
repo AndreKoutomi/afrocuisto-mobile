@@ -1,11 +1,20 @@
 package com.afrocuisto.app.data.repository
 
+import android.content.Context
+import android.content.SharedPreferences
 import com.afrocuisto.app.data.model.Ingredient
 import com.afrocuisto.app.data.model.MarketCurrency
 import com.afrocuisto.app.data.model.ShoppingItem
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -146,6 +155,17 @@ class ShoppingRepository {
         sharedItems.value = sharedItems.value.filter { it.id != id }
     }
 
+    fun moveItem(fromId: String, toId: String) {
+        if (fromId == toId) return
+        val current = sharedItems.value.toMutableList()
+        val fromIdx = current.indexOfFirst { it.id == fromId }
+        val toIdx = current.indexOfFirst { it.id == toId }
+        if (fromIdx < 0 || toIdx < 0 || fromIdx == toIdx) return
+        val moved = current.removeAt(fromIdx)
+        current.add(toIdx, moved)
+        sharedItems.value = current
+    }
+
     fun clearCheckedItems() {
         sharedItems.value = sharedItems.value.filterNot { it.isChecked }
     }
@@ -241,11 +261,59 @@ class ShoppingRepository {
     }
 
     companion object {
+        private const val PREFS_NAME = "afrocuisto_shopping_prefs"
+        private const val KEY_ITEMS = "shopping_items_json"
+        private const val KEY_ARCHIVED = "shopping_archived_json"
+        private const val KEY_CURRENCY = "shopping_currency"
+
+        private val json = Json { ignoreUnknownKeys = true }
+        private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private var prefs: SharedPreferences? = null
+
         private val sharedCurrency = MutableStateFlow(MarketCurrency.FCFA)
 
         private val sharedItems = MutableStateFlow<List<ShoppingItem>>(emptyList())
 
         private val sharedArchivedItems = MutableStateFlow<List<ShoppingItem>>(emptyList())
+
+        fun init(context: Context) {
+            if (prefs != null) return
+            val sp = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs = sp
+            sp.getString(KEY_ITEMS, null)?.let { raw ->
+                runCatching { json.decodeFromString<List<ShoppingItem>>(raw) }
+                    .getOrNull()
+                    ?.let { if (sharedItems.value.isEmpty()) sharedItems.value = it }
+            }
+            sp.getString(KEY_ARCHIVED, null)?.let { raw ->
+                runCatching { json.decodeFromString<List<ShoppingItem>>(raw) }
+                    .getOrNull()
+                    ?.let { if (sharedArchivedItems.value.isEmpty()) sharedArchivedItems.value = it }
+            }
+            sp.getString(KEY_CURRENCY, null)?.let { code ->
+                runCatching { MarketCurrency.valueOf(code) }.getOrNull()?.let { sharedCurrency.value = it }
+            }
+
+            persistScope.launch {
+                sharedItems.drop(1).collect { list ->
+                    runCatching { json.encodeToString(list) }.getOrNull()?.let { encoded ->
+                        sp.edit().putString(KEY_ITEMS, encoded).apply()
+                    }
+                }
+            }
+            persistScope.launch {
+                sharedArchivedItems.drop(1).collect { list ->
+                    runCatching { json.encodeToString(list) }.getOrNull()?.let { encoded ->
+                        sp.edit().putString(KEY_ARCHIVED, encoded).apply()
+                    }
+                }
+            }
+            persistScope.launch {
+                sharedCurrency.drop(1).collect { curr ->
+                    sp.edit().putString(KEY_CURRENCY, curr.name).apply()
+                }
+            }
+        }
 
         private fun formatArchiveBatchLabel(timestampMs: Long): String {
             val fmt = SimpleDateFormat("dd MMM • HH:mm", Locale.FRENCH)

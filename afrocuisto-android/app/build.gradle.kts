@@ -164,6 +164,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.androidx.browser)
+    implementation(libs.android.youtube.player)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

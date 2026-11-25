@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabaseAdmin } from '../lib/supabase';
+import { AdminSelect } from '../components/AdminSelect';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Search, Utensils, CheckCircle2 } from '../components/SolarIcons';
 import { APP_SECTION_TYPES, getAppSectionTypeMeta } from '../lib/sectionTypes';
@@ -141,16 +142,14 @@ export function SectionForm() {
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
                             Type d’affichage
                         </label>
-                        <select
+                        <AdminSelect
+                            ariaLabel="Type d’affichage"
                             value={sectionType}
-                            onChange={e => setSectionType(e.target.value)}
-                            className="form-control"
-                            style={{ height: '46px' }}
-                        >
-                            {APP_SECTION_TYPES.map(t => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
-                            ))}
-                        </select>
+                            onChange={setSectionType}
+                            options={APP_SECTION_TYPES.map(type => ({ value: type.value, label: type.label }))}
+                            style={{ width: '100%' }}
+                            triggerStyle={{ height: '46px' }}
+                        />
                         <p style={{ margin: '6px 0 0', fontSize: '11.5px', color: 'var(--text-muted)' }}>
                             {getAppSectionTypeMeta(sectionType).description}
                         </p>

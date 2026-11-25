@@ -13,8 +13,9 @@
 
 import { useEffect, useState } from 'react';
 import { supabase, supabaseAdmin } from '../lib/supabase';
+import { AdminSelect } from '../components/AdminSelect';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ImagePlus, X, Clock, Flame, Globe, Tag, BookOpen, Sparkles, ChefHat, Leaf, Wand2, Zap, Youtube, Crop, Plus, Trash2, ArrowUp, ArrowDown, ListOrdered, ShoppingBasket } from '../components/SolarIcons';
+import { ArrowLeft, Save, ImagePlus, X, Clock, Flame, Globe, Tag, BookOpen, Sparkles, ChefHat, Leaf, Wand2, Zap, Youtube, Crop, Plus, Trash2, ArrowUp, ArrowDown, ListOrdered, ShoppingBasket, AlertCircle } from '../components/SolarIcons';
 import { aiService } from '../lib/ai';
 import { ImageCropModal } from '../components/ImageCropModal';
 
@@ -133,6 +134,7 @@ export function RecipeForm() {
     const [uploading, setUploading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(!!id);
     const [aiLoading, setAiLoading] = useState(false);
+    const [aiError, setAiError] = useState('');
 
     const [aiPrefilled, setAiPrefilled] = useState(false);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -259,14 +261,43 @@ export function RecipeForm() {
     const handleAIFill = async () => {
         if (!formData.name.trim()) { alert("Entrez d'abord le nom du plat."); return; }
         setAiLoading(true);
-        const { data, error } = await aiService.generateRecipeDetails(formData.name);
-        if (data) {
-            setFormData(prev => ({ ...prev, ...data }));
-            setAiPrefilled(true);
-        } else if (error) {
-            alert(`Erreur IA : ${error}`);
+        setAiError('');
+        try {
+            const { data, error } = await aiService.generateFullRecipe(formData.name);
+            if (data) {
+                const ingredients = normalizeIngredients(data.ingredients);
+                const steps = normalizeSteps(data.steps);
+                setFormData(prev => ({
+                    ...prev,
+                    alias: data.alias ?? prev.alias,
+                    region: data.region ?? prev.region,
+                    category: data.category ?? prev.category,
+                    difficulty: data.difficulty ?? prev.difficulty,
+                    prep_time: data.prep_time ?? prev.prep_time,
+                    cook_time: data.cook_time ?? prev.cook_time,
+                    description: data.description ?? prev.description,
+                    technique_title: data.technique_title ?? prev.technique_title,
+                    technique_description: data.technique_description ?? prev.technique_description,
+                    benefits: data.benefits ?? prev.benefits,
+                    style: data.style ?? prev.style,
+                    type: data.type ?? prev.type,
+                    base: data.base ?? prev.base,
+                    name: prev.name,
+                    ingredients,
+                    steps,
+                }));
+                setAiPrefilled(true);
+                if (ingredients.length === 0 || steps.length === 0) {
+                    setAiError('La fiche a été générée, mais les ingrédients ou les étapes sont incomplets. Réessayez pour compléter la recette.');
+                }
+            } else {
+                setAiError(error || 'La génération IA a échoué. Réessayez.');
+            }
+        } catch (error: any) {
+            setAiError(error?.message || 'La génération IA a échoué. Réessayez.');
+        } finally {
+            setAiLoading(false);
         }
-        setAiLoading(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -277,14 +308,34 @@ export function RecipeForm() {
             ingredients: (formData.ingredients || []).filter(i => i.name.trim().length > 0),
             steps: (formData.steps || []).map(s => s.trim()).filter(Boolean),
         };
+        // `servings` is generated for the preview but is not a column in recipes.
+        delete (cleanData as any).servings;
 
+        let createdRecipeId: string | null = null;
         const trySave = async (data: Record<string, any>) => {
             if (id) {
                 return supabaseAdmin.from('recipes').update(data).eq('id', id);
             } else {
-                (data as any).id = `rec_${Date.now()}`;
+                createdRecipeId = `rec_${Date.now()}`;
+                (data as any).id = createdRecipeId;
                 return supabaseAdmin.from('recipes').insert([data]);
             }
+        };
+
+        const publishNewRecipeNotification = async () => {
+            if (id || !createdRecipeId) return;
+            const region = cleanData.region?.trim() || 'Terroir';
+            const prep = cleanData.prep_time?.trim() || '30 min';
+            const desc = (cleanData.description || '').trim();
+            const snippet = desc.length > 90 ? `${desc.slice(0, 87)}...` : desc;
+            await supabaseAdmin.from('app_notifications').insert([{
+                title: `Nouvelle recette : ${cleanData.name}`,
+                body: snippet
+                    ? `${region} • ${prep} — ${snippet}`
+                    : `${region} • ${prep} — Découvrez ce nouveau plat authentique sur AfroCuisto.`,
+                action_route: `recipe:${createdRecipeId}`,
+                is_active: true,
+            }]);
         };
 
         try {
@@ -297,6 +348,7 @@ export function RecipeForm() {
                 delete (dataWithoutVideo as any).video_url;
                 const retry = await trySave(dataWithoutVideo);
                 if (!retry.error) {
+                    await publishNewRecipeNotification();
                     alert('✅ Recette sauvegardée.\n\n⚠️ Le lien vidéo n\'a pas pu être enregistré car la colonne n\'existe pas encore dans la base de données.\n\nPour activer cette fonctionnalité, exécutez ce SQL dans Supabase :\nALTER TABLE recipes ADD COLUMN IF NOT EXISTS video_url TEXT;');
                     navigate('/recipes');
                     return;
@@ -305,10 +357,12 @@ export function RecipeForm() {
             }
 
             if (error) throw error;
+            await publishNewRecipeNotification();
             navigate('/recipes');
         } catch (err) {
             console.error('Save error:', err);
-            alert('Erreur lors de la sauvegarde.');
+            const message = err instanceof Error ? err.message : String(err || 'Erreur inconnue');
+            alert(`Erreur lors de la sauvegarde : ${message}`);
         } finally {
             setLoading(false);
         }
@@ -409,16 +463,32 @@ export function RecipeForm() {
                                         <span style={{ whiteSpace: 'nowrap' }}>{aiLoading ? 'IA en cours...' : 'Remplir par l\'IA'}</span>
                                     </button>
                                 </div>
+                                {aiError && (
+                                    <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '8px', padding: '10px 12px', borderRadius: '10px', background: '#fff7ed', color: '#9a3412', fontSize: '12px', lineHeight: 1.5 }}>
+                                        <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                        <span style={{ flex: 1 }}>{aiError}</span>
+                                        <button type="button" onClick={handleAIFill} disabled={aiLoading} style={{ border: 0, background: 'transparent', color: '#c2410c', fontSize: '12px', fontWeight: 800, cursor: aiLoading ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}>
+                                            Réessayer
+                                        </button>
+                                    </div>
+                                )}
                             </Field>
                             <div className="grid-2-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                 <Field label="Alias / Nom local">
                                     <input name="alias" value={formData.alias || ''} onChange={handleChange} placeholder="Nom en langue locale" style={inputStyle} />
                                 </Field>
                                 <Field label="Catégorie">
-                                    <select name="category" value={formData.category || ''} onChange={handleChange} style={{ ...inputStyle, cursor: 'pointer' }}>
-                                        <option value="">Sélectionner...</option>
-                                        {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                                    </select>
+                                    <AdminSelect
+                                        ariaLabel="Catégorie de la recette"
+                                        value={formData.category || ''}
+                                        onChange={value => setFormData(prev => ({ ...prev, category: value }))}
+                                        options={[
+                                            { value: '', label: 'Sélectionner...' },
+                                            ...CATEGORIES.map(category => ({ value: category.value, label: category.label })),
+                                        ]}
+                                        style={{ width: '100%' }}
+                                        triggerStyle={{ height: '46px' }}
+                                    />
                                 </Field>
                             </div>
                             <div className="grid-2-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -823,9 +893,14 @@ export function RecipeForm() {
                             </Field>
 
                             <Field label="Niveau de difficulté">
-                                <select name="difficulty" value={formData.difficulty || ''} onChange={handleChange} style={{ ...inputStyle, cursor: 'pointer' }}>
-                                    {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
+                                <AdminSelect
+                                    ariaLabel="Niveau de difficulté"
+                                    value={formData.difficulty || ''}
+                                    onChange={value => setFormData(prev => ({ ...prev, difficulty: value }))}
+                                    options={DIFFICULTIES.map(difficulty => ({ value: difficulty, label: difficulty }))}
+                                    style={{ width: '100%' }}
+                                    triggerStyle={{ height: '46px' }}
+                                />
                             </Field>
 
                             <div className="grid-2-cols">

@@ -15,7 +15,8 @@ import { useEffect, useState, useMemo } from 'react'; // Hooks React pour le cyc
 import { supabase, supabaseAdmin } from '../lib/supabase'; // Client pour communiquer avec la base de données
 import { Plus, Edit2, Trash2, Search, RefreshCw, ChefHat, Clock, MapPin, Filter, X, Sparkles, Database } from '../components/SolarIcons'; // Collection d'icônes
 import { Link, useSearchParams } from 'react-router-dom'; // Outils de navigation
-import { RecipeAIWizard } from '../components/RecipeAIWizard'; // Composant assistant IA
+import { RecipeAIWizard } from '../components/RecipeAIWizard';
+import { AdminSelect } from '../components/AdminSelect';
 import { seedDemoRecipesAndSections } from '../lib/seedRecipes';
 
 // Définition des catégories avec leurs couleurs pour l'affichage
@@ -242,25 +243,29 @@ export function RecipesList() {
                     />
                 </div>
 
-                <select
+                <AdminSelect
+                    ariaLabel="Filtrer par catégorie"
                     value={filterCategory}
-                    onChange={e => setFilterCategory(e.target.value)}
-                    style={{ ...inputStyle, flex: '1 1 auto', minWidth: '160px', cursor: 'pointer', color: filterCategory ? '#111827' : '#9ca3af' }}
-                >
-                    <option value="">Toutes les catégories</option>
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
+                    onChange={setFilterCategory}
+                    options={[
+                        { value: '', label: 'Toutes les catégories' },
+                        ...CATEGORIES.map(category => ({ value: category.value, label: category.label })),
+                    ]}
+                    style={{ flex: '1 1 auto', minWidth: '160px' }}
+                />
 
-                <select
+                <AdminSelect
+                    ariaLabel="Filtrer par difficulté"
                     value={filterDifficulty}
-                    onChange={e => setFilterDifficulty(e.target.value)}
-                    style={{ ...inputStyle, flex: '1 1 auto', minWidth: '140px', cursor: 'pointer', color: filterDifficulty ? '#111827' : '#9ca3af' }}
-                >
-                    <option value="">Toute difficulté</option>
-                    <option value="Facile">Facile</option>
-                    <option value="Moyen">Moyen</option>
-                    <option value="Difficile">Difficile</option>
-                </select>
+                    onChange={setFilterDifficulty}
+                    options={[
+                        { value: '', label: 'Toute difficulté' },
+                        { value: 'Facile', label: 'Facile' },
+                        { value: 'Moyen', label: 'Moyen' },
+                        { value: 'Difficile', label: 'Difficile' },
+                    ]}
+                    style={{ flex: '1 1 auto', minWidth: '140px' }}
+                />
 
                 {hasActiveFilters && (
                     <button

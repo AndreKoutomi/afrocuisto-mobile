@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase, supabaseAdmin } from '../lib/supabase';
+import { AdminSelect } from '../components/AdminSelect';
 import {
     Edit2, ShieldAlert, ShieldCheck, UserPlus, MoreHorizontal,
     History, CreditCard, Activity, Trash2, X, Users,
@@ -328,19 +329,18 @@ export function UsersPage() {
                         }}
                     />
                 </div>
-                <select
+                <AdminSelect
+                    ariaLabel="Trier les utilisateurs"
                     value={sortBy}
-                    onChange={e => setSortBy(e.target.value as any)}
-                    style={{
-                        height: '46px', borderRadius: '14px', border: '1.5px solid #e5e7eb',
-                        background: '#fff', padding: '0 14px', fontSize: '13px', fontWeight: 700,
-                        color: '#374151', cursor: 'pointer', outline: 'none',
-                    }}
-                >
-                    <option value="date">Trier par date</option>
-                    <option value="name">Trier par nom</option>
-                    <option value="favorites">Trier par favoris</option>
-                </select>
+                    onChange={value => setSortBy(value as any)}
+                    options={[
+                        { value: 'date', label: 'Trier par date' },
+                        { value: 'name', label: 'Trier par nom' },
+                        { value: 'favorites', label: 'Trier par favoris' },
+                    ]}
+                    style={{ flex: '0 0 auto' }}
+                    triggerStyle={{ height: '46px', minWidth: '190px', fontSize: '13px', fontWeight: 700 }}
+                />
                 <button
                     onClick={fetchUsers}
                     title="Actualiser"

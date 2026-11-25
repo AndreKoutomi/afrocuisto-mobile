@@ -17,6 +17,7 @@ import { SettingsPage } from './pages/Settings';
 import { Community } from './pages/Community';
 import { Bugs } from './pages/Bugs';
 import { Login } from './pages/Login';
+import { BoutiqueAdmin } from './pages/BoutiqueAdmin';
 import { supabase } from './lib/supabase';
 
 interface AppLayoutProps {
@@ -52,6 +53,9 @@ function AppLayout({ children, session, onLogout, theme, onToggleTheme }: AppLay
     if (location.pathname === '/contributions') return 'Suggestions de plats';
     if (location.pathname === '/dashboard') return 'Tableau de bord';
     if (location.pathname === '/recipes') return 'Catalogue Recettes';
+    if (location.pathname.startsWith('/boutique/products')) return 'Produits boutique';
+    if (location.pathname.startsWith('/boutique/orders')) return 'Commandes boutique';
+    if (location.pathname.startsWith('/boutique/delivery')) return 'Gestion des livraisons';
     if (location.pathname.startsWith('/recipes/create')) return 'Nouvelle Recette';
     if (location.pathname.startsWith('/recipes/edit')) return 'Modifier la Recette';
     if (location.pathname === '/users') return 'Utilisateurs';
@@ -65,6 +69,7 @@ function AppLayout({ children, session, onLogout, theme, onToggleTheme }: AppLay
 
   const getBreadcrumb = () => {
     if (location.pathname.startsWith('/recipes')) return 'Contenu / Recettes';
+    if (location.pathname.startsWith('/boutique')) return 'Boutique / Opérations';
     if (location.pathname.startsWith('/sections')) return 'Contenu / Sections';
     if (location.pathname.startsWith('/contributions')) return 'Contenu / Suggestions';
     if (location.pathname.startsWith('/users')) return 'Communauté / Utilisateurs';
@@ -291,6 +296,10 @@ function App() {
                 <Route path="/recipes" element={<RecipesList />} />
                 <Route path="/recipes/create" element={<RecipeForm />} />
                 <Route path="/recipes/edit/:id" element={<RecipeForm />} />
+                <Route path="/boutique" element={<Navigate to="/boutique/products" replace />} />
+                <Route path="/boutique/products" element={<BoutiqueAdmin key="products" section="products" />} />
+                <Route path="/boutique/orders" element={<BoutiqueAdmin key="orders" section="orders" />} />
+                <Route path="/boutique/delivery" element={<BoutiqueAdmin key="delivery" section="delivery" />} />
                 <Route path="/sections" element={<SectionsManager />} />
                 <Route path="/sections/create" element={<SectionForm />} />
                 <Route path="/sections/edit/:id" element={<SectionForm />} />

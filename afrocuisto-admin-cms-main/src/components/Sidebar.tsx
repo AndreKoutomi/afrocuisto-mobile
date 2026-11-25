@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users,
     Sparkles, Bell, ChevronLeft, ChevronRight, LogOut, Share2,
-    Bug, Smartphone, UserCheck, Settings
+    Bug, Smartphone, UserCheck, Settings, ShoppingBasket, MapPin, ListOrdered
 } from './SolarIcons';
 import logoAdmin from '../assets/logo_admin.png';
 
@@ -101,6 +101,23 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }:
                 <NavLink to="/contributions" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <Sparkles size={18} />
                     <span>Suggestions plats</span>
+                </NavLink>
+
+                <span className="nav-label">Boutique & Livraison</span>
+
+                <NavLink to="/boutique/products" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <ShoppingBasket size={18} />
+                    <span>Produits boutique</span>
+                </NavLink>
+
+                <NavLink to="/boutique/orders" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <ListOrdered size={18} />
+                    <span>Commandes</span>
+                </NavLink>
+
+                <NavLink to="/boutique/delivery" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <MapPin size={18} />
+                    <span>Livraison</span>
                 </NavLink>
 
                 <span className="nav-label">Communauté & Support</span>

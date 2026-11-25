@@ -14,7 +14,7 @@
 import { CATEGORIES } from '../pages/RecipeForm'; // Importation des catégories de recettes
 import { supabase } from '../lib/supabase'; // Importation du client de base de données
 
-const DEFAULT_MODEL = 'gemini-flash-latest'; // Modèle d'intelligence artificielle utilisé par défaut (stable sur Free Tier)
+const DEFAULT_MODEL = 'gemini-3.8-flash'; // Modèle stable par défaut pour les générations de texte
 
 // Structure d'une réponse renvoyée par ce service
 export interface AIServiceResponse {
@@ -174,20 +174,10 @@ class AIService {
         } else {
             // Logique pour les modèles Google Gemini
             const tryFetch = async (version: string, modelName: string) => {
-                let endpoint = '';
-                let body: any = {};
-                if (customBaseUrl) {
-                    const baseUrl = customBaseUrl.replace(/\/$/, '');
-                    endpoint = `${baseUrl}/${version}/models/${modelName}:generateContent?key=${key}`;
-                } else {
-                    endpoint = `https://generativelanguage.googleapis.com/${version}/models/${modelName}:generateContent?key=${key}`;
-                }
-
-                body = {
+                const baseUrl = customBaseUrl?.replace(/\/$/, '') || 'https://generativelanguage.googleapis.com';
+                const endpoint = `${baseUrl}/${version}/models/${modelName}:generateContent?key=${encodeURIComponent(key)}`;
+                const body = {
                     contents: [{ parts: [{ text: `${systemPrompt}\n\nUser request: ${prompt}` }] }],
-                    generationConfig: {
-                        temperature: 0.8
-                    },
                 };
 
                 return fetch(endpoint, {
@@ -197,27 +187,77 @@ class AIService {
                 });
             };
 
-            let response = await tryFetch('v1beta', model);
+            // Try a smaller stable text model if the selected model is temporarily overloaded.
+            const fallbackModels = customBaseUrl ? [] : [
+                'gemini-3.5-flash-lite',
+                'gemini-3.8-flash',
+                'gemini-3.6-flash',
+                'gemini-3.1-flash-lite',
+                'gemini-flash-latest',
+            ];
+            const modelsToTry = [...new Set([model, ...fallbackModels])];
+            const transientStatuses = new Set([500, 502, 503, 504]);
+            let lastFailure = '';
+            const attemptedModels: string[] = [];
 
-            // Fallback stable si le modèle spécifique de l'env n'est pas trouvé
-            if (response.status === 404 && model !== DEFAULT_MODEL) {
-                response = await tryFetch('v1beta', DEFAULT_MODEL);
-            }
+            for (const [modelIndex, modelName] of modelsToTry.entries()) {
+                attemptedModels.push(modelName);
+                const maxAttempts = modelIndex === 0 ? 3 : 1;
 
-            const text = await response.text();
-            if (!response.ok) {
-                if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<html')) {
-                    throw new Error(`L'API Gemini a renvoyé du HTML (Erreur ${response.status}). Vérifiez votre Base URL.`);
+                for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                    let response: Response;
+                    try {
+                        response = await tryFetch('v1beta', modelName);
+                    } catch (error: any) {
+                        lastFailure = error?.message || 'Échec réseau';
+                        if (attempt < maxAttempts - 1) {
+                            await new Promise<void>(resolve => window.setTimeout(() => resolve(), 1200 * (2 ** attempt)));
+                            continue;
+                        }
+                        break;
+                    }
+
+                    const text = await response.text();
+                    if (response.ok) {
+                        try {
+                            const json = JSON.parse(text);
+                            const generatedText = json.candidates?.[0]?.content?.parts
+                                ?.map((part: { text?: string }) => part.text || '')
+                                .join('')
+                                .trim();
+                            if (!generatedText) throw new Error('Gemini a renvoyé une réponse vide ou bloquée.');
+                            return generatedText;
+                        } catch (error: any) {
+                            throw new Error(error?.message || 'Format de réponse Gemini invalide.');
+                        }
+                    }
+
+                    let message = text;
+                    try { message = JSON.parse(text)?.error?.message || text; } catch { /* conserve le texte brut */ }
+                    if (message.trim().startsWith('<!doctype') || message.trim().startsWith('<html')) {
+                        message = 'Le serveur IA a renvoyé une page HTML au lieu du résultat.';
+                    }
+                    message = message.slice(0, 400);
+                    lastFailure = `HTTP ${response.status} — ${message}`;
+
+                    if (response.status === 404) break;
+                    if (!transientStatuses.has(response.status)) {
+                        throw new Error(`Erreur API Gemini (${response.status}): ${message}`);
+                    }
+
+                    if (attempt < maxAttempts - 1) {
+                        const retryAfter = Number(response.headers.get('Retry-After'));
+                        const wait = Number.isFinite(retryAfter) && retryAfter > 0
+                            ? Math.min(retryAfter * 1000, 10000)
+                            : 1200 * (2 ** attempt) + Math.random() * 300;
+                        await new Promise<void>(resolve => window.setTimeout(() => resolve(), wait));
+                    }
                 }
-                throw new Error(`Erreur API Gemini (${response.status}): ${text}`);
             }
 
-            try {
-                const json = JSON.parse(text);
-                return json.candidates[0].content.parts[0].text;
-            } catch (e) {
-                throw new Error('Format de réponse Gemini invalide ou contenu bloqué.');
-            }
+            throw new Error(
+                `Gemini est temporairement indisponible. ${attemptedModels.length > 1 ? `Modèles essayés : ${attemptedModels.join(', ')}. ` : ''}Dernière réponse : ${lastFailure || 'aucune réponse du service'}. Réessayez dans quelques instants ou choisissez un autre modèle dans Paramètres IA.`
+            );
         }
     }
 

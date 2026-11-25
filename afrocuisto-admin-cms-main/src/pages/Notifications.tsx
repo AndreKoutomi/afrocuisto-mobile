@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, Send, Trash2, CheckCircle2, AlertCircle, Eye, EyeOff, RefreshCw } from '../components/SolarIcons';
 import { supabaseAdmin } from '../lib/supabase';
+import { AdminSelect } from '../components/AdminSelect';
 
 interface AppNotification {
     id: string;
@@ -166,15 +167,14 @@ export function Notifications() {
                         </div>
                         <div>
                             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>Route d’action (optionnel)</label>
-                            <select
+                            <AdminSelect
+                                ariaLabel="Route d’action de la notification"
                                 value={form.action_route}
-                                onChange={e => setForm({ ...form, action_route: e.target.value })}
-                                style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #e5e7eb', fontSize: '14px', background: '#fff', boxSizing: 'border-box', outline: 'none' }}
-                            >
-                                {ACTION_ROUTES.map(r => (
-                                    <option key={r.value} value={r.value}>{r.label}</option>
-                                ))}
-                            </select>
+                                onChange={value => setForm({ ...form, action_route: value })}
+                                options={ACTION_ROUTES}
+                                style={{ width: '100%' }}
+                                triggerStyle={{ minHeight: '44px' }}
+                            />
                         </div>
                         <button
                             type="submit"

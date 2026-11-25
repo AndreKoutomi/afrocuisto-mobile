@@ -14,9 +14,10 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { supabaseAdmin } from '../lib/supabase';
+import { AdminSelect } from '../components/AdminSelect';
 import {
     Bug, CheckCircle2, Clock, XCircle,
-    RefreshCw, Search, Filter, ChevronDown, Trash2,
+    RefreshCw, Search, Filter, Trash2,
     Smartphone, Calendar, Tag, Layers, Info,
     TrendingUp, ShieldAlert
 } from '../components/SolarIcons';
@@ -273,33 +274,33 @@ export function Bugs() {
                 </div>
 
                 {/* Sévérité */}
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <select
-                        value={filterSeverity}
-                        onChange={e => setFilterSeverity(e.target.value)}
-                        style={{ height: 44, borderRadius: 14, border: '1.5px solid #e5e7eb', background: '#fff', padding: '0 36px 0 14px', fontSize: 13, fontWeight: 700, color: '#374151', cursor: 'pointer', outline: 'none', appearance: 'none' }}
-                    >
-                        <option value="all">Toutes sévérités</option>
-                        <option value="Bloquant">🔴 Bloquant</option>
-                        <option value="Majeur">🟠 Majeur</option>
-                        <option value="Mineur">🟡 Mineur</option>
-                        <option value="Cosmétique">🔵 Cosmétique</option>
-                    </select>
-                    <ChevronDown size={14} color="#9ca3af" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                </div>
+                <AdminSelect
+                    ariaLabel="Filtrer par sévérité"
+                    value={filterSeverity}
+                    onChange={setFilterSeverity}
+                    options={[
+                        { value: 'all', label: 'Toutes sévérités' },
+                        { value: 'Bloquant', label: '🔴 Bloquant' },
+                        { value: 'Majeur', label: '🟠 Majeur' },
+                        { value: 'Mineur', label: '🟡 Mineur' },
+                        { value: 'Cosmétique', label: '🔵 Cosmétique' },
+                    ]}
+                    style={{ flex: '0 0 auto' }}
+                    triggerStyle={{ height: '44px', minWidth: '176px', fontSize: '13px', fontWeight: 700 }}
+                />
 
                 {/* Sort */}
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <select
-                        value={sortBy}
-                        onChange={e => setSortBy(e.target.value as any)}
-                        style={{ height: 44, borderRadius: 14, border: '1.5px solid #e5e7eb', background: '#fff', padding: '0 36px 0 14px', fontSize: 13, fontWeight: 700, color: '#374151', cursor: 'pointer', outline: 'none', appearance: 'none' }}
-                    >
-                        <option value="date">Plus récents</option>
-                        <option value="severity">Par sévérité</option>
-                    </select>
-                    <ChevronDown size={14} color="#9ca3af" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                </div>
+                <AdminSelect
+                    ariaLabel="Trier les rapports de bugs"
+                    value={sortBy}
+                    onChange={value => setSortBy(value as 'date' | 'severity')}
+                    options={[
+                        { value: 'date', label: 'Plus récents' },
+                        { value: 'severity', label: 'Par sévérité' },
+                    ]}
+                    style={{ flex: '0 0 auto' }}
+                    triggerStyle={{ height: '44px', minWidth: '160px', fontSize: '13px', fontWeight: 700 }}
+                />
 
                 {/* Refresh */}
                 <button

@@ -2,6 +2,7 @@ package com.afrocuisto.app.ui.screens.market
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -15,7 +16,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
@@ -40,7 +43,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -67,6 +72,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -76,7 +82,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
@@ -84,8 +94,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afrocuisto.app.R
+import com.afrocuisto.app.data.model.BoutiqueProduct
 import com.afrocuisto.app.data.model.MarketCurrency
 import com.afrocuisto.app.data.model.ShoppingItem
+import com.afrocuisto.app.data.repository.BoutiqueRepository
 import com.afrocuisto.app.data.repository.ShoppingRepository
 import com.afrocuisto.app.ui.components.AfroHapticKind
 import com.afrocuisto.app.ui.components.AfroPullToRefreshBox
@@ -107,8 +119,8 @@ private val MarketRadius28 = RoundedCornerShape(28.dp)
 private val MarketTopSheetRadius28 = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
 private enum class MarketTab {
-    ACTIVE,
-    ARCHIVES
+    BOUTIQUE,
+    ACTIVE
 }
 
 private enum class ActiveListFilter(val label: String) {
@@ -129,7 +141,8 @@ private val QUICK_QUANTITIES = listOf("250 g", "500 g", "1 kg", "1 boîte", "1 b
 
 @Composable
 fun MarketScreen(
-    repository: ShoppingRepository = remember { ShoppingRepository() }
+    repository: ShoppingRepository = remember { ShoppingRepository() },
+    boutiqueRepository: BoutiqueRepository = remember { BoutiqueRepository() }
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = isAfroDarkTheme()
@@ -139,11 +152,19 @@ fun MarketScreen(
     val archivedItems by repository.archivedItems.collectAsState()
     val currency by repository.currency.collectAsState()
 
-    var selectedTab by remember { mutableStateOf(MarketTab.ACTIVE) }
+    val boutiqueProducts by boutiqueRepository.products.collectAsState()
+    val boutiqueCart by boutiqueRepository.cart.collectAsState()
+    val boutiqueOrders by boutiqueRepository.orders.collectAsState()
+
+    var selectedTab by remember { mutableStateOf(MarketTab.BOUTIQUE) }
+    var showArchivesInList by remember { mutableStateOf(false) }
     var activeFilter by remember { mutableStateOf(ActiveListFilter.ALL) }
     var searchOrQuickName by remember { mutableStateOf("") }
 
     var editorTarget by remember { mutableStateOf<MarketEditorTarget?>(null) }
+    var selectedBoutiqueProduct by remember { mutableStateOf<BoutiqueProduct?>(null) }
+    var showBoutiqueCartSheet by remember { mutableStateOf(false) }
+    var showBoutiqueOrdersSheet by remember { mutableStateOf(false) }
     var showClearArchivesDialog by remember { mutableStateOf(false) }
     var archiveBannerMessage by remember { mutableStateOf<String?>(null) }
 
@@ -209,28 +230,127 @@ fun MarketScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             EditorialPageHeader(
-                title = "Mon marché",
+                title = if (selectedTab == MarketTab.BOUTIQUE) "Mon panier" else "Ma liste",
                 trailingAction = {
-                    Surface(
-                        shape = MarketRadius28,
-                        color = AfroOrange.copy(alpha = 0.14f)
-                    ) {
-                        AnimatedContent(
-                            targetState = pendingItems.size,
-                            transitionSpec = {
-                                (scaleIn(spring(dampingRatio = 0.65f)) + fadeIn()).togetherWith(
-                                    scaleOut() + fadeOut()
+                    AnimatedContent(
+                        targetState = selectedTab,
+                        transitionSpec = {
+                            val forward = targetState == MarketTab.ACTIVE
+                            (slideInHorizontally(tween(240)) { if (forward) it / 4 else -it / 4 } +
+                                fadeIn(tween(240)) +
+                                scaleIn(initialScale = 0.94f, animationSpec = tween(240)))
+                                .togetherWith(
+                                    slideOutHorizontally(tween(180)) { if (forward) -it / 4 else it / 4 } +
+                                        fadeOut(tween(180)) +
+                                        scaleOut(targetScale = 0.94f, animationSpec = tween(180))
                                 )
-                            },
-                            label = "marketPendingCounter"
-                        ) { count ->
-                            Text(
-                                text = "$count à acheter",
-                                fontSize = 12.sp,
-                                color = AfroOrange,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                            )
+                                .using(SizeTransform(clip = false))
+                        },
+                        label = "marketHeaderTrailingTransition"
+                    ) { tab ->
+                        if (tab == MarketTab.BOUTIQUE) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Bouton conditionnel "Mes commandes" uniquement sur Boutique
+                                Surface(
+                                    shape = MarketRadius28,
+                                    color = if (isDark) colorScheme.surfaceVariant else Color(0xFFF1F5F9),
+                                    border = BorderStroke(1.dp, if (isDark) colorScheme.outline else Color(0xFFE2E8F0)),
+                                    modifier = Modifier.afroSpringClickable(
+                                        pressedScale = 0.94f,
+                                        haptic = AfroHapticKind.SELECTION
+                                    ) { showBoutiqueOrdersSheet = true }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_solar_clipboard_list_linear),
+                                            contentDescription = "Mes commandes",
+                                            tint = colorScheme.onSurface,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text(
+                                            text = if (boutiqueOrders.isNotEmpty()) {
+                                                "Mes commandes (${boutiqueOrders.size})"
+                                            } else {
+                                                "Mes commandes"
+                                            },
+                                            fontSize = 11.5.sp,
+                                            lineHeight = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colorScheme.onSurface
+                                        )
+                                    }
+                                }
+
+                                // Bouton Panier Boutique sur la même ligne que le titre
+                                val cartTotalCount = boutiqueCart.sumOf { it.quantity }
+                                Surface(
+                                    shape = MarketRadius28,
+                                    color = AfroOrange.copy(alpha = 0.14f),
+                                    border = BorderStroke(1.dp, AfroOrange.copy(alpha = 0.35f)),
+                                    modifier = Modifier.afroSpringClickable(
+                                        pressedScale = 0.92f,
+                                        haptic = AfroHapticKind.SELECTION
+                                    ) { showBoutiqueCartSheet = true }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (cartTotalCount > 0) R.drawable.ic_solar_bag_bold else R.drawable.ic_solar_bag_linear
+                                            ),
+                                            contentDescription = "Panier Boutique",
+                                            tint = AfroOrange,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                        if (cartTotalCount > 0) {
+                                            Surface(shape = CircleShape, color = AfroOrange) {
+                                                Text(
+                                                    text = "$cartTotalCount",
+                                                    fontSize = 10.5.sp,
+                                                    lineHeight = 12.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = Color.White,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Surface(
+                                shape = MarketRadius28,
+                                color = AfroOrange.copy(alpha = 0.14f)
+                            ) {
+                                AnimatedContent(
+                                    targetState = if (showArchivesInList) archivedItems.size else pendingItems.size,
+                                    transitionSpec = {
+                                        (scaleIn(spring(dampingRatio = 0.65f)) + fadeIn()).togetherWith(
+                                            scaleOut() + fadeOut()
+                                        )
+                                    },
+                                    label = "marketPendingCounter"
+                                ) { count ->
+                                    Text(
+                                        text = if (showArchivesInList) "$count archivés" else "$count à acheter",
+                                        fontSize = 12.sp,
+                                        lineHeight = 14.sp,
+                                        color = AfroOrange,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -242,53 +362,54 @@ fun MarketScreen(
                     EditorialSearchBar(
                         value = searchOrQuickName,
                         onValueChange = { searchOrQuickName = it },
-                        placeholder = if (selectedTab == MarketTab.ACTIVE) {
-                            "Rechercher ou ajouter (ex: Gombo...)"
-                        } else {
-                            "Rechercher dans les archives..."
+                        placeholder = when {
+                            selectedTab == MarketTab.BOUTIQUE -> "Rechercher ingrédient, fruit, légume..."
+                            showArchivesInList -> "Rechercher dans les archives..."
+                            else -> "Rechercher ou ajouter (ex: Gombo...)"
                         },
                         leadingIcon = null,
                         shape = MarketRadius28,
                         modifier = Modifier.weight(1f)
                     )
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    if (selectedTab == MarketTab.ACTIVE && !showArchivesInList) {
+                        Spacer(modifier = Modifier.width(10.dp))
 
-                    Surface(
-                        shape = MarketRadius28,
-                        color = AfroOrange,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .graphicsLayer {
-                                scaleX = addReadyScale
-                                scaleY = addReadyScale
-                            }
-                            .afroSpringClickable(
-                                pressedScale = 0.86f,
-                                haptic = AfroHapticKind.SELECTION
-                            ) {
-                                editorTarget = MarketEditorTarget.NewItem(
-                                    prefillName = searchOrQuickName.trim()
+                        Surface(
+                            shape = MarketRadius28,
+                            color = AfroOrange,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .graphicsLayer {
+                                    scaleX = addReadyScale
+                                    scaleY = addReadyScale
+                                }
+                                .afroSpringClickable(
+                                    pressedScale = 0.86f,
+                                    haptic = AfroHapticKind.SELECTION
+                                ) {
+                                    editorTarget = MarketEditorTarget.NewItem(
+                                        prefillName = searchOrQuickName.trim()
+                                    )
+                                }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_solar_add_linear),
+                                    contentDescription = "Ajouter un produit avec montant",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_solar_add_linear),
-                                contentDescription = "Ajouter un produit avec montant",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
                         }
                     }
                 }
             }
 
-            // Segmented Switcher: Panier actif vs Archives des achats (28.dp radius)
+            // Segmented Switcher: Boutique vs Ma liste (Archives intégrées dans Ma liste)
             MarketTabSwitcher(
                 selectedTab = selectedTab,
                 activeCount = items.size,
-                archiveCount = archivedItems.size,
                 onSelectTab = { tab ->
                     if (tab != selectedTab) {
                         haptics.selectionTick()
@@ -297,6 +418,53 @@ fun MarketScreen(
                 },
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
             )
+
+            // Sous-sélecteur Ma liste / Archives uniquement sur l'onglet Ma liste
+            AnimatedVisibility(
+                visible = selectedTab == MarketTab.ACTIVE,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        false to "Liste active (${items.size})",
+                        true to "Archives (${archivedItems.size})"
+                    ).forEach { (isArchive, label) ->
+                        val selected = showArchivesInList == isArchive
+                        Surface(
+                            shape = CircleShape,
+                            color = if (selected) {
+                                if (isDark) AfroOrange else Color(0xFF1E1E2D)
+                            } else {
+                                if (isDark) colorScheme.surface else Color.White
+                            },
+                            border = BorderStroke(
+                                1.dp,
+                                if (selected) Color.Transparent
+                                else if (isDark) colorScheme.outline else Color(0xFFE2E8F0)
+                            ),
+                            modifier = Modifier.afroSpringClickable(
+                                pressedScale = 0.95f,
+                                haptic = AfroHapticKind.SELECTION
+                            ) { showArchivesInList = isArchive }
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 12.sp,
+                                lineHeight = 14.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selected) Color.White else colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             // Confirmation banner right after archiving
             AnimatedVisibility(
@@ -347,7 +515,8 @@ fun MarketScreen(
                                     .clip(MarketRadius28)
                                     .clickable {
                                         haptics.selectionTick()
-                                        selectedTab = MarketTab.ARCHIVES
+                                        selectedTab = MarketTab.ACTIVE
+                                        showArchivesInList = true
                                         archiveBannerMessage = null
                                     }
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -366,15 +535,27 @@ fun MarketScreen(
                     .weight(1f)
             ) {
             AnimatedContent(
-                targetState = selectedTab,
+                targetState = selectedTab to showArchivesInList,
                 transitionSpec = {
                     fadeIn(tween(220)) togetherWith fadeOut(tween(180))
                 },
                 label = "marketTabContent",
                 modifier = Modifier.fillMaxSize()
-            ) { tab ->
-                when (tab) {
-                    MarketTab.ACTIVE -> {
+            ) { (tab, showArchives) ->
+                when {
+                    tab == MarketTab.BOUTIQUE -> {
+                        BoutiqueContent(
+                            products = boutiqueProducts,
+                            cart = boutiqueCart,
+                            searchQuery = searchOrQuickName,
+                            currency = currency,
+                            onAddProduct = { product -> boutiqueRepository.addToCart(product, 1) },
+                            onUpdateQuantity = { id, qty -> boutiqueRepository.updateQuantity(id, qty) },
+                            onOpenProductDetail = { product -> selectedBoutiqueProduct = product }
+                        )
+                    }
+
+                    !showArchives -> {
                         ActiveMarketContent(
                             items = items,
                             filteredItems = filteredActiveItems,
@@ -406,6 +587,9 @@ fun MarketScreen(
                             onDeleteItem = { item ->
                                 repository.deleteItem(item.id)
                             },
+                            onMoveItem = { fromId, toId ->
+                                repository.moveItem(fromId, toId)
+                            },
                             onOpenAddSheet = {
                                 haptics.selectionTick()
                                 editorTarget = MarketEditorTarget.NewItem(searchOrQuickName.trim())
@@ -413,7 +597,7 @@ fun MarketScreen(
                         )
                     }
 
-                    MarketTab.ARCHIVES -> {
+                    else -> {
                         ArchivedMarketContent(
                             archivedItems = archivedItems,
                             archiveBatches = archiveBatches,
@@ -441,9 +625,9 @@ fun MarketScreen(
             }
         }
 
-        // Sticky Bottom Archive Dock when 1+ items are marked on the Active tab
+        // Sticky Bottom Archive Dock when 1+ items are marked on the Active list
         AnimatedVisibility(
-            visible = selectedTab == MarketTab.ACTIVE && checkedItems.isNotEmpty(),
+            visible = selectedTab == MarketTab.ACTIVE && !showArchivesInList && checkedItems.isNotEmpty(),
             enter = slideInVertically(
                 initialOffsetY = { it },
                 animationSpec = spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow)
@@ -538,6 +722,49 @@ fun MarketScreen(
                 }
             )
         }
+
+        selectedBoutiqueProduct?.let { product ->
+            BoutiqueProductDetailSheet(
+                product = product,
+                currency = currency,
+                onDismiss = { selectedBoutiqueProduct = null },
+                onAddToCart = { qty, note -> boutiqueRepository.addToCart(product, qty, note) },
+                onAddToShoppingList = {
+                    repository.addItem(
+                        name = product.name,
+                        quantity = product.unitLabel,
+                        category = product.category.label,
+                        price = product.priceFcfa
+                    )
+                    archiveBannerMessage = "« ${product.name} » ajouté à Ma liste"
+                }
+            )
+        }
+
+        if (showBoutiqueCartSheet) {
+            BoutiqueCartSheet(
+                cart = boutiqueCart,
+                currency = currency,
+                onDismiss = { showBoutiqueCartSheet = false },
+                onUpdateQuantity = { id, qty -> boutiqueRepository.updateQuantity(id, qty) },
+                onPlaceOrder = { slot, addr, method ->
+                    boutiqueRepository.placeOrder(
+                        deliverySlot = slot,
+                        address = addr,
+                        paymentMethod = method
+                    )
+                }
+            )
+        }
+
+        if (showBoutiqueOrdersSheet) {
+            BoutiqueOrdersSheet(
+                orders = boutiqueOrders,
+                currency = currency,
+                onDismiss = { showBoutiqueOrdersSheet = false },
+                onMarkDelivered = { orderId -> boutiqueRepository.markOrderDelivered(orderId) }
+            )
+        }
     }
 }
 
@@ -558,10 +785,15 @@ private fun ActiveMarketContent(
     onEditItem: (ShoppingItem) -> Unit,
     onArchiveSingle: (ShoppingItem) -> Unit,
     onDeleteItem: (ShoppingItem) -> Unit,
+    onMoveItem: (String, String) -> Unit,
     onOpenAddSheet: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = isAfroDarkTheme()
+    val haptic = LocalHapticFeedback.current
+    val lazyListState = rememberLazyListState()
+    var draggedItemId by remember { mutableStateOf<String?>(null) }
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
 
     if (items.isEmpty()) {
         MarketEmptyState(
@@ -576,8 +808,11 @@ private fun ActiveMarketContent(
 
     val pendingSection = remember(filteredItems) { filteredItems.filterNot { it.isChecked } }
     val checkedSection = remember(filteredItems) { filteredItems.filter { it.isChecked } }
+    val pendingIds = remember(pendingSection) { pendingSection.map { it.id }.toSet() }
+    val checkedIds = remember(checkedSection) { checkedSection.map { it.id }.toSet() }
 
     LazyColumn(
+        state = lazyListState,
         contentPadding = PaddingValues(
             start = 20.dp,
             end = 20.dp,
@@ -674,18 +909,65 @@ private fun ActiveMarketContent(
                     key = { _, item -> item.id },
                     contentType = { _, _ -> "shopping_item" }
                 ) { index, item ->
+                    val isDragging = draggedItemId == item.id
                     ShoppingItemCard(
                         item = item,
                         currency = currency,
+                        isDragging = isDragging,
                         onToggle = { onToggleCheck(item) },
                         onEditPrice = { onEditItem(item) },
                         onArchiveSingle = { onArchiveSingle(item) },
                         onDelete = { onDeleteItem(item) },
                         modifier = Modifier
-                            .animateItem(
-                                fadeInSpec = tween(220),
-                                placementSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
-                                fadeOutSpec = tween(180)
+                            .zIndex(if (isDragging) 10f else 0f)
+                            .graphicsLayer {
+                                translationY = if (isDragging) dragOffsetY else 0f
+                                val s = if (isDragging) 1.025f else 1f
+                                scaleX = s
+                                scaleY = s
+                            }
+                            .pointerInput(item.id, pendingIds) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        draggedItemId = item.id
+                                        dragOffsetY = 0f
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    },
+                                    onDragEnd = {
+                                        draggedItemId = null
+                                        dragOffsetY = 0f
+                                    },
+                                    onDragCancel = {
+                                        draggedItemId = null
+                                        dragOffsetY = 0f
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        dragOffsetY += dragAmount.y
+                                        val visible = lazyListState.layoutInfo.visibleItemsInfo
+                                        val currentInfo = visible.firstOrNull { it.key == item.id } ?: return@detectDragGesturesAfterLongPress
+                                        val centerY = currentInfo.offset + dragOffsetY + currentInfo.size / 2f
+                                        val targetInfo = visible.firstOrNull { info ->
+                                            val k = info.key as? String ?: return@firstOrNull false
+                                            k != item.id && k in pendingIds &&
+                                                centerY >= info.offset && centerY <= info.offset + info.size
+                                        }
+                                        if (targetInfo != null) {
+                                            val targetId = targetInfo.key as String
+                                            val delta = targetInfo.offset - currentInfo.offset
+                                            onMoveItem(item.id, targetId)
+                                            dragOffsetY -= delta
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        }
+                                    }
+                                )
+                            }
+                            .then(
+                                if (isDragging) Modifier else Modifier.animateItem(
+                                    fadeInSpec = tween(220),
+                                    placementSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+                                    fadeOutSpec = tween(180)
+                                )
                             )
                             .afroStaggeredEntrance(index = index)
                     )
@@ -707,18 +989,65 @@ private fun ActiveMarketContent(
                     key = { _, item -> item.id },
                     contentType = { _, _ -> "shopping_item" }
                 ) { index, item ->
+                    val isDragging = draggedItemId == item.id
                     ShoppingItemCard(
                         item = item,
                         currency = currency,
+                        isDragging = isDragging,
                         onToggle = { onToggleCheck(item) },
                         onEditPrice = { onEditItem(item) },
                         onArchiveSingle = { onArchiveSingle(item) },
                         onDelete = { onDeleteItem(item) },
                         modifier = Modifier
-                            .animateItem(
-                                fadeInSpec = tween(220),
-                                placementSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
-                                fadeOutSpec = tween(180)
+                            .zIndex(if (isDragging) 10f else 0f)
+                            .graphicsLayer {
+                                translationY = if (isDragging) dragOffsetY else 0f
+                                val s = if (isDragging) 1.025f else 1f
+                                scaleX = s
+                                scaleY = s
+                            }
+                            .pointerInput(item.id, checkedIds) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        draggedItemId = item.id
+                                        dragOffsetY = 0f
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    },
+                                    onDragEnd = {
+                                        draggedItemId = null
+                                        dragOffsetY = 0f
+                                    },
+                                    onDragCancel = {
+                                        draggedItemId = null
+                                        dragOffsetY = 0f
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        dragOffsetY += dragAmount.y
+                                        val visible = lazyListState.layoutInfo.visibleItemsInfo
+                                        val currentInfo = visible.firstOrNull { it.key == item.id } ?: return@detectDragGesturesAfterLongPress
+                                        val centerY = currentInfo.offset + dragOffsetY + currentInfo.size / 2f
+                                        val targetInfo = visible.firstOrNull { info ->
+                                            val k = info.key as? String ?: return@firstOrNull false
+                                            k != item.id && k in checkedIds &&
+                                                centerY >= info.offset && centerY <= info.offset + info.size
+                                        }
+                                        if (targetInfo != null) {
+                                            val targetId = targetInfo.key as String
+                                            val delta = targetInfo.offset - currentInfo.offset
+                                            onMoveItem(item.id, targetId)
+                                            dragOffsetY -= delta
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        }
+                                    }
+                                )
+                            }
+                            .then(
+                                if (isDragging) Modifier else Modifier.animateItem(
+                                    fadeInSpec = tween(220),
+                                    placementSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+                                    fadeOutSpec = tween(180)
+                                )
                             )
                             .afroStaggeredEntrance(index = index)
                     )
@@ -1056,7 +1385,6 @@ private fun MarketBudgetDashboardCard(
 private fun MarketTabSwitcher(
     selectedTab: MarketTab,
     activeCount: Int,
-    archiveCount: Int,
     onSelectTab: (MarketTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1074,7 +1402,7 @@ private fun MarketTabSwitcher(
             .padding(4.dp)
     ) {
         val tabWidth = maxWidth / 2
-        val targetOffset = if (selectedTab == MarketTab.ACTIVE) 0.dp else tabWidth
+        val targetOffset = if (selectedTab == MarketTab.BOUTIQUE) 0.dp else tabWidth
         val pillOffset by animateDpAsState(
             targetValue = targetOffset,
             animationSpec = spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow),
@@ -1093,8 +1421,8 @@ private fun MarketTabSwitcher(
 
         Row(modifier = Modifier.fillMaxSize()) {
             listOf(
-                Triple(MarketTab.ACTIVE, "Panier ($activeCount)", R.drawable.ic_solar_bag_linear),
-                Triple(MarketTab.ARCHIVES, "Archives ($archiveCount)", R.drawable.ic_solar_clipboard_list_linear)
+                Triple(MarketTab.BOUTIQUE, "Boutique", R.drawable.ic_solar_bag_linear),
+                Triple(MarketTab.ACTIVE, "Ma liste ($activeCount)", R.drawable.ic_solar_clipboard_list_linear)
             ).forEach { (tab, label, iconRes) ->
                 val isSelected = tab == selectedTab
                 val textColor by animateColorAsState(
@@ -1165,6 +1493,7 @@ private fun MarketSectionLabel(
 private fun ShoppingItemCard(
     item: ShoppingItem,
     currency: MarketCurrency,
+    isDragging: Boolean = false,
     onToggle: () -> Unit,
     onEditPrice: () -> Unit,
     onArchiveSingle: () -> Unit,
@@ -1175,7 +1504,7 @@ private fun ShoppingItemCard(
     val isDark = isAfroDarkTheme()
     val interactionSource = remember { MutableInteractionSource() }
     val baseCardBg = if (isDark) colorScheme.surface else Color.White
-    val borderColor = if (isDark) colorScheme.outline else Color(0xFFE2E8F0)
+    val borderColor = if (isDragging) AfroOrange else if (isDark) colorScheme.outline else Color(0xFFE2E8F0)
 
     val cardBgColor by animateColorAsState(
         targetValue = if (item.isChecked) baseCardBg.copy(alpha = 0.72f) else baseCardBg,

@@ -51,17 +51,17 @@ class RecipeRepository {
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
 
-    private val _recipes = MutableStateFlow<List<Recipe>>(getMockRecipes())
-    val recipes: Flow<List<Recipe>> = _recipes.asStateFlow()
+    private val _recipes = sharedRecipes
+    val recipes: Flow<List<Recipe>> = sharedRecipes.asStateFlow()
 
-    private val _homeSections = MutableStateFlow<List<HomeSection>>(emptyList())
-    val homeSections: Flow<List<HomeSection>> = _homeSections.asStateFlow()
+    private val _homeSections = sharedHomeSections
+    val homeSections: Flow<List<HomeSection>> = sharedHomeSections.asStateFlow()
 
     private val _notifications = MutableStateFlow<List<AppNotificationItem>>(emptyList())
     val notifications: Flow<List<AppNotificationItem>> = _notifications.asStateFlow()
 
-    private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
-    val favoriteIds: Flow<Set<String>> = _favoriteIds.asStateFlow()
+    private val _favoriteIds = sharedFavoriteIds
+    val favoriteIds: Flow<Set<String>> = sharedFavoriteIds.asStateFlow()
 
     init {
         refreshFromSupabaseAsync()
@@ -107,7 +107,7 @@ class RecipeRepository {
 
         runCatching {
             fetchJsonArray("$baseUrl/rest/v1/app_notifications?select=*&is_active=eq.true&order=created_at.desc", anonKey)?.let { arr ->
-                _notifications.value = arr.mapNotNull { el ->
+                val remoteItems = arr.mapNotNull { el ->
                     runCatching {
                         val obj = el.jsonObject
                         AppNotificationItem(
@@ -119,6 +119,8 @@ class RecipeRepository {
                         )
                     }.getOrNull()
                 }
+                _notifications.value = remoteItems
+                AppNotificationCenter.syncRemoteNotifications(remoteItems)
             }
         }
     }
@@ -209,6 +211,7 @@ class RecipeRepository {
             current.add(recipeId)
         }
         _favoriteIds.value = current
+        persistFavorites()
     }
 
     fun isFavorite(recipeId: String): Boolean {
@@ -219,9 +222,32 @@ class RecipeRepository {
 
     fun setFavorites(ids: Set<String>) {
         _favoriteIds.value = ids
+        persistFavorites()
     }
 
     companion object {
+        private const val PREFS_NAME = "afrocuisto_recipe_prefs"
+        private const val KEY_FAVORITES = "favorite_recipe_ids"
+        private var favPrefs: android.content.SharedPreferences? = null
+        private val sharedRecipes = MutableStateFlow<List<Recipe>>(getMockRecipes())
+        private val sharedHomeSections = MutableStateFlow<List<HomeSection>>(emptyList())
+        private val sharedFavoriteIds = MutableStateFlow<Set<String>>(emptySet())
+
+        fun init(context: android.content.Context) {
+            if (favPrefs != null) return
+            val sp = context.applicationContext.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            favPrefs = sp
+            sp.getStringSet(KEY_FAVORITES, null)?.let { saved ->
+                if (sharedFavoriteIds.value.isEmpty()) {
+                    sharedFavoriteIds.value = saved.toSet()
+                }
+            }
+        }
+
+        private fun persistFavorites() {
+            favPrefs?.edit()?.putStringSet(KEY_FAVORITES, sharedFavoriteIds.value.toSet())?.apply()
+        }
+
         fun getMockRecipes(): List<Recipe> = listOf(
             Recipe(
                 id = "P02",

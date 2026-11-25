@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Smartphone, Plus, Trash2, RefreshCw, ExternalLink, ShieldAlert, CheckCircle2, AlertCircle } from '../components/SolarIcons';
 import { supabaseAdmin } from '../lib/supabase';
+import { AdminSelect } from '../components/AdminSelect';
 
 interface AppRelease {
     id: string;
@@ -125,14 +126,17 @@ export function Releases() {
                         <div className="grid-2-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>Canal *</label>
-                                <select
+                                <AdminSelect
+                                    ariaLabel="Canal de publication"
                                     value={form.channel}
-                                    onChange={e => setForm({ ...form, channel: e.target.value as 'beta' | 'production' })}
-                                    style={{ width: '100%', padding: '11px 12px', borderRadius: '12px', border: '1.5px solid #e5e7eb', fontSize: '14px', background: '#fff', boxSizing: 'border-box' }}
-                                >
-                                    <option value="beta">Bêta (beta)</option>
-                                    <option value="production">Production</option>
-                                </select>
+                                    onChange={value => setForm({ ...form, channel: value as 'beta' | 'production' })}
+                                    options={[
+                                        { value: 'beta', label: 'Bêta (beta)' },
+                                        { value: 'production', label: 'Production' },
+                                    ]}
+                                    style={{ width: '100%' }}
+                                    triggerStyle={{ minHeight: '44px' }}
+                                />
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>Version Code *</label>

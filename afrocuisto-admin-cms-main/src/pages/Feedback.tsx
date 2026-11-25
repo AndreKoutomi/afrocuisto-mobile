@@ -13,9 +13,10 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { supabaseAdmin } from '../lib/supabase';
+import { AdminSelect } from '../components/AdminSelect';
 import {
     Star, MessageSquare, Trash2, Calendar, Utensils,
-    RefreshCw, TrendingUp, Filter, Search, ChevronDown,
+    RefreshCw, TrendingUp, Filter, Search,
     Award, AlertCircle, Quote
 } from '../components/SolarIcons';
 
@@ -267,18 +268,18 @@ export function Feedback() {
 
                 <div className="flex-responsive" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     {/* Sort */}
-                    <div style={{ position: 'relative' }}>
-                        <select
-                            value={sortBy}
-                            onChange={e => setSortBy(e.target.value as any)}
-                            style={{ height: 44, borderRadius: 14, border: '1.5px solid #e5e7eb', background: '#fff', padding: '0 36px 0 14px', fontSize: 13, fontWeight: 700, color: '#374151', cursor: 'pointer', outline: 'none', appearance: 'none' }}
-                        >
-                            <option value="date">Plus récents</option>
-                            <option value="rating_desc">Meilleures notes</option>
-                            <option value="rating_asc">Notes basses</option>
-                        </select>
-                        <ChevronDown size={14} color="#9ca3af" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                    </div>
+                    <AdminSelect
+                        ariaLabel="Trier les avis"
+                        value={sortBy}
+                        onChange={value => setSortBy(value as 'date' | 'rating_desc' | 'rating_asc')}
+                        options={[
+                            { value: 'date', label: 'Plus récents' },
+                            { value: 'rating_desc', label: 'Meilleures notes' },
+                            { value: 'rating_asc', label: 'Notes basses' },
+                        ]}
+                        style={{ flex: '0 0 auto' }}
+                        triggerStyle={{ height: '44px', minWidth: '184px', fontSize: '13px', fontWeight: 700 }}
+                    />
 
                     {/* Refresh */}
                     <button

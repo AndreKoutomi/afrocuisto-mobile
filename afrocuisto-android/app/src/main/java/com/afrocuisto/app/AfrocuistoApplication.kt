@@ -5,10 +5,18 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.afrocuisto.app.data.repository.AppNotificationCenter
+import com.afrocuisto.app.data.repository.BoutiqueRepository
+import com.afrocuisto.app.data.repository.RecipeRepository
+import com.afrocuisto.app.data.repository.ShoppingRepository
 
 class AfrocuistoApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
+        RecipeRepository.init(this)
+        ShoppingRepository.init(this)
+        BoutiqueRepository.init(this)
+        AppNotificationCenter.init(this)
     }
 
     override fun newImageLoader(): ImageLoader {
