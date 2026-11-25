@@ -1,68 +1,65 @@
-/**
- * ============================================================================
- * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
- * ============================================================================
- * Rôle principal : Le tableau de bord central. Affiche des statistiques rapides (nombre total de recettes, utilisateurs récents) pour aider l'administrateur.
- * 
- * Conseils de lecture :
- * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
- * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
- * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
- * ============================================================================
- */
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { supabaseAdmin } from '../lib/supabase';
+import {
+    BookText, Users, Sparkles, PlusCircle, Edit, MessageSquare,
+    History, LayoutGrid, Bug, Smartphone, Bell, ArrowUpRight
+} from '../components/SolarIcons';
 
-import { useEffect, useState } from 'react'; // Outils pour gérer le cycle de vie et la mémoire du composant
-import { supabase } from '../lib/supabase'; // Client pour lire les données dans la base Supabase
-import { Book, Users, Star, PlusCircle, Edit, MessageSquare, History } from 'lucide-react'; // Icônes pour illustrer les statistiques
+interface DashboardStats {
+    recipes: number;
+    sections: number;
+    users: number;
+    contributions: number;
+    openBugs: number;
+    releases: number;
+}
 
 export function Dashboard() {
-    // État (mémoire) pour stocker les statistiques (ex: nombre de recettes)
-    const [stats, setStats] = useState({ recipes: 0, users: 0, contributions: 0 });
-    // État pour savoir si on est encore en train de charger les données
+    const [stats, setStats] = useState<DashboardStats>({
+        recipes: 0,
+        sections: 0,
+        users: 0,
+        contributions: 0,
+        openBugs: 0,
+        releases: 0,
+    });
     const [loading, setLoading] = useState(true);
-    // État pour les activités récentes
     const [activities, setActivities] = useState<any[]>([]);
 
-    // useEffect : s'exécute automatiquement quand la page s'affiche pour la première fois
     useEffect(() => {
-        // Fonction interne pour aller chercher les chiffres dans la base de données
         async function fetchData() {
             try {
-                // 1. Statistiques
-                const { count: recipesCount } = await supabase
-                    .from('recipes')
-                    .select('*', { count: 'exact', head: true });
-
-                const { count: suggestionsCount } = await supabase
-                    .from('dish_suggestions')
-                    .select('*', { count: 'exact', head: true });
-
-                const { count: usersCount } = await supabase
-                    .from('profiles')
-                    .select('*', { count: 'exact', head: true });
+                const [
+                    recipesRes,
+                    sectionsRes,
+                    usersRes,
+                    suggestionsRes,
+                    bugsRes,
+                    releasesRes,
+                    latestRecipesRes,
+                    latestSuggestionsRes,
+                ] = await Promise.all([
+                    supabaseAdmin.from('recipes').select('*', { count: 'exact', head: true }),
+                    supabaseAdmin.from('home_sections').select('*', { count: 'exact', head: true }).eq('is_active', true),
+                    supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }),
+                    supabaseAdmin.from('dish_suggestions').select('*', { count: 'exact', head: true }),
+                    supabaseAdmin.from('bug_reports').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+                    supabaseAdmin.from('app_releases').select('*', { count: 'exact', head: true }),
+                    supabaseAdmin.from('recipes').select('id, name, created_at, updated_at').order('updated_at', { ascending: false }).limit(5),
+                    supabaseAdmin.from('dish_suggestions').select('id, dish_name, created_at').order('created_at', { ascending: false }).limit(5),
+                ]);
 
                 setStats({
-                    recipes: recipesCount || 0,
-                    users: usersCount || 0,
-                    contributions: suggestionsCount || 0
+                    recipes: recipesRes.count || 0,
+                    sections: sectionsRes.count || 0,
+                    users: usersRes.count || 0,
+                    contributions: suggestionsRes.count || 0,
+                    openBugs: bugsRes.count || 0,
+                    releases: releasesRes.count || 0,
                 });
 
-                // 2. Activités Récentes (Recettes)
-                const { data: latestRecipes } = await supabase
-                    .from('recipes')
-                    .select('id, name, created_at, updated_at')
-                    .order('updated_at', { ascending: false })
-                    .limit(5);
-
-                // 3. Activités Récentes (Suggestions)
-                const { data: latestSuggestions } = await supabase
-                    .from('dish_suggestions')
-                    .select('id, name, created_at')
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-
-                // Formater et fusionner
-                const recipeActivities = (latestRecipes || []).map(r => {
+                const recipeActivities = (latestRecipesRes.data || []).map(r => {
                     const isNew = Math.abs(new Date(r.updated_at).getTime() - new Date(r.created_at).getTime()) < 2000;
                     return {
                         id: r.id,
@@ -70,106 +67,138 @@ export function Dashboard() {
                         title: r.name,
                         date: r.updated_at,
                         icon: isNew ? <PlusCircle size={16} /> : <Edit size={16} />,
-                        color: isNew ? '#059669' : '#3b82f6',
-                        bg: isNew ? '#d1fae5' : '#dbeafe',
-                        desc: isNew ? 'Nouvelle recette ajoutée' : 'Recette mise à jour'
+                        color: isNew ? '#10b981' : '#3b82f6',
+                        bg: isNew ? 'rgba(16, 185, 129, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                        desc: isNew ? 'Nouvelle recette ajoutée' : 'Recette mise à jour',
                     };
                 });
 
-                const suggestionActivities = (latestSuggestions || []).map(s => ({
+                const suggestionActivities = (latestSuggestionsRes.data || []).map(s => ({
                     id: s.id,
                     type: 'suggestion',
-                    title: s.name,
+                    title: s.dish_name,
                     date: s.created_at,
                     icon: <MessageSquare size={16} />,
-                    color: '#f97316',
-                    bg: '#fff7ed',
-                    desc: 'Nouvelle suggestion reçue'
+                    color: '#fb5607',
+                    bg: 'rgba(251, 86, 7, 0.12)',
+                    desc: 'Nouvelle suggestion reçue',
                 }));
 
                 const allActivities = [...recipeActivities, ...suggestionActivities]
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .slice(0, 10);
+                    .slice(0, 8);
 
                 setActivities(allActivities);
-
             } catch (err) {
                 console.error('Error fetching dashboard data:', err);
             } finally {
-                setLoading(false); // On dit que le chargement est terminé
+                setLoading(false);
             }
         }
         fetchData();
     }, []);
 
-    // Rendu visuel de la page
+    const kpis = [
+        { label: 'Recettes publiées', value: stats.recipes, icon: BookText, color: '#fb5607', bg: 'rgba(251, 86, 7, 0.12)', to: '/recipes' },
+        { label: 'Sections actives', value: stats.sections, icon: LayoutGrid, color: '#7c3aed', bg: 'rgba(124, 58, 237, 0.12)', to: '/sections' },
+        { label: 'Utilisateurs inscrits', value: stats.users, icon: Users, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', to: '/users' },
+        { label: 'Suggestions de plats', value: stats.contributions, icon: Sparkles, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', to: '/contributions' },
+        { label: 'Bugs ouverts', value: stats.openBugs, icon: Bug, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)', to: '/bugs' },
+        { label: 'Releases OTA', value: stats.releases, icon: Smartphone, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)', to: '/releases' },
+    ];
+
+    const quickActions = [
+        { label: 'Nouvelle Recette', desc: 'Ajouter un plat au catalogue', to: '/recipes/create', icon: BookText },
+        { label: 'Nouvelle Section', desc: 'Organiser l’écran d’accueil', to: '/sections/create', icon: LayoutGrid },
+        { label: 'Publier Release OTA', desc: 'Déployer un APK Android', to: '/releases', icon: Smartphone },
+        { label: 'Notification App', desc: 'Informer les utilisateurs', to: '/notifications', icon: Bell },
+    ];
+
     return (
         <div style={{ width: '100%', boxSizing: 'border-box' }}>
+            {/* Grille KPI */}
+            <div className="grid-responsive-3" style={{ marginBottom: '24px' }}>
+                {kpis.map(kpi => {
+                    const Icon = kpi.icon;
+                    return (
+                        <Link key={kpi.label} to={kpi.to} className="card kpi-card" style={{ textDecoration: 'none' }}>
+                            <div className="kpi-icon-wrapper" style={{ color: kpi.color, backgroundColor: kpi.bg }}>
+                                <Icon size={22} />
+                            </div>
+                            <div className="kpi-info" style={{ flex: 1 }}>
+                                <p>{kpi.label}</p>
+                                <h3>{loading ? '—' : kpi.value}</h3>
+                            </div>
+                            <ArrowUpRight size={16} color="var(--text-muted)" />
+                        </Link>
+                    );
+                })}
+            </div>
 
-            {/* Grille de 3 colonnes pour afficher les KPI (chiffres clés) */}
-            <div className="grid-responsive-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '24px' }}>
-                {/* Carte 1 : Nombre de recettes */}
-                <div className="card kpi-card" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '24px' }}>
-                    <div className="kpi-icon-wrapper">
-                        <Book size={28} />
-                    </div>
-                    <div className="kpi-info">
-                        <p>Total Recettes</p>
-                        <h3>{loading ? '...' : stats.recipes}</h3>
-                    </div>
-                </div>
-
-                {/* Carte 2 : Utilisateurs actifs */}
-                <div className="card kpi-card">
-                    <div className="kpi-icon-wrapper" style={{ color: 'var(--success)', backgroundColor: 'rgba(5, 205, 153, 0.1)' }}>
-                        <Users size={28} />
-                    </div>
-                    <div className="kpi-info">
-                        <p>Utilisateurs Actifs</p>
-                        <h3>{loading ? '...' : stats.users}</h3>
-                    </div>
-                </div>
-
-                {/* Carte 3 : Contributions */}
-                <div className="card kpi-card">
-                    <div className="kpi-icon-wrapper" style={{ color: 'var(--warning)', backgroundColor: 'rgba(255, 206, 32, 0.1)' }}>
-                        <Star size={28} />
-                    </div>
-                    <div className="kpi-info">
-                        <p>Contributions</p>
-                        <h3>{loading ? '...' : stats.contributions}</h3>
-                    </div>
+            {/* Actions Rapides */}
+            <div style={{ marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '12px' }}>
+                    Actions rapides
+                </h2>
+                <div className="grid-responsive-stats" style={{ marginBottom: 0 }}>
+                    {quickActions.map(action => {
+                        const Icon = action.icon;
+                        return (
+                            <Link
+                                key={action.label}
+                                to={action.to}
+                                className="card"
+                                style={{
+                                    padding: '16px 18px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    textDecoration: 'none',
+                                }}
+                            >
+                                <div style={{ width: 38, height: 38, borderRadius: '11px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Icon size={18} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-main)' }}>{action.label}</div>
+                                    <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontWeight: 500 }}>{action.desc}</div>
+                                </div>
+                            </Link>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* Section basse pour l'activité récente */}
-            <div className="mt-8 card">
-                <div className="card-header flex-responsive" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 className="card-title">Activité Récente</h3>
-                    {!loading && activities.length > 0 && <span style={{ fontSize: '12px', color: '#9ca3af' }}>{activities.length} derniers événements</span>}
+            {/* Activité récente */}
+            <div className="card">
+                <div className="card-header">
+                    <h3 className="card-title">Activité récente</h3>
+                    {!loading && activities.length > 0 && (
+                        <span className="badge badge-primary">{activities.length} événements</span>
+                    )}
                 </div>
-                <div className="p-0">
+                <div>
                     {loading ? (
                         <div className="p-6 center-content">
-                            <div className="loader"></div>
+                            <div className="loader" />
                         </div>
                     ) : activities.length === 0 ? (
-                        <div className="p-12 center-content text-muted flex-col gap-4">
-                            <History size={40} className="opacity-20" />
-                            <p>Aucune activité récente détectée.</p>
+                        <div className="p-12 center-content text-muted flex-col gap-3">
+                            <History size={34} style={{ opacity: 0.35 }} />
+                            <p style={{ fontSize: '13.5px', fontWeight: 600 }}>Aucune activité récente détectée.</p>
                         </div>
                     ) : (
-                        <div className="activity-list">
+                        <div>
                             {activities.map((activity, idx) => (
                                 <div
                                     key={`${activity.type}-${activity.id}-${idx}`}
-                                    className="activity-item list-item-responsive"
+                                    className="list-item-responsive"
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '16px',
-                                        padding: '16px 24px',
-                                        borderBottom: idx === activities.length - 1 ? 'none' : '1px solid #f9fafb'
+                                        gap: '14px',
+                                        padding: '14px 24px',
+                                        borderBottom: idx === activities.length - 1 ? 'none' : '1px solid var(--border)',
                                     }}
                                 >
                                     <div style={{
@@ -181,23 +210,23 @@ export function Dashboard() {
                                         justifyContent: 'center',
                                         background: activity.bg,
                                         color: activity.color,
-                                        flexShrink: 0
+                                        flexShrink: 0,
                                     }}>
                                         {activity.icon}
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#111827' }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: 'var(--text-main)' }}>
                                             {activity.title}
                                         </p>
-                                        <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>
+                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
                                             {activity.desc}
                                         </p>
                                     </div>
                                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                        <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>
+                                        <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                             {new Date(activity.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                                         </p>
-                                        <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af' }}>
+                                        <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>
                                             {new Date(activity.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>

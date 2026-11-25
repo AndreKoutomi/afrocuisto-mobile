@@ -18,7 +18,7 @@ import {
     Sparkles, X, ChefHat, ArrowRight, ArrowLeft, Check,
     Clock, MapPin, Flame, Loader2, AlertCircle, BookOpen,
     Leaf, Utensils, ListOrdered, Save, ExternalLink
-} from 'lucide-react';
+} from './SolarIcons';
 import { useNavigate } from 'react-router-dom';
 
 interface Ingredient {
@@ -126,15 +126,18 @@ export function RecipeAIWizard({ onClose, onSaved }: Props) {
                 type: generated.type || '',
                 style: generated.style || '',
                 base: generated.base || '',
+                origine_humaine: generated.origine_humaine || '',
                 description: generated.description || '',
                 technique_title: generated.technique_title || '',
                 technique_description: generated.technique_description || '',
                 benefits: generated.benefits || '',
-                // Colonnes enrichies — maintenant présentes en BDD
                 ingredients: generated.ingredients || [],
-                steps: generated.steps || [],
+                steps: (generated.steps || []).map((s: any) =>
+                    typeof s === 'string'
+                        ? s
+                        : [s?.title, s?.description].filter(Boolean).join(' : ')
+                ),
                 rating: generated.rating ?? 4.5,
-                servings: generated.servings ?? 4,
             };
 
             const { error: dbError } = await supabaseAdmin.from('recipes').insert([payload]);
@@ -356,6 +359,12 @@ export function RecipeAIWizard({ onClose, onSaved }: Props) {
                     {/* ── STEP: PREVIEW ── */}
                     {step === 'preview' && generated && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                            {error && (
+                                <div style={{ display: 'flex', gap: '10px', padding: '12px 14px', background: '#fee2e2', borderRadius: '12px', border: '1px solid #fecaca', marginBottom: '16px' }}>
+                                    <AlertCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: '1px' }} />
+                                    <p style={{ margin: 0, fontSize: '13px', color: '#dc2626', fontWeight: 600 }}>{error}</p>
+                                </div>
+                            )}
 
                             {/* Meta summary */}
                             <div style={{

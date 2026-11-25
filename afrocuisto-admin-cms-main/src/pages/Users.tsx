@@ -17,7 +17,7 @@ import {
     Edit2, ShieldAlert, ShieldCheck, UserPlus, MoreHorizontal,
     History, CreditCard, Activity, Trash2, X, Users,
     Search, Mail, Check, Copy, Heart, RefreshCw
-} from 'lucide-react';
+} from '../components/SolarIcons';
 
 interface UserProfile {
     id: string;
@@ -46,7 +46,7 @@ export function UsersPage() {
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'info' | 'history' | 'transactions'>('info');
+    const [activeTab, setActiveTab] = useState<'info' | 'history'>('info');
 
     // Form State for new/edit user
     const [formData, setFormData] = useState({ name: '', email: '', password: '' });
@@ -62,7 +62,7 @@ export function UsersPage() {
         try {
             // 1. Récupérer les profils (données de l'app) via le client Admin pour bypass RLS
             const { data: profiles, error: profilesError } = await supabaseAdmin
-                .from('user_profiles')
+                .from('profiles')
                 .select('*');
 
             if (profilesError) {
@@ -83,15 +83,15 @@ export function UsersPage() {
                 return {
                     id: profile.id,
                     email: auth?.email || profile.email,
-                    name: profile.name || auth?.user_metadata?.full_name || 'Utilisateur',
-                    language: profile.language || 'fr',
-                    dark_mode: profile.dark_mode || false,
-                    joined_date: profile.joined_date || profile.created_at || auth?.created_at,
+                    name: profile.display_name || auth?.user_metadata?.display_name || auth?.user_metadata?.full_name || 'Gourmet Afro',
+                    language: 'fr',
+                    dark_mode: false,
+                    joined_date: profile.created_at || auth?.created_at,
                     updated_at: profile.updated_at || auth?.updated_at,
-                    favorites: profile.favorites || [],
-                    shopping_list: profile.shopping_list || [],
-                    avatar: profile.avatar || auth?.user_metadata?.avatar_url,
-                    is_banned: !!auth?.banned_until || auth?.user_metadata?.banned === true,
+                    favorites: profile.cooked_recipe_ids || [],
+                    shopping_list: [],
+                    avatar: profile.avatar_url || auth?.user_metadata?.avatar_url,
+                    is_banned: Boolean(profile.is_banned) || !!auth?.banned_until || auth?.user_metadata?.banned === true,
                     last_sign_in: auth?.last_sign_in_at
                 };
             });
@@ -135,7 +135,7 @@ export function UsersPage() {
             if (data?.user) {
                 await supabaseAdmin.from('profiles').upsert([{
                     id: data.user.id,
-                    name: formData.name,
+                    display_name: formData.name,
                     email: formData.email
                 }]);
             }
@@ -199,7 +199,7 @@ export function UsersPage() {
                 .from('profiles')
                 .upsert({
                     id: selectedUser.id,
-                    name: formData.name,
+                    display_name: formData.name,
                     updated_at: new Date().toISOString()
                 });
             if (upError) throw upError;
@@ -547,7 +547,6 @@ export function UsersPage() {
                             {[
                                 { id: 'info', label: 'Profil & Accès', icon: <Users size={16} /> },
                                 { id: 'history', label: 'Historique Connect', icon: <History size={16} /> },
-                                { id: 'transactions', label: 'Transactions', icon: <CreditCard size={16} /> },
                             ].map(t => (
                                 <button
                                     key={t.id}
@@ -646,15 +645,6 @@ export function UsersPage() {
                                 </div>
                             )}
 
-                            {activeTab === 'transactions' && (
-                                <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                                    <div style={{ width: 48, height: 48, background: '#fff7ed', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#fb5607' }}>
-                                        <CreditCard size={24} />
-                                    </div>
-                                    <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Aucune transaction</h4>
-                                    <p style={{ color: '#9ca3af', fontSize: '13px', marginTop: '4px' }}>Aucun achat détecté.</p>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>

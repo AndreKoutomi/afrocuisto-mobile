@@ -14,8 +14,39 @@
 import { useEffect, useState } from 'react';
 import { supabase, supabaseAdmin } from '../lib/supabase';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ImagePlus, X, Clock, Flame, Globe, Tag, BookOpen, Sparkles, ChefHat, Leaf, Wand2, Zap, Youtube } from 'lucide-react';
+import { ArrowLeft, Save, ImagePlus, X, Clock, Flame, Globe, Tag, BookOpen, Sparkles, ChefHat, Leaf, Wand2, Zap, Youtube, Crop, Plus, Trash2, ArrowUp, ArrowDown, ListOrdered, ShoppingBasket } from '../components/SolarIcons';
 import { aiService } from '../lib/ai';
+import { ImageCropModal } from '../components/ImageCropModal';
+
+interface IngredientItem {
+    name: string;
+    amount: string;
+    unit: string;
+    isOptional?: boolean;
+    substitute?: string;
+}
+
+function normalizeIngredients(raw: any): IngredientItem[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item: any) => ({
+        name: String(item?.name || ''),
+        amount: String(item?.amount ?? item?.quantity ?? ''),
+        unit: String(item?.unit || ''),
+        isOptional: Boolean(item?.isOptional),
+        substitute: item?.substitute ? String(item.substitute) : '',
+    }));
+}
+
+function normalizeSteps(raw: any): string[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((s: any) =>
+            typeof s === 'string'
+                ? s
+                : [s?.title, s?.description].filter(Boolean).join(' : ')
+        )
+        .filter((s: string) => s.trim().length > 0);
+}
 
 const INITIAL_STATE = {
     name: '',
@@ -34,7 +65,9 @@ const INITIAL_STATE = {
     type: '',
     base: '',
     origine_humaine: '',
-    video_url: ''
+    video_url: '',
+    ingredients: [] as IngredientItem[],
+    steps: [] as string[],
 };
 
 export const CATEGORIES = [
@@ -102,11 +135,19 @@ export function RecipeForm() {
     const [aiLoading, setAiLoading] = useState(false);
 
     const [aiPrefilled, setAiPrefilled] = useState(false);
+    const [cropSrc, setCropSrc] = useState<string | null>(null);
 
     useEffect(() => {
         if (id) {
-            supabase.from('recipes').select('*').eq('id', id).single().then(({ data, error }) => {
-                if (data && !error) setFormData({ ...INITIAL_STATE, ...data });
+            supabaseAdmin.from('recipes').select('*').eq('id', id).single().then(({ data, error }) => {
+                if (data && !error) {
+                    setFormData({
+                        ...INITIAL_STATE,
+                        ...data,
+                        ingredients: normalizeIngredients(data.ingredients),
+                        steps: normalizeSteps(data.steps),
+                    });
+                }
                 setInitialLoading(false);
             });
         } else {
@@ -115,7 +156,12 @@ export function RecipeForm() {
             if (aiData) {
                 try {
                     const parsed = JSON.parse(aiData);
-                    setFormData(prev => ({ ...prev, ...parsed }));
+                    setFormData(prev => ({
+                        ...prev,
+                        ...parsed,
+                        ingredients: normalizeIngredients(parsed.ingredients),
+                        steps: normalizeSteps(parsed.steps),
+                    }));
                     setAiPrefilled(true);
                     sessionStorage.removeItem('ai_recipe_prefill');
                 } catch (_) { }
@@ -127,13 +173,78 @@ export function RecipeForm() {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files?.length) return;
-        const file = e.target.files[0];
-        const filePath = `${Math.random()}.${file.name.split('.').pop()}`;
+    const addIngredient = () => {
+        setFormData(prev => ({
+            ...prev,
+            ingredients: [...prev.ingredients, { name: '', amount: '', unit: '', isOptional: false, substitute: '' }],
+        }));
+    };
+
+    const updateIngredient = (index: number, patch: Partial<IngredientItem>) => {
+        setFormData(prev => ({
+            ...prev,
+            ingredients: prev.ingredients.map((ing, i) => (i === index ? { ...ing, ...patch } : ing)),
+        }));
+    };
+
+    const removeIngredient = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            ingredients: prev.ingredients.filter((_, i) => i !== index),
+        }));
+    };
+
+    const addStep = () => {
+        setFormData(prev => ({ ...prev, steps: [...prev.steps, ''] }));
+    };
+
+    const updateStep = (index: number, value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            steps: prev.steps.map((s, i) => (i === index ? value : s)),
+        }));
+    };
+
+    const removeStep = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            steps: prev.steps.filter((_, i) => i !== index),
+        }));
+    };
+
+    const moveStep = (index: number, direction: 'up' | 'down') => {
+        const target = direction === 'up' ? index - 1 : index + 1;
+        setFormData(prev => {
+            if (target < 0 || target >= prev.steps.length) return prev;
+            const next = [...prev.steps];
+            const [moved] = next.splice(index, 1);
+            next.splice(target, 0, moved);
+            return { ...prev, steps: next };
+        });
+    };
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === 'string') {
+                setCropSrc(reader.result);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleCroppedUpload = async (croppedBlob: Blob) => {
+        setCropSrc(null);
+        const filePath = `recipe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
         setUploading(true);
         try {
-            const { error: uploadError } = await supabaseAdmin.storage.from('recipe-images').upload(filePath, file);
+            const { error: uploadError } = await supabaseAdmin.storage
+                .from('recipe-images')
+                .upload(filePath, croppedBlob, { contentType: 'image/jpeg' });
             if (uploadError) throw uploadError;
             const { data } = supabaseAdmin.storage.from('recipe-images').getPublicUrl(filePath);
             setFormData(prev => ({ ...prev, image: data.publicUrl }));
@@ -161,8 +272,11 @@ export function RecipeForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        const cleanData = { ...formData };
-        delete (cleanData as any).origine_humaine;
+        const cleanData = {
+            ...formData,
+            ingredients: (formData.ingredients || []).filter(i => i.name.trim().length > 0),
+            steps: (formData.steps || []).map(s => s.trim()).filter(Boolean),
+        };
 
         const trySave = async (data: Record<string, any>) => {
             if (id) {
@@ -400,6 +514,215 @@ export function RecipeForm() {
                             </Field>
                         </div>
                     </div>
+
+                    {/* Panel: Ingrédients */}
+                    <div style={cardStyle}>
+                        <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <ShoppingBasket size={18} color="#059669" />
+                                </div>
+                                <div>
+                                    <p style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>
+                                        Ingrédients ({formData.ingredients.length})
+                                    </p>
+                                    <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>
+                                        Ajoutez, modifiez ou retirez les ingrédients du plat
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={addIngredient}
+                                className="btn btn-secondary"
+                                style={{ padding: '8px 12px', fontSize: '12px' }}
+                            >
+                                <Plus size={14} /> Ajouter un ingrédient
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {formData.ingredients.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '24px', borderRadius: '12px', background: '#f9fafb', border: '1px dashed #e5e7eb', color: '#9ca3af', fontSize: '13px' }}>
+                                    Aucun ingrédient ajouté. Cliquez sur « Ajouter un ingrédient » pour commencer.
+                                </div>
+                            ) : (
+                                formData.ingredients.map((ing, idx) => (
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '14px',
+                                            border: '1px solid #e5e7eb',
+                                            background: '#fafafa',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '10px',
+                                        }}
+                                    >
+                                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '8px', alignItems: 'center' }}>
+                                            <input
+                                                value={ing.name}
+                                                onChange={(e) => updateIngredient(idx, { name: e.target.value })}
+                                                placeholder="Nom de l'ingrédient"
+                                                style={{ ...inputStyle, height: '40px', fontSize: '13px' }}
+                                            />
+                                            <input
+                                                value={ing.amount}
+                                                onChange={(e) => updateIngredient(idx, { amount: e.target.value })}
+                                                placeholder="Qté (ex: 500)"
+                                                style={{ ...inputStyle, height: '40px', fontSize: '13px' }}
+                                            />
+                                            <input
+                                                value={ing.unit}
+                                                onChange={(e) => updateIngredient(idx, { unit: e.target.value })}
+                                                placeholder="Unité (g, ml...)"
+                                                style={{ ...inputStyle, height: '40px', fontSize: '13px' }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeIngredient(idx)}
+                                                title="Retirer cet ingrédient"
+                                                style={{
+                                                    width: '36px', height: '36px', borderRadius: '10px',
+                                                    background: '#fee2e2', color: '#ef4444', border: 'none',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                                                }}
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                            <input
+                                                value={ing.substitute || ''}
+                                                onChange={(e) => updateIngredient(idx, { substitute: e.target.value })}
+                                                placeholder="Substitut diaspora (optionnel)"
+                                                style={{ ...inputStyle, height: '34px', fontSize: '12px', flex: '1 1 200px' }}
+                                            />
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#4b5563', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={Boolean(ing.isOptional)}
+                                                    onChange={(e) => updateIngredient(idx, { isOptional: e.target.checked })}
+                                                    style={{ accentColor: 'var(--primary)' }}
+                                                />
+                                                Optionnel
+                                            </label>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Panel: Étapes de préparation */}
+                    <div style={cardStyle}>
+                        <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <ListOrdered size={18} color="#2563eb" />
+                                </div>
+                                <div>
+                                    <p style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>
+                                        Étapes de préparation ({formData.steps.length})
+                                    </p>
+                                    <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>
+                                        Modifiez, réorganisez ou supprimez les étapes de cuisson
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={addStep}
+                                className="btn btn-secondary"
+                                style={{ padding: '8px 12px', fontSize: '12px' }}
+                            >
+                                <Plus size={14} /> Ajouter une étape
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {formData.steps.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '24px', borderRadius: '12px', background: '#f9fafb', border: '1px dashed #e5e7eb', color: '#9ca3af', fontSize: '13px' }}>
+                                    Aucune étape ajoutée. Cliquez sur « Ajouter une étape » pour rédiger la préparation.
+                                </div>
+                            ) : (
+                                formData.steps.map((stepText, idx) => (
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '10px',
+                                            padding: '12px',
+                                            borderRadius: '14px',
+                                            border: '1px solid #e5e7eb',
+                                            background: '#fafafa',
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: '28px', height: '28px', borderRadius: '9px',
+                                            background: 'var(--primary)', color: '#fff',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '12px', fontWeight: 800, flexShrink: 0, marginTop: '4px',
+                                        }}>
+                                            {idx + 1}
+                                        </div>
+                                        <textarea
+                                            rows={2}
+                                            value={stepText}
+                                            onChange={(e) => updateStep(idx, e.target.value)}
+                                            placeholder={`Décrivez l'étape ${idx + 1}...`}
+                                            style={{ ...textareaStyle, fontSize: '13px', flex: 1, minHeight: '60px' }}
+                                        />
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => moveStep(idx, 'up')}
+                                                disabled={idx === 0}
+                                                title="Monter"
+                                                style={{
+                                                    width: '30px', height: '28px', borderRadius: '8px',
+                                                    border: '1px solid #e5e7eb', background: '#fff',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    cursor: idx === 0 ? 'not-allowed' : 'pointer', opacity: idx === 0 ? 0.4 : 1,
+                                                }}
+                                            >
+                                                <ArrowUp size={13} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => moveStep(idx, 'down')}
+                                                disabled={idx === formData.steps.length - 1}
+                                                title="Descendre"
+                                                style={{
+                                                    width: '30px', height: '28px', borderRadius: '8px',
+                                                    border: '1px solid #e5e7eb', background: '#fff',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    cursor: idx === formData.steps.length - 1 ? 'not-allowed' : 'pointer',
+                                                    opacity: idx === formData.steps.length - 1 ? 0.4 : 1,
+                                                }}
+                                            >
+                                                <ArrowDown size={13} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeStep(idx)}
+                                                title="Supprimer cette étape"
+                                                style={{
+                                                    width: '30px', height: '28px', borderRadius: '8px',
+                                                    background: '#fee2e2', color: '#ef4444', border: 'none',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                                                }}
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* ══ RIGHT COLUMN ══ */}
@@ -410,27 +733,43 @@ export function RecipeForm() {
                         {sectionHeader(<Globe size={18} color="#059669" />, "Informations Culturelles", "Origine et contexte historique", "#ecfdf5")}
                         <div style={{ padding: '20px' }}>
                             {formData.image ? (
-                                <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', aspectRatio: '4/3', background: '#f3f4f6' }}>
+                                <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', background: '#f3f4f6', border: '1px solid var(--border)' }}>
                                     <img
                                         src={formData.image}
                                         alt="Aperçu"
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                        style={{ width: '100%', height: 'auto', maxHeight: '340px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
                                         onError={e => { e.currentTarget.style.display = 'none'; }}
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
-                                        style={{
-                                            position: 'absolute', top: '10px', right: '10px',
-                                            width: '30px', height: '30px', borderRadius: '50%',
-                                            background: 'rgba(0,0,0,0.4)', border: 'none',
-                                            cursor: 'pointer', color: '#fff',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            backdropFilter: 'blur(4px)',
-                                        }}
-                                    >
-                                        <X size={14} />
-                                    </button>
+                                    <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '6px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCropSrc(formData.image)}
+                                            title="Recadrer l'image"
+                                            style={{
+                                                height: '30px', padding: '0 10px', borderRadius: '999px',
+                                                background: 'rgba(0,0,0,0.55)', border: 'none',
+                                                cursor: 'pointer', color: '#fff', fontSize: '11.5px', fontWeight: 700,
+                                                display: 'flex', alignItems: 'center', gap: '5px',
+                                                backdropFilter: 'blur(4px)',
+                                            }}
+                                        >
+                                            <Crop size={13} /> Recadrer
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
+                                            title="Supprimer l'image"
+                                            style={{
+                                                width: '30px', height: '30px', borderRadius: '50%',
+                                                background: 'rgba(0,0,0,0.55)', border: 'none',
+                                                cursor: 'pointer', color: '#fff',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                backdropFilter: 'blur(4px)',
+                                            }}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 <label style={{
@@ -519,6 +858,8 @@ export function RecipeForm() {
                             { label: 'Description', done: !!formData.description, icon: <BookOpen size={12} /> },
                             { label: 'Région', done: !!formData.region, icon: <Globe size={12} /> },
                             { label: 'Bienfaits', done: !!formData.benefits, icon: <Leaf size={12} /> },
+                            { label: `Ingrédients (${formData.ingredients.length})`, done: formData.ingredients.length > 0, icon: <ShoppingBasket size={12} /> },
+                            { label: `Étapes (${formData.steps.length})`, done: formData.steps.length > 0, icon: <ListOrdered size={12} /> },
                         ].map(f => (
                             <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 0' }}>
                                 <div style={{
@@ -536,7 +877,7 @@ export function RecipeForm() {
                         <div style={{ marginTop: '12px', height: '6px', borderRadius: '99px', background: 'rgba(251, 86, 7, 0.1)', overflow: 'hidden' }}>
                             <div style={{
                                 height: '100%', borderRadius: '99px', background: 'var(--primary)',
-                                width: `${([formData.name, formData.image, formData.category, formData.description, formData.region, formData.benefits].filter(Boolean).length / 6) * 100}%`,
+                                width: `${([formData.name, formData.image, formData.category, formData.description, formData.region, formData.benefits, formData.ingredients.length > 0, formData.steps.length > 0].filter(Boolean).length / 8) * 100}%`,
                                 transition: 'width 0.3s ease',
                             }} />
                         </div>
@@ -544,6 +885,14 @@ export function RecipeForm() {
                 </div>
 
             </form>
-        </div >
+
+            {cropSrc && (
+                <ImageCropModal
+                    imageSrc={cropSrc}
+                    onCancel={() => setCropSrc(null)}
+                    onConfirm={handleCroppedUpload}
+                />
+            )}
+        </div>
     );
 }

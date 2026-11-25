@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabaseAdmin } from '../lib/supabase';
 import {
     Mail, Search, RefreshCw, Sparkles, Calendar, Globe, Trash2, Users, MoreVertical, Copy, Check
-} from 'lucide-react';
+} from '../components/SolarIcons';
 
 interface BetaTester {
     id: string;

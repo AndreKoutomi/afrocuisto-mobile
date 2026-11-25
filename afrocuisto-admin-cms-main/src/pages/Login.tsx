@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, LogIn, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, LogIn, Loader2, AlertCircle, ShieldCheck, Eye, EyeOff, BookText, LayoutGrid, Smartphone } from '../components/SolarIcons';
 import { useNavigate } from 'react-router-dom';
 import logoAdmin from '../assets/logo_admin.png';
 
 export function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
@@ -29,7 +30,7 @@ export function Login() {
 
             if (!user || !authorizedEmails.includes(user.email || '')) {
                 await supabase.auth.signOut();
-                throw new Error("Accès refusé : Seuls les administrateurs autorisés peuvent se connecter.");
+                throw new Error('Accès refusé : seuls les administrateurs autorisés peuvent se connecter.');
             }
 
             navigate('/dashboard');
@@ -44,253 +45,181 @@ export function Login() {
     return (
         <div style={{
             minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #fb5607 0%, #ff7a00 50%, #ea580c 100%)',
-            padding: '24px',
-            fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif"
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+            background: 'var(--bg-color)',
         }}>
+            {/* Panneau gauche éditorial */}
             <div style={{
-                width: '100%',
-                maxWidth: '440px',
-                background: 'rgba(255, 255, 255, 0.96)',
-                backdropFilter: 'blur(16px)',
-                borderRadius: '32px',
-                padding: '48px 40px',
-                boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.3)',
+                background: 'radial-gradient(circle at 18% 22%, rgba(251, 86, 7, 0.28), transparent 55%), linear-gradient(155deg, #181615 0%, #121110 100%)',
+                color: '#f5f3ef',
+                padding: '48px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
                 position: 'relative',
                 overflow: 'hidden',
-                border: '1px solid rgba(255, 255, 255, 0.6)'
             }}>
-                {/* Decorative Elements */}
-                <div style={{
-                    position: 'absolute',
-                    top: '-50px',
-                    right: '-50px',
-                    width: '150px',
-                    height: '150px',
-                    background: 'rgba(251, 86, 7, 0.1)',
-                    borderRadius: '50%',
-                    zIndex: 0
-                }} />
-
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                    <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                        <div style={{
-                            width: '80px',
-                            height: '80px',
-                            background: '#fff',
-                            borderRadius: '24px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            margin: '0 auto 20px',
-                            boxShadow: '0 10px 25px rgba(251, 86, 7, 0.15)',
-                            overflow: 'hidden',
-                            border: '4px solid #fff'
-                        }}>
-                            <img src={logoAdmin} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img
+                        src={logoAdmin}
+                        alt="AfroCuisto"
+                        style={{ width: 42, height: 42, borderRadius: '12px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.14)' }}
+                    />
+                    <div>
+                        <div style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em' }}>
+                            Afro<span style={{ color: '#fb5607' }}>Cuisto</span>
                         </div>
-                        <h1 style={{
-                            fontSize: '28px',
-                            fontWeight: 800,
-                            color: '#111827',
-                            margin: '0 0 8px',
-                            letterSpacing: '-0.5px'
-                        }}>
-                            Admin AfroCuisto
+                        <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: '#a6a098', textTransform: 'uppercase' }}>
+                            Studio CMS
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ maxWidth: '460px', margin: '48px 0' }}>
+                    <span style={{
+                        display: 'inline-block',
+                        padding: '5px 12px',
+                        borderRadius: '999px',
+                        background: 'rgba(251, 86, 7, 0.16)',
+                        color: '#ff8547',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        marginBottom: '18px',
+                    }}>
+                        Administration & Contenu Mobile
+                    </span>
+                    <h2 style={{ fontSize: '34px', fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.03em', marginBottom: '16px' }}>
+                        Pilotez tout le contenu d’AfroCuisto en temps réel.
+                    </h2>
+                    <p style={{ fontSize: '15px', lineHeight: 1.6, color: '#a6a098', marginBottom: '32px' }}>
+                        Publiez des recettes authentiques, organisez les sections de l’écran d’accueil, modérez la communauté et déployez vos mises à jour OTA.
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {[
+                            { icon: BookText, text: 'Catalogue recettes & assistant IA culinaire' },
+                            { icon: LayoutGrid, text: 'Sections dynamiques de l’application Android' },
+                            { icon: Smartphone, text: 'Notifications & releases OTA instantanées' },
+                        ].map((item) => {
+                            const Icon = item.icon;
+                            return (
+                                <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13.5px', fontWeight: 600, color: '#e5e0d8' }}>
+                                    <div style={{ width: 32, height: 32, borderRadius: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fb5607', flexShrink: 0 }}>
+                                        <Icon size={16} />
+                                    </div>
+                                    <span>{item.text}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div style={{ fontSize: '12px', color: '#7b756d', fontWeight: 600 }}>
+                    AfroCuisto Studio — Back-Office Supabase
+                </div>
+            </div>
+
+            {/* Panneau droit formulaire */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '32px 24px',
+            }}>
+                <div className="card" style={{ width: '100%', maxWidth: '420px', padding: '40px 36px' }}>
+                    <div style={{ marginBottom: '28px' }}>
+                        <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', marginBottom: '6px' }}>
+                            Connexion Studio
                         </h1>
-                        <p style={{
-                            fontSize: '15px',
-                            color: '#6b7280',
-                            margin: 0,
-                            fontWeight: 500
-                        }}>
-                            Connectez-vous pour gérer vos recettes
+                        <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                            Entrez vos identifiants administrateur pour continuer.
                         </p>
                     </div>
 
                     {error && (
                         <div style={{
-                            background: '#fef2f2',
-                            border: '1px solid #fee2e2',
-                            borderRadius: '16px',
-                            padding: '16px',
-                            marginBottom: '32px',
+                            background: 'rgba(239, 68, 68, 0.08)',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            borderRadius: '12px',
+                            padding: '12px 14px',
+                            marginBottom: '20px',
                             display: 'flex',
-                            gap: '12px',
-                            alignItems: 'center'
+                            gap: '10px',
+                            alignItems: 'center',
                         }}>
-                            <AlertCircle color="#ef4444" size={20} />
-                            <p style={{
-                                fontSize: '13px',
-                                color: '#b91c1c',
-                                margin: 0,
-                                fontWeight: 600
-                            }}>
+                            <AlertCircle color="var(--danger)" size={18} style={{ flexShrink: 0 }} />
+                            <p style={{ fontSize: '13px', color: 'var(--danger)', margin: 0, fontWeight: 600 }}>
                                 {error}
                             </p>
                         </div>
                     )}
 
-                    <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <label style={{
-                                fontSize: '12px',
-                                fontWeight: 800,
-                                color: '#374151',
-                                textTransform: 'uppercase',
-                                letterSpacing: '1px',
-                                paddingLeft: '4px'
-                            }}>
-                                Email Professionnel
-                            </label>
+                    <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                        <div>
+                            <label className="form-label">Adresse email</label>
                             <div style={{ position: 'relative' }}>
-                                <Mail style={{
-                                    position: 'absolute',
-                                    left: '16px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    color: '#9ca3af'
-                                }} size={20} />
+                                <Mail size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                                 <input
                                     type="email"
-                                    placeholder="nom@afrocuisto.com"
+                                    className="form-control"
+                                    placeholder="admin@afrocuisto.com"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '16px 16px 16px 52px',
-                                        background: '#f9fafb',
-                                        border: '2px solid #f3f4f6',
-                                        borderRadius: '18px',
-                                        fontSize: '15px',
-                                        fontWeight: 600,
-                                        color: '#111827',
-                                        transition: 'all 0.2s',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.currentTarget.style.border = '2px solid #fb5607';
-                                        e.currentTarget.style.background = '#fff';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.currentTarget.style.border = '2px solid #f3f4f6';
-                                        e.currentTarget.style.background = '#f9fafb';
-                                    }}
+                                    style={{ paddingLeft: '40px', height: '46px' }}
                                 />
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <label style={{
-                                fontSize: '12px',
-                                fontWeight: 800,
-                                color: '#374151',
-                                textTransform: 'uppercase',
-                                letterSpacing: '1px',
-                                paddingLeft: '4px'
-                            }}>
-                                Mot de passe
-                            </label>
+                        <div>
+                            <label className="form-label">Mot de passe</label>
                             <div style={{ position: 'relative' }}>
-                                <Lock style={{
-                                    position: 'absolute',
-                                    left: '16px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    color: '#9ca3af'
-                                }} size={20} />
+                                <Lock size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                                 <input
-                                    type="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    className="form-control"
                                     placeholder="••••••••"
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '16px 16px 16px 52px',
-                                        background: '#f9fafb',
-                                        border: '2px solid #f3f4f6',
-                                        borderRadius: '18px',
-                                        fontSize: '15px',
-                                        fontWeight: 600,
-                                        color: '#111827',
-                                        transition: 'all 0.2s',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.currentTarget.style.border = '2px solid #fb5607';
-                                        e.currentTarget.style.background = '#fff';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.currentTarget.style.border = '2px solid #f3f4f6';
-                                        e.currentTarget.style.background = '#f9fafb';
-                                    }}
+                                    style={{ paddingLeft: '40px', paddingRight: '42px', height: '46px' }}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(s => !s)}
+                                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
+                                    aria-label={showPassword ? 'Masquer' : 'Afficher'}
+                                >
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
                             </div>
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            style={{
-                                marginTop: '12px',
-                                background: 'linear-gradient(135deg, #fb5607 0%, #ff7a00 100%)',
-                                color: '#fff',
-                                padding: '18px',
-                                borderRadius: '18px',
-                                fontSize: '16px',
-                                fontWeight: 800,
-                                border: 'none',
-                                cursor: loading ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '10px',
-                                boxShadow: '0 10px 24px rgba(251, 86, 7, 0.35)',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!loading) {
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 15px 30px rgba(251, 86, 7, 0.45)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!loading) {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 10px 24px rgba(251, 86, 7, 0.35)';
-                                }
-                            }}
+                            className="btn btn-primary"
+                            style={{ width: '100%', height: '46px', fontSize: '14px', marginTop: '6px' }}
                         >
-                            {loading ? (
-                                <Loader2 className="animate-spin" size={24} />
-                            ) : (
-                                <>
-                                    <LogIn size={20} />
-                                    Se connecter
-                                </>
-                            )}
+                            {loading ? <Loader2 className="spinning" size={18} /> : <><LogIn size={17} /> Se connecter</>}
                         </button>
                     </form>
 
                     <div style={{
-                        marginTop: '40px',
-                        paddingTop: '24px',
-                        borderTop: '1px solid #f3f4f6',
+                        marginTop: '28px',
+                        paddingTop: '18px',
+                        borderTop: '1px solid var(--border)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px'
+                        gap: '8px',
                     }}>
-                        <ShieldCheck size={16} color="#10b981" />
-                        <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: 600 }}>
-                            Accès sécurisé réservé au personnel autorisé
+                        <ShieldCheck size={15} color="var(--success)" />
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            Accès protégé par Supabase Auth
                         </span>
                     </div>
                 </div>

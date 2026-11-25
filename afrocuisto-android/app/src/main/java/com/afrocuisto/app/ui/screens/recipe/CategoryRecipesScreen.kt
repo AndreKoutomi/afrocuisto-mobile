@@ -48,7 +48,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import com.afrocuisto.app.data.repository.RecipeRepository
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.afrocuisto.app.ui.components.AfroHapticKind
+import com.afrocuisto.app.ui.components.AfroPullToRefreshBox
 import com.afrocuisto.app.ui.components.EditorialSearchBar
 import com.afrocuisto.app.ui.components.afroSpringClickable
 import com.afrocuisto.app.ui.components.afroStaggeredEntrance
@@ -235,10 +238,17 @@ fun CategoryRecipesScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        AfroPullToRefreshBox(
+            onRefresh = { repository.refreshFromSupabase() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
         if (categoryRecipes.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 32.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -303,6 +313,7 @@ fun CategoryRecipesScreen(
                     }
                 }
             }
+        }
         }
     }
 }

@@ -9,48 +9,61 @@ import { supabaseAdmin } from '../lib/supabase';
 import {
     MessageSquare, Heart, Eye, Trash2, ShieldAlert,
     Search, RefreshCw, User, TrendingUp, Image, Calendar
-} from 'lucide-react';
+} from '../components/SolarIcons';
 
 interface CommunityPost {
     id: string;
-    user_id: string;
-    title: string;
+    author_id: string | null;
+    author_name: string;
+    author_avatar?: string | null;
+    author_role?: string | null;
+    author_country?: string | null;
     content: string;
-    image_url: string;
-    category: string;
+    image_url?: string | null;
+    recipe_id?: string | null;
+    recipe_name?: string | null;
+    region?: string | null;
+    type: string;
     likes_count: number;
     comments_count: number;
-    views_count: number;
+    shares_count: number;
     created_at: string;
-    author_name?: string;
-    author_avatar?: string;
     author_email?: string;
 }
 
 interface PostComment {
     id: string;
     post_id: string;
-    user_id: string;
+    author_id: string | null;
+    author_name: string;
     content: string;
     created_at: string;
-    author_name?: string;
+}
+
+interface PostReport {
+    id: string;
+    post_id: string;
+    reporter_id: string | null;
+    reason: string;
+    status: 'pending' | 'reviewed' | 'dismissed';
+    created_at: string;
 }
 
 export function Community() {
     const [posts, setPosts] = useState<CommunityPost[]>([]);
     const [comments, setComments] = useState<PostComment[]>([]);
+    const [reports, setReports] = useState<PostReport[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState<'posts' | 'comments' | 'moderation'>('posts');
-    const [stats, setStats] = useState({ totalPosts: 0, totalLikes: 0, totalComments: 0, totalViews: 0 });
+    const [stats, setStats] = useState({ totalPosts: 0, totalLikes: 0, totalComments: 0, totalShares: 0 });
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             if (activeTab === 'posts' || activeTab === 'moderation') {
-                // 1. Récupère les posts sans jointure (robuste même sans FK)
                 const { data: postsData, error: postsErr } = await supabaseAdmin
                     .from('community_posts')
                     .select('*')
@@ -58,26 +71,26 @@ export function Community() {
 
                 if (postsErr) throw postsErr;
 
-                // 2. Récupère les profils des auteurs séparément
-                const userIds = [...new Set((postsData || []).map((p: any) => p.user_id).filter(Boolean))];
-                let profilesMap: Record<string, { name: string; avatar?: string; email?: string }> = {};
+                const authorIds = [...new Set((postsData || []).map((p: any) => p.author_id).filter(Boolean))];
+                const profilesMap: Record<string, { display_name: string; avatar_url?: string; email?: string }> = {};
 
-                if (userIds.length > 0) {
+                if (authorIds.length > 0) {
                     const { data: profiles } = await supabaseAdmin
-                        .from('user_profiles')
-                        .select('id, name, avatar, email')
-                        .in('id', userIds);
+                        .from('profiles')
+                        .select('id, display_name, avatar_url, email')
+                        .in('id', authorIds);
                     if (profiles) {
-                        profiles.forEach((p: any) => { profilesMap[p.id] = { name: p.name, avatar: p.avatar, email: p.email }; });
+                        profiles.forEach((p: any) => {
+                            profilesMap[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, email: p.email };
+                        });
                     }
                 }
 
-                // 3. Fusionne
                 const enrichedPosts: CommunityPost[] = (postsData || []).map((p: any) => ({
                     ...p,
-                    author_name: profilesMap[p.user_id]?.name || 'Utilisateur',
-                    author_avatar: profilesMap[p.user_id]?.avatar,
-                    author_email: profilesMap[p.user_id]?.email,
+                    author_name: p.author_name || (p.author_id ? profilesMap[p.author_id]?.display_name : undefined) || 'Gourmet Afro',
+                    author_avatar: p.author_avatar || (p.author_id ? profilesMap[p.author_id]?.avatar_url : undefined),
+                    author_email: p.author_id ? profilesMap[p.author_id]?.email : undefined,
                 }));
 
                 setPosts(enrichedPosts);
@@ -86,10 +99,17 @@ export function Community() {
                     totalPosts: acc.totalPosts + 1,
                     totalLikes: acc.totalLikes + (p.likes_count || 0),
                     totalComments: acc.totalComments + (p.comments_count || 0),
-                    totalViews: acc.totalViews + (p.views_count || 0)
-                }), { totalPosts: 0, totalLikes: 0, totalComments: 0, totalViews: 0 });
+                    totalShares: acc.totalShares + (p.shares_count || 0),
+                }), { totalPosts: 0, totalLikes: 0, totalComments: 0, totalShares: 0 });
                 setStats(s);
 
+                if (activeTab === 'moderation') {
+                    const { data: reportsData } = await supabaseAdmin
+                        .from('post_reports')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    setReports(reportsData || []);
+                }
             } else if (activeTab === 'comments') {
                 const { data: commentsData, error: commentsErr } = await supabaseAdmin
                     .from('post_comments')
@@ -98,22 +118,9 @@ export function Community() {
 
                 if (commentsErr) throw commentsErr;
 
-                const userIds = [...new Set((commentsData || []).map((c: any) => c.user_id).filter(Boolean))];
-                let profilesMap: Record<string, string> = {};
-
-                if (userIds.length > 0) {
-                    const { data: profiles } = await supabaseAdmin
-                        .from('user_profiles')
-                        .select('id, name')
-                        .in('id', userIds);
-                    if (profiles) {
-                        profiles.forEach((p: any) => { profilesMap[p.id] = p.name; });
-                    }
-                }
-
                 const enrichedComments: PostComment[] = (commentsData || []).map((c: any) => ({
                     ...c,
-                    author_name: profilesMap[c.user_id] || 'Utilisateur',
+                    author_name: c.author_name || 'Gourmet Afro',
                 }));
                 setComments(enrichedComments);
             }
@@ -147,7 +154,7 @@ export function Community() {
     const filteredPosts = posts.filter(p =>
         !search ||
         p.content?.toLowerCase().includes(search.toLowerCase()) ||
-        p.title?.toLowerCase().includes(search.toLowerCase()) ||
+        p.recipe_name?.toLowerCase().includes(search.toLowerCase()) ||
         p.author_name?.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -162,7 +169,7 @@ export function Community() {
                 <StatCard label="Total Posts" value={stats.totalPosts} icon={<MessageSquare size={20} />} color="#fb5607" />
                 <StatCard label="Total Likes" value={stats.totalLikes} icon={<Heart size={20} />} color="#ef4444" />
                 <StatCard label="Commentaires" value={stats.totalComments} icon={<TrendingUp size={20} />} color="#7c3aed" />
-                <StatCard label="Vues Totales" value={stats.totalViews} icon={<Eye size={20} />} color="#0891b2" />
+                <StatCard label="Partages" value={stats.totalShares} icon={<Eye size={20} />} color="#0891b2" />
             </div>
 
             {/* ── Barre d'outils ── */}
@@ -277,8 +284,8 @@ export function Community() {
                             </p>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
                                 <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '20px', minWidth: '200px' }}>
-                                    <h4 style={{ margin: '0 0 8px', fontSize: '28px', fontWeight: 900, color: '#fb5607' }}>{posts.filter(p => (p.likes_count || 0) < 0).length}</h4>
-                                    <p style={{ margin: 0, fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#9ca3af' }}>Posts Signalés</p>
+                                    <h4 style={{ margin: '0 0 8px', fontSize: '28px', fontWeight: 900, color: '#fb5607' }}>{reports.filter(r => r.status === 'pending').length}</h4>
+                                    <p style={{ margin: 0, fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#9ca3af' }}>Signalements en attente</p>
                                 </div>
                                 <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '20px', minWidth: '200px' }}>
                                     <h4 style={{ margin: '0 0 8px', fontSize: '28px', fontWeight: 900, color: '#7c3aed' }}>{posts.length}</h4>
@@ -300,7 +307,7 @@ function PostCard({ post, onDelete }: { post: CommunityPost; onDelete: (id: stri
                 <div style={{ height: '180px', overflow: 'hidden', position: 'relative' }}>
                     <img src={post.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                     <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>
-                        {post.category || 'Autre'}
+                        {post.type || 'general'}
                     </div>
                 </div>
             ) : (
@@ -326,7 +333,7 @@ function PostCard({ post, onDelete }: { post: CommunityPost; onDelete: (id: stri
                     </button>
                 </div>
                 {/* Contenu */}
-                {post.title && <h4 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: 800, lineHeight: 1.3 }}>{post.title}</h4>}
+                {post.recipe_name && <h4 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: 800, lineHeight: 1.3 }}>{post.recipe_name}</h4>}
                 <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#6b7280', lineHeight: 1.5, flex: 1, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any }}>
                     {post.content || <span style={{ color: '#d1d5db', fontStyle: 'italic' }}>Aucun texte</span>}
                 </p>
@@ -339,7 +346,7 @@ function PostCard({ post, onDelete }: { post: CommunityPost; onDelete: (id: stri
                         <MessageSquare size={13} color="#7c3aed" /> {post.comments_count || 0}
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#6b7280' }}>
-                        <Eye size={13} color="#0891b2" /> {post.views_count || 0}
+                        <Eye size={13} color="#0891b2" /> {post.shares_count || 0}
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#9ca3af', marginLeft: 'auto' }}>
                         <Calendar size={11} /> {new Date(post.created_at).toLocaleDateString('fr-FR')}

@@ -42,6 +42,10 @@ import com.afrocuisto.app.ui.components.EditorialPageHeader
 import com.afrocuisto.app.ui.components.EditorialSearchBar
 import com.afrocuisto.app.ui.components.afroStaggeredEntrance
 import com.afrocuisto.app.ui.screens.home.SunRecipeCard
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.verticalScroll
+import com.afrocuisto.app.ui.components.AfroPullToRefreshBox
 import com.afrocuisto.app.ui.theme.isAfroDarkTheme
 
 @Composable
@@ -85,10 +89,17 @@ fun FavoritesScreen(
             )
         }
 
+        AfroPullToRefreshBox(
+            onRefresh = { repository.refreshFromSupabase() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
         if (favoriteRecipes.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(bottom = 120.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -153,6 +164,7 @@ fun FavoritesScreen(
                     }
                 }
             }
+        }
         }
     }
 }

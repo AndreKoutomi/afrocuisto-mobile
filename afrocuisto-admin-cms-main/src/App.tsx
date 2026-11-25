@@ -1,20 +1,7 @@
-/**
- * ============================================================================
- * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
- * ============================================================================
- * Rôle principal : Point d'entrée de l'interface d'administration. Il vérifie si l'administrateur est connecté. Si oui, il affiche le tableau de bord, sinon il le renvoie sur la page de connexion.
- * 
- * Conseils de lecture :
- * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
- * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
- * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
- * ============================================================================
- */
-
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
-import { Menu, X, Loader2, Search } from 'lucide-react';
+import { Menu, X, Loader2, Search, Sun, Moon } from './components/SolarIcons';
 import { Dashboard } from './pages/Dashboard';
 import { RecipesList } from './pages/RecipesList';
 import { RecipeForm } from './pages/RecipeForm';
@@ -24,23 +11,30 @@ import { Feedback } from './pages/Feedback';
 import { Contributions } from './pages/Contributions';
 import { UsersPage } from './pages/Users';
 import { BetaTesters } from './pages/BetaTesters';
-import { Transactions } from './pages/Transactions';
 import { Notifications } from './pages/Notifications';
-import { Merchants } from './pages/Merchants';
-import { Products } from './pages/Products';
-import { Orders } from './pages/Orders';
+import { Releases } from './pages/Releases';
+import { SettingsPage } from './pages/Settings';
 import { Community } from './pages/Community';
 import { Bugs } from './pages/Bugs';
 import { Login } from './pages/Login';
 import { supabase } from './lib/supabase';
 
-function AppLayout({ children, session, onLogout }: { children: React.ReactNode, session: any, onLogout: () => void }) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('afrocuisto_sidebar_collapsed') === 'true');
+interface AppLayoutProps {
+  children: React.ReactNode;
+  session: any;
+  onLogout: () => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
+}
+
+function AppLayout({ children, session, onLogout, theme, onToggleTheme }: AppLayoutProps) {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    () => localStorage.getItem('afrocuisto_sidebar_collapsed') === 'true'
+  );
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Fermer le menu mobile lors d'un changement de page
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
@@ -50,48 +44,45 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
   }
 
   const getPageTitle = () => {
-    if (location.pathname === '/sections') return 'Gestion des Sections';
+    if (location.pathname === '/sections') return 'Sections d’accueil';
     if (location.pathname === '/sections/create') return 'Nouvelle Section';
-    if (location.pathname === '/sections/edit/') return 'Modifier la Section';
-    if (location.pathname === '/feedback') return 'Retours Clients';
+    if (location.pathname.startsWith('/sections/edit')) return 'Modifier la Section';
+    if (location.pathname === '/feedback') return 'Avis & Notes';
     if (location.pathname === '/bugs') return 'Rapports de Bugs';
-    if (location.pathname === '/contributions') return 'Contributions Utilisateur';
+    if (location.pathname === '/contributions') return 'Suggestions de plats';
     if (location.pathname === '/dashboard') return 'Tableau de bord';
-    if (location.pathname === '/recipes') return 'Gestion des Recettes';
+    if (location.pathname === '/recipes') return 'Catalogue Recettes';
     if (location.pathname.startsWith('/recipes/create')) return 'Nouvelle Recette';
     if (location.pathname.startsWith('/recipes/edit')) return 'Modifier la Recette';
-    if (location.pathname === '/users') return 'Utilisateurs App (Clients)';
-    if (location.pathname === '/beta-testers') return 'Inscriptions Waitlist (Bêta Testers)';
-    if (location.pathname === '/transactions') return 'Transactions';
-    if (location.pathname === '/notifications') return 'Notifications Push';
-    if (location.pathname === '/merchants') return 'Partenaires Marchands';
-    if (location.pathname === '/products') return 'Gestion des Produits Store';
-    if (location.pathname === '/orders') return 'Gestion des Commandes';
-    if (location.pathname === '/community') return 'Espace Communauté';
-    return 'Bienvenue sur AfroCuisto';
+    if (location.pathname === '/users') return 'Utilisateurs';
+    if (location.pathname === '/beta-testers') return 'Waitlist Bêta';
+    if (location.pathname === '/notifications') return 'Notifications App';
+    if (location.pathname === '/releases') return 'Mises à jour OTA';
+    if (location.pathname === '/settings') return 'Paramètres IA';
+    if (location.pathname === '/community') return 'Communauté';
+    return 'AfroCuisto Studio';
   };
 
   const getBreadcrumb = () => {
-    if (location.pathname.startsWith('/recipes')) return 'Pages / Recettes';
-    if (location.pathname.startsWith('/sections')) return 'Pages / Sections';
-    if (location.pathname.startsWith('/users')) return 'Pages / Clients App';
-    if (location.pathname.startsWith('/beta-testers')) return 'Pages / Bêta Testers';
-    if (location.pathname.startsWith('/transactions')) return 'Pages / Transactions';
-    if (location.pathname.startsWith('/contributions')) return 'Pages / Contributions';
-    if (location.pathname.startsWith('/notifications')) return 'Pages / Notifications';
-    if (location.pathname.startsWith('/merchants')) return 'Pages / Marchands';
-    if (location.pathname.startsWith('/products')) return 'Pages / Produits';
-    if (location.pathname.startsWith('/orders')) return 'Pages / Commandes';
-    if (location.pathname.startsWith('/community')) return 'Pages / Communauté';
-    if (location.pathname.startsWith('/bugs')) return 'Pages / Bugs';
-    return 'Pages / Tableau de bord';
+    if (location.pathname.startsWith('/recipes')) return 'Contenu / Recettes';
+    if (location.pathname.startsWith('/sections')) return 'Contenu / Sections';
+    if (location.pathname.startsWith('/contributions')) return 'Contenu / Suggestions';
+    if (location.pathname.startsWith('/users')) return 'Communauté / Utilisateurs';
+    if (location.pathname.startsWith('/beta-testers')) return 'Communauté / Waitlist';
+    if (location.pathname.startsWith('/community')) return 'Communauté / Flux';
+    if (location.pathname.startsWith('/feedback')) return 'Support / Avis';
+    if (location.pathname.startsWith('/bugs')) return 'Support / Bugs';
+    if (location.pathname.startsWith('/notifications')) return 'Déploiement / Notifications';
+    if (location.pathname.startsWith('/releases')) return 'Déploiement / OTA';
+    if (location.pathname.startsWith('/settings')) return 'Configuration / Gemini IA';
+    return 'Studio / Vue d’ensemble';
   };
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      const target = e.currentTarget;
-      if (target.value.trim()) {
-        navigate(`/recipes?q=${encodeURIComponent(target.value)}`);
+      const value = e.currentTarget.value.trim();
+      if (value) {
+        navigate(`/recipes?q=${encodeURIComponent(value)}`);
       }
     }
   };
@@ -100,7 +91,6 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
 
   return (
     <div className="app-container">
-      {/* Overlay pour mobile */}
       <div
         className={`sidebar-overlay ${isMobileMenuOpen ? 'active' : ''}`}
         onClick={() => setIsMobileMenuOpen(false)}
@@ -115,10 +105,10 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
         }}
         onLogout={onLogout}
       />
+
       <main className="main-content">
         <header className="topbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {/* Bouton Menu Mobile */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               className="mobile-menu-btn"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -126,49 +116,108 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
                 display: 'none',
                 padding: '8px',
                 background: 'var(--surface)',
+                border: '1px solid var(--border)',
                 borderRadius: '10px',
-                boxShadow: 'var(--shadow-sm)',
                 color: 'var(--text-main)'
               }}
+              aria-label="Menu"
             >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
             <div>
-              <p className="page-subtitle" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>Pages</span>
-                <span style={{ opacity: 0.5 }}>/</span>
-                <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{getPageTitle()}</span>
-              </p>
+              <p className="page-subtitle">{getBreadcrumb()}</p>
               <h1 className="page-title">{getPageTitle()}</h1>
             </div>
           </div>
+
           <div className="topbar-card">
-            <div className="flex items-center gap-2" style={{ backgroundColor: '#F4F7FE', padding: '9px 18px', borderRadius: '30px', border: '1.5px solid transparent', transition: 'all 0.2s', display: 'flex', alignItems: 'center' }}>
-              <Search size={16} color="var(--primary)" />
+            <div
+              className="topbar-search"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                padding: '7px 14px',
+                borderRadius: '12px',
+              }}
+            >
+              <Search size={15} color="var(--text-muted)" />
               <input
                 type="text"
-                placeholder="Recherche globale..."
-                style={{ border: 'none', background: 'transparent', outline: 'none', width: '190px', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}
+                placeholder="Rechercher une recette..."
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  outline: 'none',
+                  width: '180px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-main)',
+                  boxShadow: 'none',
+                }}
                 onKeyDown={handleSearch}
               />
             </div>
-            <div className="avatar flex items-center gap-3">
-              <div className="flex flex-col items-end mr-1">
-                <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-main)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#05CD99' }} />
-                  Admin
-                </span>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{session?.user?.email}</span>
-              </div>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--primary-gradient)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', boxShadow: '0 3px 10px rgba(251, 86, 7, 0.35)' }}>
+
+            <button
+              onClick={onToggleTheme}
+              title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+              aria-label="Basculer le thème"
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '11px',
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '4px 10px 4px 4px',
+                borderRadius: '12px',
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+              }}
+            >
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: '9px',
+                  background: 'var(--primary-gradient)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '13px',
+                }}
+              >
                 {userInitial}
+              </div>
+              <div className="topbar-search" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-main)' }}>Admin</span>
+                <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                  {session?.user?.email}
+                </span>
               </div>
             </div>
           </div>
         </header>
-        <div className="content-area">
-          {children}
-        </div>
+
+        <div className="content-area">{children}</div>
       </main>
     </div>
   );
@@ -177,6 +226,15 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode,
 function App() {
   const [session, setSession] = useState<any>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('afrocuisto_cms_theme');
+    return saved === 'dark' ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('afrocuisto_cms_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const authorizedEmails = ['andre.koutomi98@gmail.com', 'deodadefassinou@gmail.com'];
@@ -191,12 +249,10 @@ function App() {
       setLoadingAuth(false);
     };
 
-    // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       checkSession(session);
     });
 
-    // Listen for changes on auth state (logged in, signed out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       checkSession(session);
     });
@@ -210,8 +266,8 @@ function App() {
 
   if (loadingAuth) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F4F7FE' }}>
-        <Loader2 className="animate-spin" size={48} color="#fb5607" />
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-color)' }}>
+        <Loader2 className="spinning" size={40} color="#fb5607" />
       </div>
     );
   }
@@ -223,7 +279,12 @@ function App() {
         <Route
           path="/*"
           element={
-            <AppLayout session={session} onLogout={handleLogout}>
+            <AppLayout
+              session={session}
+              onLogout={handleLogout}
+              theme={theme}
+              onToggleTheme={() => setTheme(t => (t === 'light' ? 'dark' : 'light'))}
+            >
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -235,13 +296,11 @@ function App() {
                 <Route path="/sections/edit/:id" element={<SectionForm />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/beta-testers" element={<BetaTesters />} />
-                <Route path="/transactions" element={<Transactions />} />
                 <Route path="/feedback" element={<Feedback />} />
                 <Route path="/contributions" element={<Contributions />} />
                 <Route path="/notifications" element={<Notifications />} />
-                <Route path="/merchants" element={<Merchants />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/orders" element={<Orders />} />
+                <Route path="/releases" element={<Releases />} />
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/community" element={<Community />} />
                 <Route path="/bugs" element={<Bugs />} />
               </Routes>

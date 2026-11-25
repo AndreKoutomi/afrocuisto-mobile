@@ -19,7 +19,7 @@ import {
     RefreshCw, Search, Filter, ChevronDown, Trash2,
     Smartphone, Calendar, Tag, Layers, Info,
     TrendingUp, ShieldAlert
-} from 'lucide-react';
+} from '../components/SolarIcons';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

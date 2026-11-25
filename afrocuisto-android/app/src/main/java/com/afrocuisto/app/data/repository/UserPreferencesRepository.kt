@@ -77,7 +77,7 @@ data class UserPreferencesState(
     val diasporaSubstitutesFirst: Boolean = false,
     val keepScreenOnInRecipe: Boolean = true,
     val dietaryTags: Set<String> = emptySet(),
-    val cookedRecipeIds: Set<String> = setOf("P02", "V03"),
+    val cookedRecipeIds: Set<String> = emptySet(),
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val carouselAutoScroll: Boolean = true,
     val timerVibrationEnabled: Boolean = true
@@ -151,7 +151,7 @@ class UserPreferencesRepository(private val context: Context) {
             diasporaSubstitutesFirst = prefs[Keys.DIASPORA_FIRST] ?: false,
             keepScreenOnInRecipe = prefs[Keys.KEEP_SCREEN_ON] ?: true,
             dietaryTags = prefs[Keys.DIETARY_TAGS] ?: emptySet(),
-            cookedRecipeIds = prefs[Keys.COOKED_RECIPE_IDS] ?: setOf("P02", "V03"),
+            cookedRecipeIds = prefs[Keys.COOKED_RECIPE_IDS] ?: emptySet(),
             themeMode = AppThemeMode.fromId(prefs[Keys.THEME_MODE]),
             carouselAutoScroll = prefs[Keys.CAROUSEL_AUTO_SCROLL] ?: true,
             timerVibrationEnabled = prefs[Keys.TIMER_VIBRATION] ?: true
@@ -214,7 +214,7 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun markRecipeCooked(recipeId: String) {
         if (recipeId.isBlank()) return
         context.afroUserPrefsDataStore.edit { prefs ->
-            val current = prefs[Keys.COOKED_RECIPE_IDS] ?: setOf("P02", "V03")
+            val current = prefs[Keys.COOKED_RECIPE_IDS] ?: emptySet()
             prefs[Keys.COOKED_RECIPE_IDS] = current + recipeId
         }
     }

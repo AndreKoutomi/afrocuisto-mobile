@@ -12,10 +12,11 @@
  */
 
 import { useEffect, useState, useMemo } from 'react'; // Hooks React pour le cycle de vie et le calcul optimisé
-import { supabase } from '../lib/supabase'; // Client pour communiquer avec la base de données
-import { Plus, Edit2, Trash2, Search, RefreshCw, ChefHat, Clock, MapPin, Filter, X, Sparkles } from 'lucide-react'; // Collection d'icônes
+import { supabase, supabaseAdmin } from '../lib/supabase'; // Client pour communiquer avec la base de données
+import { Plus, Edit2, Trash2, Search, RefreshCw, ChefHat, Clock, MapPin, Filter, X, Sparkles, Database } from '../components/SolarIcons'; // Collection d'icônes
 import { Link, useSearchParams } from 'react-router-dom'; // Outils de navigation
 import { RecipeAIWizard } from '../components/RecipeAIWizard'; // Composant assistant IA
+import { seedDemoRecipesAndSections } from '../lib/seedRecipes';
 
 // Définition des catégories avec leurs couleurs pour l'affichage
 const CATEGORIES = [
@@ -53,6 +54,21 @@ export function RecipesList() {
     const [filterCategory, setFilterCategory] = useState(''); // Filtre par catégorie
     const [filterDifficulty, setFilterDifficulty] = useState(''); // Filtre par difficulté
     const [showAIWizard, setShowAIWizard] = useState(false); // Est-ce qu'on montre l'assistant IA ?
+    const [seeding, setSeeding] = useState(false);
+
+    async function handleSeedDemo() {
+        if (!window.confirm('Importer les 6 recettes de démonstration et les sections initiales dans Supabase ?')) return;
+        setSeeding(true);
+        try {
+            await seedDemoRecipesAndSections();
+            await fetchRecipes();
+            alert('Recettes et sections de démonstration importées avec succès !');
+        } catch (err: any) {
+            alert('Erreur lors de l’import : ' + (err?.message || err));
+        } finally {
+            setSeeding(false);
+        }
+    }
 
     // Fonction pour charger les recettes depuis Supabase
     async function fetchRecipes() {
@@ -98,7 +114,7 @@ export function RecipesList() {
         if (!window.confirm('Supprimer cette recette ?')) return;
         setDeletingId(id);
         try {
-            const { error } = await supabase.from('recipes').delete().eq('id', id);
+            const { error } = await supabaseAdmin.from('recipes').delete().eq('id', id);
             if (error) throw error;
             // On retire la recette de l'écran sans tout recharger
             setRecipes(prev => prev.filter(r => r.id !== id));
@@ -147,6 +163,20 @@ export function RecipesList() {
                         title="Rafraîchir"
                     >
                         <RefreshCw size={16} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+                    </button>
+                    <button
+                        onClick={handleSeedDemo}
+                        disabled={seeding}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            background: '#fff', color: '#374151',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '14px', padding: '10px 16px',
+                            fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                        }}
+                        title="Importer les recettes de démonstration dans Supabase"
+                    >
+                        <Database size={15} /> {seeding ? 'Import...' : 'Importer démo'}
                     </button>
                     <button
                         onClick={() => setShowAIWizard(true)}

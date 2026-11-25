@@ -243,41 +243,9 @@ class ShoppingRepository {
     companion object {
         private val sharedCurrency = MutableStateFlow(MarketCurrency.FCFA)
 
-        private val sharedItems = MutableStateFlow(
-            listOf(
-                ShoppingItem("1", "Farine de maïs raffinée", "500 g", "Céréales & Féculents", "Amiwô au Poulet Braisé", false, 1200.0),
-                ShoppingItem("2", "Concentré de noix de palme", "1 boîte", "Huiles & Conserves", "Dékoun", true, 1800.0),
-                ShoppingItem("3", "Poudre de Kankan (Yaji)", "100 g", "Épices & Terroir", "Tchatchanga", false, 750.0),
-                ShoppingItem("4", "Piment rouge frais", "200 g", "Légumes & Frais", "Amiwô au Poulet Braisé", false, 500.0)
-            )
-        )
+        private val sharedItems = MutableStateFlow<List<ShoppingItem>>(emptyList())
 
-        private val sharedArchivedItems = MutableStateFlow(
-            listOf(
-                ShoppingItem(
-                    id = "arch_1",
-                    name = "Poulet fermier découpé",
-                    quantity = "1,2 kg",
-                    category = "Viandes & Poissons",
-                    recipeName = "Amiwô au Poulet Braisé",
-                    isChecked = true,
-                    price = 4500.0,
-                    archivedAt = System.currentTimeMillis() - 86_400_000L,
-                    archiveBatchLabel = "Courses d'hier"
-                ),
-                ShoppingItem(
-                    id = "arch_2",
-                    name = "Fleurs d'hibiscus (Bissap)",
-                    quantity = "250 g",
-                    category = "Épices & Terroir",
-                    recipeName = "Jus de Bissap à la Menthe",
-                    isChecked = true,
-                    price = 1000.0,
-                    archivedAt = System.currentTimeMillis() - 86_400_000L,
-                    archiveBatchLabel = "Courses d'hier"
-                )
-            )
-        )
+        private val sharedArchivedItems = MutableStateFlow<List<ShoppingItem>>(emptyList())
 
         private fun formatArchiveBatchLabel(timestampMs: Long): String {
             val fmt = SimpleDateFormat("dd MMM • HH:mm", Locale.FRENCH)

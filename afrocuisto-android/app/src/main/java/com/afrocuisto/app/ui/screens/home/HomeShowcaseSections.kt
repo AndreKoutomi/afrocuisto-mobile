@@ -152,11 +152,44 @@ fun HomeDailyMenuSection(
     onNavigateToAiChef: () -> Unit,
     titleColor: Color,
     subtitleColor: Color,
-    borderColor: Color
+    borderColor: Color,
+    sectionTitle: String = "Menu du Moment"
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = isAfroDarkTheme()
     val haptic = LocalHapticFeedback.current
+
+    val menus = remember(recipes) {
+        val hasMockIds = DAILY_MENUS.any { m -> recipes.any { it.id == m.mainRecipeId } }
+        if (recipes.isEmpty() || hasMockIds) {
+            DAILY_MENUS
+        } else {
+            val tabMeta = listOf(
+                Triple("midi", "Déjeuner", "MENU DU MIDI"),
+                Triple("soir", "Dîner", "TABLE DU SOIR"),
+                Triple("weekend", "Convivial", "PARTAGE & GRILL")
+            )
+            tabMeta.mapIndexed { idx, (tabId, tabLabel, badge) ->
+                val recipe = recipes[idx % recipes.size]
+                DailyMenuPairing(
+                    tabId = tabId,
+                    tabLabel = tabLabel,
+                    badge = badge,
+                    title = recipe.name,
+                    subtitle = recipe.description?.takeIf { it.isNotBlank() }
+                        ?: "Spécialité ${recipe.region.ifBlank { "africaine" }} sélectionnée pour votre table.",
+                    mainRecipeId = recipe.id,
+                    pairingNote = recipe.suggestedSides?.firstOrNull()?.let { "Accord : $it" }
+                        ?: listOfNotNull(
+                            recipe.region.takeIf { it.isNotBlank() },
+                            recipe.category.takeIf { it.isNotBlank() }
+                        ).joinToString(" • ").ifBlank { "Suggestion du Chef" },
+                    totalMinutesLabel = recipe.prepTime.ifBlank { "20 min" },
+                    servingsLabel = "4 pers."
+                )
+            }
+        }
+    }
 
     val defaultIndex = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -167,7 +200,7 @@ fun HomeDailyMenuSection(
         }
     }
     var selectedTab by remember { mutableIntStateOf(defaultIndex) }
-    val activeMenu = DAILY_MENUS[selectedTab]
+    val activeMenu = menus[selectedTab.coerceIn(0, menus.lastIndex)]
     val mainRecipe = remember(recipes, activeMenu.mainRecipeId) {
         recipes.firstOrNull { it.id == activeMenu.mainRecipeId } ?: recipes.firstOrNull()
     }
@@ -194,7 +227,7 @@ fun HomeDailyMenuSection(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Menu du Moment",
+                    text = sectionTitle,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = titleColor,
@@ -217,7 +250,7 @@ fun HomeDailyMenuSection(
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                DAILY_MENUS.forEachIndexed { idx, item ->
+                menus.forEachIndexed { idx, item ->
                     val active = idx == selectedTab
                     val tabBg by animateColorAsState(
                         targetValue = if (active) AfroOrange else Color.Transparent,
@@ -800,7 +833,8 @@ fun HomeExpressRecipesSection(
     onNavigateToRecipes: () -> Unit,
     titleColor: Color,
     subtitleColor: Color,
-    borderColor: Color
+    borderColor: Color,
+    sectionTitle: String = "Prêt en un éclair"
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = isAfroDarkTheme()
@@ -831,7 +865,7 @@ fun HomeExpressRecipesSection(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Prêt en un éclair",
+                    text = sectionTitle,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = titleColor,

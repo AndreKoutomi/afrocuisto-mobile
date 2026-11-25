@@ -1,18 +1,9 @@
-/**
- * ============================================================================
- * EXPLICATION DU FICHIER POUR LES DÉBUTANTS
- * ============================================================================
- * Rôle principal : Le menu de navigation latéral de l'espace d'administration pour passer d'une rubrique à l'autre (Recettes, Utilisateurs, Paramètres...).
- * 
- * Conseils de lecture :
- * - Cherchez les mots-clés "function" ou "const" pour voir les actions définies.
- * - Le mot "return" suivi de balises HTML (ex: <div>) indique un élément visuel (Composant React).
- * - "import" en haut signifie qu'on utilise des outils d'autres fichiers pour s'aider.
- * ============================================================================
- */
-
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users, Sparkles, CreditCard, Bell, ChevronLeft, ChevronRight, Store, ShoppingBag, ShoppingBasket, LogOut, Share2, Bug } from 'lucide-react';
+import {
+    LayoutDashboard, BookText, LayoutGrid, MessageSquare, Users,
+    Sparkles, Bell, ChevronLeft, ChevronRight, LogOut, Share2,
+    Bug, Smartphone, UserCheck, Settings
+} from './SolarIcons';
 import logoAdmin from '../assets/logo_admin.png';
 
 interface SidebarProps {
@@ -22,199 +13,156 @@ interface SidebarProps {
     onLogout: () => void;
 }
 
-// Composant Sidebar (La barre latérale gauche)
 export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, onLogout }: SidebarProps) {
     return (
-        <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`} style={{ position: 'relative' }}>
-            {/* Bouton pour réduire/agrandir la barre */}
+        <aside
+            className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}
+            style={{ position: 'relative' }}
+        >
             <button
                 className="sidebar-toggle"
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 style={{
                     position: 'absolute',
-                    right: '-12px',
-                    top: '40px',
+                    right: '-13px',
+                    top: '26px',
                     background: 'var(--surface)',
                     border: '1px solid var(--border)',
                     borderRadius: '50%',
-                    width: '24px',
-                    height: '24px',
+                    width: '26px',
+                    height: '26px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    zIndex: 100,
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                    zIndex: 30,
+                    boxShadow: 'var(--shadow-sm)',
                     color: 'var(--text-main)'
                 }}
-                title={isCollapsed ? "Agrandir" : "Réduire"}
+                title={isCollapsed ? 'Agrandir le menu' : 'Réduire le menu'}
+                aria-label={isCollapsed ? 'Agrandir le menu' : 'Réduire le menu'}
             >
                 {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
             </button>
 
-            {/* Haut de la barre latérale : Logo et Nom de l'app */}
-            <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <img src={logoAdmin} alt="Logo" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '8px' }} />
+            <div className="sidebar-header">
+                <img
+                    src={logoAdmin}
+                    alt="AfroCuisto"
+                    style={{
+                        width: '36px',
+                        height: '36px',
+                        objectFit: 'cover',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        flexShrink: 0,
+                    }}
+                />
                 {!isCollapsed && (
-                    <>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 800 }}>
-                            <span style={{ color: 'var(--text-main)' }}>Afro</span><span style={{ color: 'var(--primary)' }}>Cuisto</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                            <span style={{ color: 'var(--text-main)' }}>Afro</span>
+                            <span style={{ color: 'var(--primary)' }}>Cuisto</span>
                         </div>
-                    </>
+                        <span style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            color: 'var(--text-muted)',
+                            textTransform: 'uppercase',
+                            marginTop: '2px',
+                        }}>
+                            Studio CMS
+                        </span>
+                    </div>
                 )}
             </div>
 
-            {/* Une ligne de séparation élégante */}
-            <div style={{ height: 1, backgroundColor: 'var(--border)', margin: '0 2rem 1rem 2rem' }}></div>
-
-            {/* Navigation : la liste des liens vers les différentes pages */}
             <nav className="sidebar-nav">
                 <span className="nav-label">Général</span>
 
-                <NavLink
-                    to="/dashboard"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <LayoutDashboard size={20} style={{ marginRight: '8px' }} />
+                <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <LayoutDashboard size={18} />
                     <span>Tableau de bord</span>
                 </NavLink>
 
-                <span className="nav-label">Contenu</span>
+                <span className="nav-label">Contenu App</span>
 
-                <NavLink
-                    to="/recipes"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <BookText size={20} style={{ marginRight: '8px' }} />
+                <NavLink to="/recipes" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <BookText size={18} />
                     <span>Recettes</span>
                 </NavLink>
 
-                <NavLink
-                    to="/sections"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <LayoutGrid size={20} style={{ marginRight: '8px' }} />
-                    <span>Sections</span>
+                <NavLink to="/sections" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <LayoutGrid size={18} />
+                    <span>Sections d’accueil</span>
                 </NavLink>
 
-                <NavLink
-                    to="/contributions"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Sparkles size={20} style={{ marginRight: '8px' }} />
-                    <span>Contributions</span>
+                <NavLink to="/contributions" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Sparkles size={18} />
+                    <span>Suggestions plats</span>
                 </NavLink>
 
-                <span className="nav-label">Utilisateurs & Social</span>
+                <span className="nav-label">Communauté & Support</span>
 
-                <NavLink
-                    to="/beta-testers"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Sparkles size={20} style={{ marginRight: '8px' }} />
-                    <span>Beta Testers</span>
-                </NavLink>
-
-                <NavLink
-                    to="/users"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Users size={20} style={{ marginRight: '8px' }} />
+                <NavLink to="/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Users size={18} />
                     <span>Utilisateurs</span>
                 </NavLink>
 
-                <NavLink
-                    to="/community"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Share2 size={20} style={{ marginRight: '8px' }} />
+                <NavLink to="/community" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Share2 size={18} />
                     <span>Communauté</span>
                 </NavLink>
 
-                <NavLink
-                    to="/feedback"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <MessageSquare size={20} style={{ marginRight: '8px' }} />
-                    <span>Retours Clients</span>
+                <NavLink to="/feedback" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <MessageSquare size={18} />
+                    <span>Avis & Notes</span>
                 </NavLink>
 
-                <NavLink
-                    to="/bugs"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Bug size={20} style={{ marginRight: '8px' }} />
+                <NavLink to="/bugs" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Bug size={18} />
                     <span>Rapports de Bugs</span>
                 </NavLink>
 
-                <span className="nav-label">Boutique & Ventes</span>
-
-                <NavLink
-                    to="/merchants"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Store size={20} style={{ marginRight: '8px' }} />
-                    <span>Marchands</span>
+                <NavLink to="/beta-testers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <UserCheck size={18} />
+                    <span>Waitlist Bêta</span>
                 </NavLink>
 
-                <NavLink
-                    to="/orders"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <ShoppingBasket size={20} style={{ marginRight: '8px' }} />
-                    <span>Commandes</span>
+                <span className="nav-label">Déploiement</span>
+
+                <NavLink to="/notifications" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Bell size={18} />
+                    <span>Notifications App</span>
                 </NavLink>
 
-                <NavLink
-                    to="/products"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <ShoppingBag size={20} style={{ marginRight: '8px' }} />
-                    <span>Produits Store</span>
+                <NavLink to="/releases" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Smartphone size={18} />
+                    <span>Mises à jour OTA</span>
                 </NavLink>
 
-                <NavLink
-                    to="/transactions"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <CreditCard size={20} style={{ marginRight: '8px' }} />
-                    <span>Transactions</span>
+                <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Settings size={18} />
+                    <span>Paramètres IA</span>
                 </NavLink>
-
-                <span className="nav-label">Communication</span>
-
-                <NavLink
-                    to="/notifications"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <Bell size={20} style={{ marginRight: '8px' }} />
-                    <span>Notifications Push</span>
-                </NavLink>
-
-                <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
-                    <button
-                        onClick={onLogout}
-                        className="nav-item"
-                        style={{
-                            width: '100%',
-                            textAlign: 'left',
-                            color: 'var(--danger)',
-                            transition: 'all 0.2s',
-                            borderRadius: '12px',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#fff5f5';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                    >
-                        <LogOut size={20} style={{ marginRight: '8px' }} />
-                        {!isCollapsed && <span>Déconnexion</span>}
-                    </button>
-                </div>
             </nav>
 
-        </aside> // Fin du composant Sidebar
+            <div style={{ padding: '12px', borderTop: '1px solid var(--border)' }}>
+                <button
+                    onClick={onLogout}
+                    className="nav-item"
+                    style={{
+                        width: '100%',
+                        color: 'var(--danger)',
+                        justifyContent: isCollapsed ? 'center' : 'flex-start',
+                    }}
+                    title="Déconnexion"
+                >
+                    <LogOut size={18} />
+                    {!isCollapsed && <span>Déconnexion</span>}
+                </button>
+            </div>
+        </aside>
     );
 }

@@ -47,6 +47,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afrocuisto.app.data.repository.RecipeRepository
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.afrocuisto.app.ui.components.AfroPullToRefreshBox
 import com.afrocuisto.app.ui.components.EditorialPageHeader
 import com.afrocuisto.app.ui.components.EditorialSearchBar
 import com.afrocuisto.app.ui.components.afroStaggeredEntrance
@@ -130,10 +133,17 @@ fun RecipeListScreen(
             )
         }
 
+        AfroPullToRefreshBox(
+            onRefresh = { repository.refreshFromSupabase() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
         if (filteredRecipes.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(bottom = 120.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -187,6 +197,7 @@ fun RecipeListScreen(
                     }
                 }
             }
+        }
         }
     }
 }

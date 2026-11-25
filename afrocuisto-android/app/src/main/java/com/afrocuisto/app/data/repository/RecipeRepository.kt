@@ -1,18 +1,201 @@
 package com.afrocuisto.app.data.repository
 
+import com.afrocuisto.app.BuildConfig
 import com.afrocuisto.app.data.model.Ingredient
 import com.afrocuisto.app.data.model.Recipe
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.TimeUnit
+
+data class HomeSection(
+    val id: String,
+    val title: String,
+    val sectionType: String = "recipes",
+    val itemIds: List<String> = emptyList(),
+    val orderIndex: Int = 0,
+    val isActive: Boolean = true
+)
+
+data class AppNotificationItem(
+    val id: String,
+    val title: String,
+    val body: String,
+    val actionRoute: String? = null,
+    val createdAt: String = ""
+)
 
 class RecipeRepository {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val json = Json { ignoreUnknownKeys = true }
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
 
     private val _recipes = MutableStateFlow<List<Recipe>>(getMockRecipes())
     val recipes: Flow<List<Recipe>> = _recipes.asStateFlow()
 
-    private val _favoriteIds = MutableStateFlow<Set<String>>(setOf("P02", "S05", "P11"))
+    private val _homeSections = MutableStateFlow<List<HomeSection>>(emptyList())
+    val homeSections: Flow<List<HomeSection>> = _homeSections.asStateFlow()
+
+    private val _notifications = MutableStateFlow<List<AppNotificationItem>>(emptyList())
+    val notifications: Flow<List<AppNotificationItem>> = _notifications.asStateFlow()
+
+    private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
     val favoriteIds: Flow<Set<String>> = _favoriteIds.asStateFlow()
+
+    init {
+        refreshFromSupabaseAsync()
+    }
+
+    fun refreshFromSupabaseAsync() {
+        scope.launch {
+            refreshFromSupabase()
+        }
+    }
+
+    suspend fun refreshFromSupabase() = withContext(Dispatchers.IO) {
+        val baseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
+        val anonKey = BuildConfig.SUPABASE_ANON_KEY
+        if (baseUrl.isBlank() || anonKey.isBlank()) return@withContext
+
+        runCatching {
+            fetchJsonArray("$baseUrl/rest/v1/recipes?select=*&order=name.asc", anonKey)?.let { arr ->
+                val parsed = arr.mapNotNull { el -> runCatching { parseRecipe(el.jsonObject) }.getOrNull() }
+                if (parsed.isNotEmpty()) {
+                    _recipes.value = parsed
+                }
+            }
+        }
+
+        runCatching {
+            fetchJsonArray("$baseUrl/rest/v1/home_sections?select=*&is_active=eq.true&order=order_index.asc", anonKey)?.let { arr ->
+                _homeSections.value = arr.mapNotNull { el ->
+                    runCatching {
+                        val obj = el.jsonObject
+                        HomeSection(
+                            id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            title = obj["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            sectionType = obj["section_type"]?.jsonPrimitive?.contentOrNull ?: "recipes",
+                            itemIds = obj["item_ids"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                            orderIndex = obj["order_index"]?.jsonPrimitive?.intOrNull ?: 0,
+                            isActive = obj["is_active"]?.jsonPrimitive?.booleanOrNull ?: true
+                        )
+                    }.getOrNull()
+                }
+            }
+        }
+
+        runCatching {
+            fetchJsonArray("$baseUrl/rest/v1/app_notifications?select=*&is_active=eq.true&order=created_at.desc", anonKey)?.let { arr ->
+                _notifications.value = arr.mapNotNull { el ->
+                    runCatching {
+                        val obj = el.jsonObject
+                        AppNotificationItem(
+                            id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            title = obj["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            body = obj["body"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            actionRoute = obj["action_route"]?.jsonPrimitive?.contentOrNull,
+                            createdAt = obj["created_at"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                        )
+                    }.getOrNull()
+                }
+            }
+        }
+    }
+
+    private fun fetchJsonArray(url: String, anonKey: String): JsonArray? {
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("apikey", anonKey)
+            .addHeader("Authorization", "Bearer $anonKey")
+            .addHeader("Accept", "application/json")
+            .get()
+            .build()
+        httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val body = response.body?.string().orEmpty()
+            if (body.isBlank()) return null
+            return json.parseToJsonElement(body).jsonArray
+        }
+    }
+
+    private fun parseRecipe(obj: JsonObject): Recipe {
+        val ingredients = obj["ingredients"]?.takeIf { it is JsonArray }?.jsonArray?.mapNotNull { item ->
+            runCatching {
+                val ing = item.jsonObject
+                Ingredient(
+                    name = ing["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    amount = ing["amount"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    unit = ing["unit"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    isOptional = ing["isOptional"]?.jsonPrimitive?.booleanOrNull ?: false,
+                    substitute = ing["substitute"]?.jsonPrimitive?.contentOrNull
+                )
+            }.getOrNull()
+        } ?: emptyList()
+
+        val steps = obj["steps"]?.takeIf { it is JsonArray }?.jsonArray?.mapNotNull { el ->
+            when (el) {
+                is JsonObject -> {
+                    val title = el["title"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+                    val desc = el["description"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+                    listOf(title, desc).filter { it.isNotBlank() }.joinToString(" : ").takeIf { it.isNotBlank() }
+                }
+                else -> runCatching { el.jsonPrimitive.contentOrNull }.getOrNull()
+            }
+        } ?: emptyList()
+
+        val sides = obj["suggested_sides"]?.takeIf { it is JsonArray }?.jsonArray?.mapNotNull {
+            it.jsonPrimitive.contentOrNull
+        }
+
+        return Recipe(
+            id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            name = obj["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            alias = obj["alias"]?.jsonPrimitive?.contentOrNull,
+            region = obj["region"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            category = obj["category"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            difficulty = obj["difficulty"]?.jsonPrimitive?.contentOrNull ?: "Facile",
+            prepTime = obj["prep_time"]?.jsonPrimitive?.contentOrNull ?: "15 min",
+            cookTime = obj["cook_time"]?.jsonPrimitive?.contentOrNull ?: "30 min",
+            image = obj["image"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            ingredients = ingredients,
+            techniqueTitle = obj["technique_title"]?.jsonPrimitive?.contentOrNull,
+            techniqueDescription = obj["technique_description"]?.jsonPrimitive?.contentOrNull,
+            description = obj["description"]?.jsonPrimitive?.contentOrNull,
+            steps = steps,
+            diasporaSubstitutes = obj["diaspora_substitutes"]?.jsonPrimitive?.contentOrNull,
+            suggestedSides = sides,
+            benefits = obj["benefits"]?.jsonPrimitive?.contentOrNull,
+            pedagogicalNote = obj["pedagogical_note"]?.jsonPrimitive?.contentOrNull,
+            type = obj["type"]?.jsonPrimitive?.contentOrNull,
+            base = obj["base"]?.jsonPrimitive?.contentOrNull,
+            isFeatured = obj["is_featured"]?.jsonPrimitive?.booleanOrNull ?: false,
+            style = obj["style"]?.jsonPrimitive?.contentOrNull,
+            origineHumaine = obj["origine_humaine"]?.jsonPrimitive?.contentOrNull,
+            videoUrl = obj["video_url"]?.jsonPrimitive?.contentOrNull,
+            rating = obj["rating"]?.jsonPrimitive?.doubleOrNull ?: 4.8
+        )
+    }
 
     fun getRecipeById(id: String): Recipe? {
         return _recipes.value.find { it.id == id }

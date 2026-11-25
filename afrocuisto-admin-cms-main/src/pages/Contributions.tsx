@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabaseAdmin } from '../lib/supabase';
 import {
     RefreshCw, Utensils, Calendar, ChevronRight,
     User, Mail, MapPin, Clock, ArrowLeft,
     CheckCircle2, XCircle, Search
-} from 'lucide-react';
+} from '../components/SolarIcons';
 
 interface DishSuggestion {
     id: string;
-    name: string;
-    ingredients: string;
+    user_id?: string | null;
+    dish_name: string;
+    name?: string;
+    ingredients?: string;
     description: string;
     region?: string;
     category?: string;
@@ -50,12 +52,12 @@ export function Contributions() {
     async function fetchSuggestions() {
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseAdmin
                 .from('dish_suggestions')
                 .select('*')
                 .order('created_at', { ascending: false });
             if (error && error.code !== '42P01') throw error;
-            setSuggestions(data || []);
+            setSuggestions((data || []).map((d: any) => ({ ...d, name: d.dish_name || d.name || 'Plat sans nom' })));
         } catch (err) {
             console.error('Erreur lors de la récupération des suggestions:', err);
         } finally {
@@ -66,7 +68,7 @@ export function Contributions() {
     async function handleAction(id: string, action: 'approved' | 'rejected' | 'pending') {
         setProcessingAction(id);
         try {
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from('dish_suggestions')
                 .update({ status: action })
                 .eq('id', id);
@@ -91,7 +93,8 @@ export function Contributions() {
     }
 
     const filtered = suggestions.filter(s => {
-        const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
+        const label = (s.dish_name || s.name || '').toLowerCase();
+        const matchesSearch = label.includes(search.toLowerCase()) ||
             (s.submitter_name || '').toLowerCase().includes(search.toLowerCase());
         const matchesStatus = filterStatus === 'all' || s.status === filterStatus;
         return matchesSearch && matchesStatus;

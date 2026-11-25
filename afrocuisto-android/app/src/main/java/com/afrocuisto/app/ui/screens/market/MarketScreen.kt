@@ -88,6 +88,7 @@ import com.afrocuisto.app.data.model.MarketCurrency
 import com.afrocuisto.app.data.model.ShoppingItem
 import com.afrocuisto.app.data.repository.ShoppingRepository
 import com.afrocuisto.app.ui.components.AfroHapticKind
+import com.afrocuisto.app.ui.components.AfroPullToRefreshBox
 import com.afrocuisto.app.ui.components.EditorialPageHeader
 import com.afrocuisto.app.ui.components.EditorialSearchBar
 import com.afrocuisto.app.ui.components.afroCardPressMotion
@@ -356,13 +357,21 @@ fun MarketScreen(
                 }
             }
 
+            AfroPullToRefreshBox(
+                onRefresh = {
+                    delay(250L)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
             AnimatedContent(
                 targetState = selectedTab,
                 transitionSpec = {
                     fadeIn(tween(220)) togetherWith fadeOut(tween(180))
                 },
                 label = "marketTabContent",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxSize()
             ) { tab ->
                 when (tab) {
                     MarketTab.ACTIVE -> {
@@ -428,6 +437,7 @@ fun MarketScreen(
                         )
                     }
                 }
+            }
             }
         }
 

@@ -12,12 +12,12 @@
  */
 
 import { useEffect, useState, useMemo } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabaseAdmin } from '../lib/supabase';
 import {
     Star, MessageSquare, Trash2, Calendar, Utensils,
     RefreshCw, TrendingUp, Filter, Search, ChevronDown,
     Award, AlertCircle, Quote
-} from 'lucide-react';
+} from '../components/SolarIcons';
 
 interface Review {
     id: string;
@@ -66,7 +66,7 @@ export function Feedback() {
     async function fetchReviews() {
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseAdmin
                 .from('reviews')
                 .select('*')
                 .order('created_at', { ascending: false });
@@ -83,7 +83,7 @@ export function Feedback() {
         if (!confirm('Supprimer définitivement cet avis ?')) return;
         setDeleting(id);
         try {
-            const { error } = await supabase.from('reviews').delete().eq('id', id);
+            const { error } = await supabaseAdmin.from('reviews').delete().eq('id', id);
             if (error) throw error;
             setReviews(prev => prev.filter(r => r.id !== id));
         } catch {

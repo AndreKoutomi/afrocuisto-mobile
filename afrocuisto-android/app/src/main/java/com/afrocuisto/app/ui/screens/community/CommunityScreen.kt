@@ -84,6 +84,7 @@ import com.afrocuisto.app.data.repository.CommunityRepository
 import com.afrocuisto.app.data.repository.RecipeRepository
 import com.afrocuisto.app.data.repository.UserPreferencesState
 import com.afrocuisto.app.ui.components.AfroHapticKind
+import com.afrocuisto.app.ui.components.AfroPullToRefreshBox
 import com.afrocuisto.app.ui.components.EditorialPageHeader
 import com.afrocuisto.app.ui.components.EditorialSearchBar
 import com.afrocuisto.app.ui.components.afroSpringClickable
@@ -229,6 +230,12 @@ fun CommunityScreen(
             }
         }
 
+        AfroPullToRefreshBox(
+            onRefresh = { recipeRepository.refreshFromSupabase() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 10.dp, bottom = 30.dp),
@@ -334,6 +341,7 @@ fun CommunityScreen(
                     )
                 }
             }
+        }
         }
     }
 

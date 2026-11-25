@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -108,8 +110,10 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.afrocuisto.app.R
 import com.afrocuisto.app.data.model.Recipe
+import com.afrocuisto.app.data.repository.HomeSection
 import com.afrocuisto.app.data.repository.RecipeRepository
 import com.afrocuisto.app.ui.components.AfroHapticKind
+import com.afrocuisto.app.ui.components.AfroPullToRefreshBox
 import com.afrocuisto.app.ui.components.AppleAiGlowCard
 import com.afrocuisto.app.ui.components.ProductLikeButton
 import com.afrocuisto.app.ui.components.afroCardPressMotion
@@ -148,6 +152,7 @@ fun HomeScreen(
     val searchFocusRequester = remember { FocusRequester() }
 
     val recipes by repository.recipes.collectAsState(initial = emptyList())
+    val homeSections by repository.homeSections.collectAsState(initial = emptyList())
     val favoriteIds by repository.favoriteIds.collectAsState(initial = emptySet())
 
     var searchQuery by remember { mutableStateOf("") }
@@ -172,9 +177,18 @@ fun HomeScreen(
         }
     }
 
-    val carouselRecipes = remember(recipes) {
-        val feat = recipes.filter { it.isFeatured }
-        if (feat.size >= 3) feat else recipes.take(5)
+    val heroSection = remember(homeSections) {
+        homeSections.firstOrNull { it.sectionType == "carousel_hero" }
+    }
+
+    val carouselRecipes = remember(recipes, heroSection) {
+        if (heroSection != null && heroSection.itemIds.isNotEmpty()) {
+            val byId = recipes.associateBy { it.id }
+            heroSection.itemIds.mapNotNull { byId[it] }.ifEmpty { recipes.take(5) }
+        } else {
+            val feat = recipes.filter { it.isFeatured }
+            if (feat.size >= 3) feat else recipes.take(5)
+        }
     }
 
     val isSearching = searchQuery.isNotBlank()
@@ -364,10 +378,15 @@ fun HomeScreen(
         }
 
         // 2. SCROLLABLE BODY BELOW FIXED HEADER
+        AfroPullToRefreshBox(
+            onRefresh = { repository.refreshFromSupabase() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
         Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
+                .fillMaxSize()
                 .verticalScroll(state = scrollState, flingBehavior = smoothFling)
         ) {
             // 3. Faithful Portrait Dish Carousel with Apple-style Smooth Auto-Scroll
@@ -401,33 +420,281 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // 6. Les Plus Populaires / Résultats
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // 6. Sections dynamiques configurées depuis l'Admin CMS (ou repli par défaut)
+            val dynamicBodySections = remember(homeSections, heroSection) {
+                homeSections.filter { it.id != heroSection?.id }
+            }
+
+            if (isSearching) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_solar_star_linear),
-                        contentDescription = null,
-                        tint = titleColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = if (isSearching) "Recettes (${filteredRecipes.size})" else "Les Plus Populaires",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = titleColor,
-                        modifier = Modifier.nexaTitleEmphasis()
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_solar_star_linear),
+                            contentDescription = null,
+                            tint = titleColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Recettes (${filteredRecipes.size})",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = titleColor,
+                            modifier = Modifier.nexaTitleEmphasis()
+                        )
+                    }
                 }
-                if (!isSearching) {
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (filteredRecipes.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.RestaurantMenu,
+                                contentDescription = null,
+                                tint = placeholderColor,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Aucune recette trouvée",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = titleColor
+                            )
+                            Text(
+                                text = "Essayez un autre mot-clé",
+                                fontSize = 12.5.sp,
+                                color = subtitleColor
+                            )
+                        }
+                    }
+                } else {
+                    filteredRecipes.chunked(2).forEach { rowRecipes ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            rowRecipes.forEach { recipe ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    SunRecipeCard(
+                                        recipe = recipe,
+                                        isFavorite = favoriteIds.contains(recipe.id),
+                                        onToggleFavorite = { repository.toggleFavorite(recipe.id) },
+                                        onClick = { onNavigateToRecipeDetail(recipe.id) }
+                                    )
+                                }
+                            }
+                            if (rowRecipes.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+            } else if (dynamicBodySections.isNotEmpty()) {
+                val recipesById = remember(recipes) { recipes.associateBy { it.id } }
+
+                dynamicBodySections.forEach { section: HomeSection ->
+                    val sectionRecipes = if (section.itemIds.isEmpty()) {
+                        popularRecipes
+                    } else {
+                        section.itemIds.mapNotNull { recipesById[it] }
+                    }
+
+                    when (section.sectionType) {
+                        "carousel_hero" -> {
+                            if (sectionRecipes.isNotEmpty()) {
+                                AppleAutoScrollDishCarousel(
+                                    recipes = sectionRecipes,
+                                    favoriteIds = favoriteIds,
+                                    autoScrollEnabled = carouselAutoScroll,
+                                    onToggleFavorite = { repository.toggleFavorite(it) },
+                                    onRecipeClick = onNavigateToRecipeDetail
+                                )
+                                Spacer(modifier = Modifier.height(22.dp))
+                            }
+                        }
+
+                        "express_horizontal" -> {
+                            HomeExpressRecipesSection(
+                                recipes = sectionRecipes,
+                                favoriteIds = favoriteIds,
+                                onToggleFavorite = { repository.toggleFavorite(it) },
+                                onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                                onNavigateToRecipes = onNavigateToRecipes,
+                                titleColor = titleColor,
+                                subtitleColor = subtitleColor,
+                                borderColor = borderColor,
+                                sectionTitle = section.title.ifBlank { "Prêt en un éclair" }
+                            )
+                            Spacer(modifier = Modifier.height(22.dp))
+                        }
+
+                        "daily_menu" -> {
+                            HomeDailyMenuSection(
+                                recipes = sectionRecipes.ifEmpty { recipes },
+                                favoriteIds = favoriteIds,
+                                onToggleFavorite = { repository.toggleFavorite(it) },
+                                onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                                onNavigateToAiChef = onNavigateToAiChef,
+                                titleColor = titleColor,
+                                subtitleColor = subtitleColor,
+                                borderColor = borderColor,
+                                sectionTitle = section.title.ifBlank { "Menu du Jour" }
+                            )
+                            Spacer(modifier = Modifier.height(22.dp))
+                        }
+
+                        "terroir_atlas" -> {
+                            HomeTerroirAtlasSection(
+                                recipes = sectionRecipes.ifEmpty { recipes },
+                                favoriteIds = favoriteIds,
+                                onToggleFavorite = { repository.toggleFavorite(it) },
+                                onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                                titleColor = titleColor,
+                                subtitleColor = subtitleColor,
+                                borderColor = borderColor
+                            )
+                            Spacer(modifier = Modifier.height(22.dp))
+                        }
+
+                        "chef_secrets" -> {
+                            HomeChefSecretsSection(
+                                onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                                onNavigateToAiChef = onNavigateToAiChef,
+                                titleColor = titleColor,
+                                subtitleColor = subtitleColor
+                            )
+                            Spacer(modifier = Modifier.height(22.dp))
+                        }
+
+                        "weekly_challenge" -> {
+                            HomeWeeklyChallengeSection(
+                                onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                                onNavigateToCommunity = onNavigateToCommunity,
+                                onNavigateToMarket = onNavigateToMarket,
+                                titleColor = titleColor,
+                                subtitleColor = subtitleColor,
+                                borderColor = borderColor
+                            )
+                            Spacer(modifier = Modifier.height(22.dp))
+                        }
+
+                        else -> {
+                            // "popular_grid" ou toute autre section grille de recettes
+                            if (sectionRecipes.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_solar_star_linear),
+                                            contentDescription = null,
+                                            tint = titleColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = section.title.ifBlank { "Les Plus Populaires" },
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = titleColor,
+                                            modifier = Modifier.nexaTitleEmphasis()
+                                        )
+                                    }
+                                    Text(
+                                        text = "Tout voir",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AfroOrange,
+                                        modifier = Modifier.afroSpringClickable(
+                                            pressedScale = 0.90f,
+                                            haptic = AfroHapticKind.NONE
+                                        ) { onNavigateToRecipes() }
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                sectionRecipes.take(8).chunked(2).forEach { rowRecipes ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 20.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        rowRecipes.forEach { recipe ->
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                SunRecipeCard(
+                                                    recipe = recipe,
+                                                    isFavorite = favoriteIds.contains(recipe.id),
+                                                    onToggleFavorite = { repository.toggleFavorite(recipe.id) },
+                                                    onClick = { onNavigateToRecipeDetail(recipe.id) }
+                                                )
+                                            }
+                                        }
+                                        if (rowRecipes.size == 1) {
+                                            Spacer(modifier = Modifier.weight(1f))
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Repli par défaut si aucune section dynamique n'est configurée en base
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_solar_star_linear),
+                            contentDescription = null,
+                            tint = titleColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Les Plus Populaires",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = titleColor,
+                            modifier = Modifier.nexaTitleEmphasis()
+                        )
+                    }
                     Text(
                         text = "Tout voir",
                         fontSize = 12.sp,
@@ -439,42 +706,10 @@ fun HomeScreen(
                         ) { onNavigateToRecipes() }
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            val displayRecipes = if (isSearching) filteredRecipes else popularRecipes
-
-            if (displayRecipes.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.RestaurantMenu,
-                            contentDescription = null,
-                            tint = placeholderColor,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Aucune recette trouvée",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = titleColor
-                        )
-                        Text(
-                            text = "Essayez un autre mot-clé",
-                            fontSize = 12.5.sp,
-                            color = subtitleColor
-                        )
-                    }
-                }
-            } else {
-                displayRecipes.take(8).chunked(2).forEach { rowRecipes ->
+                popularRecipes.take(8).chunked(2).forEach { rowRecipes ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -497,70 +732,70 @@ fun HomeScreen(
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                 }
-            }
 
-            // 7. Curated Editorial & Interactive AfroCuisto Experience Sections
-            if (!isSearching && recipes.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(14.dp))
+                if (recipes.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                HomeDailyMenuSection(
-                    recipes = recipes,
-                    favoriteIds = favoriteIds,
-                    onToggleFavorite = { repository.toggleFavorite(it) },
-                    onNavigateToRecipeDetail = onNavigateToRecipeDetail,
-                    onNavigateToAiChef = onNavigateToAiChef,
-                    titleColor = titleColor,
-                    subtitleColor = subtitleColor,
-                    borderColor = borderColor
-                )
+                    HomeDailyMenuSection(
+                        recipes = recipes,
+                        favoriteIds = favoriteIds,
+                        onToggleFavorite = { repository.toggleFavorite(it) },
+                        onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                        onNavigateToAiChef = onNavigateToAiChef,
+                        titleColor = titleColor,
+                        subtitleColor = subtitleColor,
+                        borderColor = borderColor
+                    )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                HomeTerroirAtlasSection(
-                    recipes = recipes,
-                    favoriteIds = favoriteIds,
-                    onToggleFavorite = { repository.toggleFavorite(it) },
-                    onNavigateToRecipeDetail = onNavigateToRecipeDetail,
-                    titleColor = titleColor,
-                    subtitleColor = subtitleColor,
-                    borderColor = borderColor
-                )
+                    HomeTerroirAtlasSection(
+                        recipes = recipes,
+                        favoriteIds = favoriteIds,
+                        onToggleFavorite = { repository.toggleFavorite(it) },
+                        onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                        titleColor = titleColor,
+                        subtitleColor = subtitleColor,
+                        borderColor = borderColor
+                    )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                HomeExpressRecipesSection(
-                    recipes = recipes,
-                    favoriteIds = favoriteIds,
-                    onToggleFavorite = { repository.toggleFavorite(it) },
-                    onNavigateToRecipeDetail = onNavigateToRecipeDetail,
-                    onNavigateToRecipes = onNavigateToRecipes,
-                    titleColor = titleColor,
-                    subtitleColor = subtitleColor,
-                    borderColor = borderColor
-                )
+                    HomeExpressRecipesSection(
+                        recipes = recipes,
+                        favoriteIds = favoriteIds,
+                        onToggleFavorite = { repository.toggleFavorite(it) },
+                        onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                        onNavigateToRecipes = onNavigateToRecipes,
+                        titleColor = titleColor,
+                        subtitleColor = subtitleColor,
+                        borderColor = borderColor
+                    )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                HomeChefSecretsSection(
-                    onNavigateToRecipeDetail = onNavigateToRecipeDetail,
-                    onNavigateToAiChef = onNavigateToAiChef,
-                    titleColor = titleColor,
-                    subtitleColor = subtitleColor
-                )
+                    HomeChefSecretsSection(
+                        onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                        onNavigateToAiChef = onNavigateToAiChef,
+                        titleColor = titleColor,
+                        subtitleColor = subtitleColor
+                    )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                HomeWeeklyChallengeSection(
-                    onNavigateToRecipeDetail = onNavigateToRecipeDetail,
-                    onNavigateToCommunity = onNavigateToCommunity,
-                    onNavigateToMarket = onNavigateToMarket,
-                    titleColor = titleColor,
-                    subtitleColor = subtitleColor,
-                    borderColor = borderColor
-                )
+                    HomeWeeklyChallengeSection(
+                        onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                        onNavigateToCommunity = onNavigateToCommunity,
+                        onNavigateToMarket = onNavigateToMarket,
+                        titleColor = titleColor,
+                        subtitleColor = subtitleColor,
+                        borderColor = borderColor
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(28.dp))
+        }
         }
     }
 
@@ -688,6 +923,8 @@ private fun AppleAutoScrollDishCarousel(
 
     val isLooping = itemCount > 1
     val virtualCount = if (isLooping) itemCount * 2000 else 1
+
+    androidx.compose.runtime.key(itemCount, virtualCount) {
     val startPage = remember(itemCount) {
         if (isLooping) {
             val mid = virtualCount / 2
@@ -782,7 +1019,7 @@ private fun AppleAutoScrollDishCarousel(
                 isFavorite = favoriteIds.contains(recipe.id),
                 isDark = isDark,
                 pageOffsetProvider = {
-                    pagerState.getOffsetDistanceInPages(page)
+                    if (page in 0 until pagerState.pageCount) pagerState.getOffsetDistanceInPages(page) else 0f
                 },
                 onToggleFavorite = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -806,7 +1043,7 @@ private fun AppleAutoScrollDishCarousel(
                     }
                 },
                 modifier = Modifier.graphicsLayer {
-                    val signedOffset = pagerState.getOffsetDistanceInPages(page)
+                    val signedOffset = if (page in 0 until pagerState.pageCount) pagerState.getOffsetDistanceInPages(page) else 0f
                     val absOffset = signedOffset.absoluteValue.coerceIn(0f, 1f)
                     val scale = lerp(start = 0.92f, stop = 1f, fraction = 1f - absOffset)
                     scaleX = scale
@@ -877,6 +1114,7 @@ private fun AppleAutoScrollDishCarousel(
                 }
             }
         }
+    }
     }
 }
 
@@ -1357,6 +1595,7 @@ private fun DishCategoryCard(
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun SunRecipeCard(
     recipe: Recipe,
     isFavorite: Boolean = false,
@@ -1487,11 +1726,12 @@ fun SunRecipeCard(
 
             Spacer(modifier = Modifier.height(9.dp))
 
-            // Bottom Pills Row: Orange PrepTime Pill (left) + Black Rating Pill (right)
-            Row(
+            // Les pilules peuvent passer sur plusieurs lignes quand la durée est longue.
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                itemVerticalAlignment = Alignment.CenterVertically
             ) {
                 ProductCardMetricPill(
                     backgroundColor = AfroOrange,

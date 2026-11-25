@@ -22,6 +22,27 @@ export interface AIServiceResponse {
     error?: string; // Le message d'erreur (si échec)
 }
 
+export const AI_STORAGE_KEYS = {
+    GEMINI_API_KEY: 'afrocuisto_gemini_api_key',
+    AI_MODEL: 'afrocuisto_ai_model',
+} as const;
+
+export function getStoredGeminiKey(): string {
+    try {
+        return localStorage.getItem(AI_STORAGE_KEYS.GEMINI_API_KEY)?.trim() || '';
+    } catch {
+        return '';
+    }
+}
+
+export function getStoredAiModel(): string {
+    try {
+        return localStorage.getItem(AI_STORAGE_KEYS.AI_MODEL)?.trim() || '';
+    } catch {
+        return '';
+    }
+}
+
 /**
  * Service central pour toutes les opérations d'Intelligence Artificielle de l'Admin.
  */
@@ -32,14 +53,14 @@ class AIService {
         const env = (import.meta as any).env;
         if (provider === 'anthropic') return env.VITE_ANTHROPIC_API_KEY || '';
         if (provider === 'openai') return env.VITE_OPENAI_API_KEY || '';
-        if (provider === 'gemini') return env.VITE_GEMINI_API_KEY || '';
+        if (provider === 'gemini') return getStoredGeminiKey() || env.VITE_GEMINI_API_KEY || '';
 
         return '';
     }
 
     // Récupère le nom du modèle IA à utiliser
     private getModel(): string {
-        let model = (import.meta as any).env.VITE_AI_MODEL || DEFAULT_MODEL;
+        let model = getStoredAiModel() || (import.meta as any).env.VITE_AI_MODEL || DEFAULT_MODEL;
 
         // Vérification si le modèle est supporté
         const isSupported = model.startsWith('gemini') || model.startsWith('gpt') || model.startsWith('claude');
@@ -64,7 +85,7 @@ class AIService {
         const provider = isAnthropic ? 'anthropic' : (isGemini ? 'gemini' : 'openai');
         const key = this.getApiKey(provider);
 
-        if (!key) throw new Error(`Clé API ${provider.toUpperCase()} manquante. Configurez-la dans le fichier .env (VITE_${provider.toUpperCase()}_API_KEY).`);
+        if (!key) throw new Error(`Clé API ${provider.toUpperCase()} manquante. Configurez-la dans Paramètres > Configuration IA ou dans le fichier .env.`);
 
         if (isAnthropic) {
             // Logique pour Anthropic (Claude)
