@@ -53,6 +53,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.collectAsState
+import com.afrocuisto.app.data.network.NetworkMonitor
+import com.afrocuisto.app.ui.components.adaptiveGridColumns
+import com.afrocuisto.app.ui.components.rememberAfroWindowWidthClass
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
@@ -152,6 +156,8 @@ fun BoutiqueContent(
             BoutiqueSort.ORGANIC -> base
         }
     }
+
+    val gridColumns = adaptiveGridColumns(rememberAfroWindowWidthClass())
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -294,7 +300,7 @@ fun BoutiqueContent(
                 }
             }
         } else {
-            val rows = filteredProducts.chunked(2)
+            val rows = filteredProducts.chunked(gridColumns)
             items(rows, key = { row -> row.joinToString("_") { it.id } }) { rowProducts ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -321,7 +327,7 @@ fun BoutiqueContent(
                             )
                         }
                     }
-                    if (rowProducts.size == 1) {
+                    repeat(gridColumns - rowProducts.size) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
@@ -1383,14 +1389,15 @@ fun BoutiqueCartSheet(
 
                     Spacer(Modifier.height(16.dp))
 
+                    val isOnline by NetworkMonitor.isOnline.collectAsState()
                     Button(
                         onClick = {
-                            if (address.isNotBlank()) {
+                            if (isOnline && address.isNotBlank()) {
                                 haptics.actionSuccess()
                                 confirmedOrder = onPlaceOrder(deliverySlot, address, paymentMethod)
                             }
                         },
-                        enabled = cart.isNotEmpty() && address.isNotBlank(),
+                        enabled = isOnline && cart.isNotEmpty() && address.isNotBlank(),
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(containerColor = AfroOrange),
                         modifier = Modifier
@@ -1398,7 +1405,7 @@ fun BoutiqueCartSheet(
                             .height(50.dp)
                     ) {
                         Text(
-                            text = "Commander • ${formatBoutiquePrice(total, currency)}",
+                            text = if (isOnline) "Commander • ${formatBoutiquePrice(total, currency)}" else "Hors ligne",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 14.5.sp
                         )

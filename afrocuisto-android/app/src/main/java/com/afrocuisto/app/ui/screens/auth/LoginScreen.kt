@@ -63,6 +63,7 @@ import com.afrocuisto.app.ui.components.AfroHapticKind
 import com.afrocuisto.app.ui.components.afroSpringClickable
 import com.afrocuisto.app.ui.components.afroStaggeredEntrance
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
+import com.afrocuisto.app.ui.components.rememberIsTablet
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
 import com.afrocuisto.app.ui.theme.AfroOrange
 import com.afrocuisto.app.ui.theme.ExpressivePillShape
@@ -195,6 +196,7 @@ fun LoginScreen(
         // Fixed background that never scrolls with the page content
         AuthFixedBackground()
 
+        val isTablet = rememberIsTablet()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -204,7 +206,8 @@ fun LoginScreen(
                 )
                 .imePadding()
                 .navigationBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = if (isTablet) Arrangement.Center else Arrangement.Top
         ) {
             AuthHeroHeader(
                 palette = palette,

@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -105,14 +106,19 @@ fun SplashScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        val widthUnit = maxWidth / 1210f
+        val effectiveWidth = if (maxWidth >= 600.dp) 440.dp else maxWidth
+        val widthUnit = effectiveWidth / 1210f
         val logoSize = widthUnit * 255f
         val logoCorner = logoSize * (72.14677f / 255f)
         val gapLogoToWordmark = widthUnit * 43f
         val gapWordmarkToSpinner = widthUnit * 65f
         val spinnerSize = widthUnit * 66.84f
         val spinnerStroke = widthUnit * 11.6667f
-        val bottomMargin = maxHeight * (299.16f / 2588f)
+        val bottomMargin = if (maxWidth >= 600.dp) {
+            (maxHeight * 0.10f).coerceIn(52.dp, 110.dp)
+        } else {
+            maxHeight * (299.16f / 2588f)
+        }
         val wordmarkFontSize = with(LocalDensity.current) { (widthUnit * 72f).toSp() }
 
         // 1. Full-bleed Culinary Photography (FigCraft node 17179869270)

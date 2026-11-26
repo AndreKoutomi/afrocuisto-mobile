@@ -44,9 +44,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.rememberPagerState
@@ -97,6 +99,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import com.afrocuisto.app.ui.components.AfroWindowWidthClass
+import com.afrocuisto.app.ui.components.adaptiveGridColumns
+import com.afrocuisto.app.ui.components.rememberAfroWindowWidthClass
+import com.afrocuisto.app.ui.components.rememberIsTablet
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -205,6 +211,9 @@ fun HomeScreen(
     val titleColor = if (isDark) colorScheme.onBackground else Color(0xFF1E1E2D)
     val subtitleColor = if (isDark) colorScheme.onSurfaceVariant else Color(0xFF64748B)
     val borderColor = if (isDark) colorScheme.outline else Color(0xFFE2E8F0)
+    val widthClass = rememberAfroWindowWidthClass()
+    val isTablet = widthClass != AfroWindowWidthClass.COMPACT
+    val gridColumns = adaptiveGridColumns(widthClass)
     val placeholderColor = if (isDark) colorScheme.onSurfaceVariant else Color(0xFF94A3B8)
 
     Column(
@@ -223,7 +232,8 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp)
             ) {
-                val availableCenterWidth = (maxWidth - 76.dp).coerceAtLeast(180.dp)
+                val rawCenterWidth = (maxWidth - 76.dp).coerceAtLeast(180.dp)
+                val availableCenterWidth = if (isTablet) rawCenterWidth.coerceAtMost(560.dp) else rawCenterWidth
                 val baseSearchWidth = (availableCenterWidth - 52.dp).coerceAtLeast(172.dp)
                 val expandedSearchWidth = (baseSearchWidth + 30.dp).coerceAtMost(availableCenterWidth - 12.dp)
 
@@ -419,10 +429,17 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // 4. Frigo Magique Card (exact FigCraft geometry + Apple AI Glow)
-                Home1FridgeBanner(
-                    onClick = onNavigateToAiChef,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Home1FridgeBanner(
+                        onClick = onNavigateToAiChef,
+                        modifier = Modifier
+                            .then(if (isTablet) Modifier.widthIn(max = 720.dp) else Modifier)
+                            .padding(horizontal = 20.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(22.dp))
 
@@ -499,7 +516,7 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    filteredRecipes.chunked(2).forEach { rowRecipes ->
+                    filteredRecipes.chunked(gridColumns).forEach { rowRecipes ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -516,7 +533,7 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                            if (rowRecipes.size == 1) {
+                            repeat(gridColumns - rowRecipes.size) {
                                 Spacer(modifier = Modifier.weight(1f))
                             }
                         }
@@ -578,15 +595,22 @@ fun HomeScreen(
                         }
 
                         "terroir_atlas" -> {
-                            HomeTerroirAtlasSection(
-                                recipes = sectionRecipes.ifEmpty { recipes },
-                                favoriteIds = favoriteIds,
-                                onToggleFavorite = { repository.toggleFavorite(it) },
-                                onNavigateToRecipeDetail = onNavigateToRecipeDetail,
-                                titleColor = titleColor,
-                                subtitleColor = subtitleColor,
-                                borderColor = borderColor
-                            )
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(modifier = if (isTablet) Modifier.widthIn(max = 760.dp) else Modifier.fillMaxWidth()) {
+                                    HomeTerroirAtlasSection(
+                                        recipes = sectionRecipes.ifEmpty { recipes },
+                                        favoriteIds = favoriteIds,
+                                        onToggleFavorite = { repository.toggleFavorite(it) },
+                                        onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                                        titleColor = titleColor,
+                                        subtitleColor = subtitleColor,
+                                        borderColor = borderColor
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.height(22.dp))
                         }
 
@@ -601,14 +625,21 @@ fun HomeScreen(
                         }
 
                         "weekly_challenge" -> {
-                            HomeWeeklyChallengeSection(
-                                onNavigateToRecipeDetail = onNavigateToRecipeDetail,
-                                onNavigateToCommunity = onNavigateToCommunity,
-                                onNavigateToMarket = onNavigateToMarket,
-                                titleColor = titleColor,
-                                subtitleColor = subtitleColor,
-                                borderColor = borderColor
-                            )
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(modifier = if (isTablet) Modifier.widthIn(max = 760.dp) else Modifier.fillMaxWidth()) {
+                                    HomeWeeklyChallengeSection(
+                                        onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                                        onNavigateToCommunity = onNavigateToCommunity,
+                                        onNavigateToMarket = onNavigateToMarket,
+                                        titleColor = titleColor,
+                                        subtitleColor = subtitleColor,
+                                        borderColor = borderColor
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.height(22.dp))
                         }
 
@@ -654,7 +685,7 @@ fun HomeScreen(
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                sectionRecipes.take(8).chunked(2).forEach { rowRecipes ->
+                                sectionRecipes.take(8).chunked(gridColumns).forEach { rowRecipes ->
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -671,7 +702,7 @@ fun HomeScreen(
                                                 )
                                             }
                                         }
-                                        if (rowRecipes.size == 1) {
+                                        repeat(gridColumns - rowRecipes.size) {
                                             Spacer(modifier = Modifier.weight(1f))
                                         }
                                     }
@@ -724,7 +755,7 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                popularRecipes.take(8).chunked(2).forEach { rowRecipes ->
+                popularRecipes.take(8).chunked(gridColumns).forEach { rowRecipes ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -741,7 +772,7 @@ fun HomeScreen(
                                 )
                             }
                         }
-                        if (rowRecipes.size == 1) {
+                        repeat(gridColumns - rowRecipes.size) {
                             Spacer(modifier = Modifier.weight(1f))
                         }
                     }
@@ -923,15 +954,22 @@ private fun AppleAutoScrollDishCarousel(
         }
     }
 
+    val isTablet = rememberIsTablet()
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         HorizontalPager(
             state = pagerState,
-            contentPadding = PaddingValues(horizontal = 36.dp, vertical = 18.dp),
-            pageSpacing = 12.dp,
-            beyondViewportPageCount = 2,
+            pageSize = if (isTablet) PageSize.Fixed(316.dp) else PageSize.Fill,
+            contentPadding = if (isTablet) {
+                PaddingValues(horizontal = 24.dp, vertical = 18.dp)
+            } else {
+                PaddingValues(horizontal = 36.dp, vertical = 18.dp)
+            },
+            pageSpacing = if (isTablet) 16.dp else 12.dp,
+            beyondViewportPageCount = if (isTablet) 3 else 2,
             flingBehavior = flingBehavior,
             key = { page ->
                 val idx = ((page % itemCount) + itemCount) % itemCount
@@ -955,8 +993,8 @@ private fun AppleAutoScrollDishCarousel(
                 },
                 onClick = {
                     val currentPage = pagerState.currentPage
-                    if (page != currentPage && !pagerState.isScrollInProgress) {
-                        // Tapping a peeking side card smoothly centers it first
+                    if (!isTablet && page != currentPage && !pagerState.isScrollInProgress) {
+                        // Tapping a peeking side card on mobile smoothly centers it first
                         coroutineScope.launch {
                             pagerState.animateScrollToPage(
                                 page = page,
@@ -970,13 +1008,17 @@ private fun AppleAutoScrollDishCarousel(
                         onRecipeClick(recipe.id)
                     }
                 },
-                modifier = Modifier.graphicsLayer {
-                    val signedOffset = if (page in 0 until pagerState.pageCount) pagerState.getOffsetDistanceInPages(page) else 0f
-                    val absOffset = signedOffset.absoluteValue.coerceIn(0f, 1f)
-                    val scale = lerp(start = 0.92f, stop = 1f, fraction = 1f - absOffset)
-                    scaleX = scale
-                    scaleY = scale
-                    translationY = absOffset * 6.dp.toPx()
+                modifier = if (isTablet) {
+                    Modifier
+                } else {
+                    Modifier.graphicsLayer {
+                        val signedOffset = if (page in 0 until pagerState.pageCount) pagerState.getOffsetDistanceInPages(page) else 0f
+                        val absOffset = signedOffset.absoluteValue.coerceIn(0f, 1f)
+                        val scale = lerp(start = 0.92f, stop = 1f, fraction = 1f - absOffset)
+                        scaleX = scale
+                        scaleY = scale
+                        translationY = absOffset * 6.dp.toPx()
+                    }
                 }
             )
         }
@@ -1569,7 +1611,7 @@ fun SunRecipeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp)
+                .padding(14.dp)
         ) {
             // Dish Photo + Top-Right Translucent Dark Favorite Circle (FigCraft Product Card)
             Box(
@@ -1601,7 +1643,7 @@ fun SunRecipeCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // ExtraBold Recipe Title (1 line max)
             Text(

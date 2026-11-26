@@ -401,7 +401,7 @@ class AuthRepository(
                 AuthResult.Success(session, "Connexion sécurisée réussie")
             }
         } catch (_: IOException) {
-            AuthResult.Error("Connexion réseau impossible. Vérifiez votre accès Internet.")
+            AuthResult.Error("Hors ligne")
         } catch (_: Exception) {
             AuthResult.Error("Impossible de vérifier vos identifiants pour le moment.")
         }
@@ -491,7 +491,7 @@ class AuthRepository(
                 }
             }
         } catch (_: IOException) {
-            AuthResult.Error("Connexion réseau impossible. Vérifiez votre accès Internet.")
+            AuthResult.Error("Hors ligne")
         } catch (_: Exception) {
             AuthResult.Error("Impossible de finaliser la création du compte pour le moment.")
         }
@@ -543,7 +543,7 @@ class AuthRepository(
                 )
             }
         } catch (_: IOException) {
-            AuthResult.Error("Connexion réseau impossible. Vérifiez votre accès Internet.")
+            AuthResult.Error("Hors ligne")
         } catch (_: Exception) {
             AuthResult.Error("Impossible d'envoyer la demande pour le moment.")
         }
@@ -612,7 +612,7 @@ class AuthRepository(
                 AuthResult.Success(session, "Connecté avec Google")
             }
         } catch (_: IOException) {
-            AuthResult.Error("Connexion réseau impossible. Vérifiez votre accès Internet.")
+            AuthResult.Error("Hors ligne")
         } catch (_: Exception) {
             AuthResult.Error("Impossible de finaliser la connexion Google pour le moment.")
         }
@@ -725,7 +725,7 @@ class AuthRepository(
                     AuthResult.Success(session, "Connecté avec Google")
                 }
             } catch (_: IOException) {
-                AuthResult.Error("Connexion réseau impossible. Vérifiez votre accès Internet.")
+                AuthResult.Error("Hors ligne")
             } catch (_: Exception) {
                 AuthResult.Error("Impossible de finaliser la connexion Google.")
             }

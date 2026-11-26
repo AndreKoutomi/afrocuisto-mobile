@@ -157,6 +157,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     implementation(libs.okhttp)
     implementation(libs.lottie.compose)
     implementation(libs.androidx.datastore.preferences)

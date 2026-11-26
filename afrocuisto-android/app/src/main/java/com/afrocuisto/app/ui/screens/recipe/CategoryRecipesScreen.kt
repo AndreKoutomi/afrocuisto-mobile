@@ -52,6 +52,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.afrocuisto.app.ui.components.AfroHapticKind
 import com.afrocuisto.app.ui.components.AfroPullToRefreshBox
+import com.afrocuisto.app.ui.components.adaptiveGridColumns
+import com.afrocuisto.app.ui.components.rememberAfroWindowWidthClass
 import com.afrocuisto.app.ui.components.EditorialSearchBar
 import com.afrocuisto.app.ui.components.afroSpringClickable
 import com.afrocuisto.app.ui.components.afroStaggeredEntrance
@@ -279,8 +281,9 @@ fun CategoryRecipesScreen(
                 }
             }
         } else {
+            val gridColumns = adaptiveGridColumns(rememberAfroWindowWidthClass())
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+                columns = GridCells.Fixed(gridColumns),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),

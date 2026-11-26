@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.afrocuisto.app.BuildConfig
+import com.afrocuisto.app.data.network.NetworkMonitor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,6 +117,7 @@ class OtaUpdateManager(private val context: Context) {
     private var activeJob: Job? = null
 
     fun checkForUpdates(scope: CoroutineScope) {
+        if (!NetworkMonitor.isOnline.value) return
         activeJob?.cancel()
         activeJob = scope.launch {
             val firebaseEndpoint = BuildConfig.FIREBASE_OTA_URL.trim()

@@ -1,8 +1,11 @@
 package com.afrocuisto.app.data.repository
 
+import coil.Coil
+import coil.request.ImageRequest
 import com.afrocuisto.app.BuildConfig
 import com.afrocuisto.app.data.model.Ingredient
 import com.afrocuisto.app.data.model.Recipe
+import com.afrocuisto.app.data.network.NetworkMonitor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -11,6 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -23,8 +28,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 import java.util.concurrent.TimeUnit
 
+@Serializable
 data class HomeSection(
     val id: String,
     val title: String,
@@ -74,6 +81,7 @@ class RecipeRepository {
     }
 
     suspend fun refreshFromSupabase() = withContext(Dispatchers.IO) {
+        if (!NetworkMonitor.isOnline.value) return@withContext
         val baseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
         val anonKey = BuildConfig.SUPABASE_ANON_KEY
         if (baseUrl.isBlank() || anonKey.isBlank()) return@withContext
@@ -83,13 +91,14 @@ class RecipeRepository {
                 val parsed = arr.mapNotNull { el -> runCatching { parseRecipe(el.jsonObject) }.getOrNull() }
                 if (parsed.isNotEmpty()) {
                     _recipes.value = parsed
+                    persistRecipes(parsed)
                 }
             }
         }
 
         runCatching {
             fetchJsonArray("$baseUrl/rest/v1/home_sections?select=*&is_active=eq.true&order=order_index.asc", anonKey)?.let { arr ->
-                _homeSections.value = arr.mapNotNull { el ->
+                val sections = arr.mapNotNull { el ->
                     runCatching {
                         val obj = el.jsonObject
                         HomeSection(
@@ -102,6 +111,8 @@ class RecipeRepository {
                         )
                     }.getOrNull()
                 }
+                _homeSections.value = sections
+                persistHomeSections(sections)
             }
         }
 
@@ -205,13 +216,17 @@ class RecipeRepository {
 
     fun toggleFavorite(recipeId: String) {
         val current = _favoriteIds.value.toMutableSet()
-        if (current.contains(recipeId)) {
+        val added = !current.contains(recipeId)
+        if (!added) {
             current.remove(recipeId)
         } else {
             current.add(recipeId)
         }
         _favoriteIds.value = current
         persistFavorites()
+        if (added) {
+            preloadRecipeImage(recipeId)
+        }
     }
 
     fun isFavorite(recipeId: String): Boolean {
@@ -223,11 +238,27 @@ class RecipeRepository {
     fun setFavorites(ids: Set<String>) {
         _favoriteIds.value = ids
         persistFavorites()
+        ids.forEach(::preloadRecipeImage)
+    }
+
+    private fun preloadRecipeImage(recipeId: String) {
+        val ctx = appContextRef ?: return
+        val imageUrl = _recipes.value.find { it.id == recipeId }?.image?.takeIf { it.isNotBlank() } ?: return
+        runCatching {
+            val request = ImageRequest.Builder(ctx)
+                .data(imageUrl)
+                .build()
+            Coil.imageLoader(ctx).enqueue(request)
+        }
     }
 
     companion object {
         private const val PREFS_NAME = "afrocuisto_recipe_prefs"
         private const val KEY_FAVORITES = "favorite_recipe_ids"
+        private const val RECIPES_CACHE_FILE = "afrocuisto_recipes_cache.json"
+        private const val SECTIONS_CACHE_FILE = "afrocuisto_home_sections_cache.json"
+        private val cacheJson = Json { ignoreUnknownKeys = true }
+        private var appContextRef: android.content.Context? = null
         private var favPrefs: android.content.SharedPreferences? = null
         private val sharedRecipes = MutableStateFlow<List<Recipe>>(getMockRecipes())
         private val sharedHomeSections = MutableStateFlow<List<HomeSection>>(emptyList())
@@ -235,12 +266,50 @@ class RecipeRepository {
 
         fun init(context: android.content.Context) {
             if (favPrefs != null) return
-            val sp = context.applicationContext.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            val appCtx = context.applicationContext
+            appContextRef = appCtx
+            val sp = appCtx.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
             favPrefs = sp
             sp.getStringSet(KEY_FAVORITES, null)?.let { saved ->
                 if (sharedFavoriteIds.value.isEmpty()) {
                     sharedFavoriteIds.value = saved.toSet()
                 }
+            }
+            loadCachedCatalog(appCtx)
+        }
+
+        private fun loadCachedCatalog(context: android.content.Context) {
+            runCatching {
+                val recipesFile = File(context.filesDir, RECIPES_CACHE_FILE)
+                if (recipesFile.exists()) {
+                    val decoded = cacheJson.decodeFromString<List<Recipe>>(recipesFile.readText())
+                    if (decoded.isNotEmpty()) {
+                        sharedRecipes.value = decoded
+                    }
+                }
+            }
+            runCatching {
+                val sectionsFile = File(context.filesDir, SECTIONS_CACHE_FILE)
+                if (sectionsFile.exists()) {
+                    val decoded = cacheJson.decodeFromString<List<HomeSection>>(sectionsFile.readText())
+                    if (decoded.isNotEmpty()) {
+                        sharedHomeSections.value = decoded
+                    }
+                }
+            }
+        }
+
+        private fun persistRecipes(recipes: List<Recipe>) {
+            val ctx = appContextRef ?: return
+            runCatching {
+                File(ctx.filesDir, RECIPES_CACHE_FILE).writeText(cacheJson.encodeToString(recipes))
+            }
+        }
+
+        private fun persistHomeSections(sections: List<HomeSection>) {
+            val ctx = appContextRef ?: return
+            runCatching {
+                File(ctx.filesDir, SECTIONS_CACHE_FILE).writeText(cacheJson.encodeToString(sections))
             }
         }
 

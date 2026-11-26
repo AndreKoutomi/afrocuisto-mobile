@@ -20,6 +20,7 @@ import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.afrocuisto.app.data.model.AiChefRecipeResult
+import com.afrocuisto.app.data.network.NetworkMonitor
 import com.afrocuisto.app.data.repository.AiChefRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -312,7 +313,7 @@ class AiChefLiveController(
 
             if (isReleased) return@launch
 
-            if (resolvedKey.isNotEmpty()) {
+            if (resolvedKey.isNotEmpty() && NetworkMonitor.isOnline.value) {
                 liveWsClient.connect(
                     apiKey = resolvedKey,
                     voiceProfile = profile,

@@ -111,6 +111,7 @@ import androidx.core.view.WindowCompat
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -125,6 +126,8 @@ import com.afrocuisto.app.data.repository.UserPreferencesRepository
 import com.afrocuisto.app.data.repository.UserPreferencesState
 import com.afrocuisto.app.service.CookingTimerService
 import com.afrocuisto.app.ui.components.CookingTimerDockCard
+import com.afrocuisto.app.ui.components.HighResCongratulationsOverlay
+import com.afrocuisto.app.ui.components.rememberIsTablet
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
 import com.afrocuisto.app.ui.theme.AccentEmerald
 import com.afrocuisto.app.ui.theme.AfroOrange
@@ -287,6 +290,13 @@ fun RecipeDetailScreen(
     var isDescriptionExpanded by remember(recipe.id) { mutableStateOf(false) }
     var isChefSecretExpanded by remember(recipe.id) { mutableStateOf(true) }
     var isNoteInputFocused by remember(recipe.id) { mutableStateOf(false) }
+    var showSuccessCelebration by remember(recipe.id) { mutableStateOf(false) }
+    LaunchedEffect(showSuccessCelebration) {
+        if (showSuccessCelebration) {
+            delay(5000L)
+            showSuccessCelebration = false
+        }
+    }
     var showBelowFold by remember(recipe.id) { mutableStateOf(false) }
     LaunchedEffect(recipe.id) {
         androidx.compose.runtime.withFrameNanos { }
@@ -431,228 +441,200 @@ fun RecipeDetailScreen(
         !recipe.benefits.isNullOrBlank() ||
         !recipe.suggestedSides.isNullOrEmpty()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(palette.sheet)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .imePadding()
-                .verticalScroll(
-                    state = scrollState,
-                    flingBehavior = rememberSmoothFlingBehavior()
-                )
-        ) {
-            // 1. PARALLAX HERO SECTION
+    val isTablet = rememberIsTablet()
+
+    val heroMediaSection: @Composable (Modifier, Boolean) -> Unit = { heroModifier, parallax ->
+        Box(modifier = heroModifier) {
+            AsyncImage(
+                model = recipe.image,
+                contentDescription = recipe.name,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        if (parallax) {
+                            translationY = scrollState.value * 0.38f
+                        }
+                    },
+                contentScale = ContentScale.Crop
+            )
+
+            // Top atmospheric scrim for status bar & floating buttons
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(380.dp)
+                    .height(140.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Black.copy(alpha = 0.52f), Color.Transparent)
+                        )
+                    )
+            )
+
+            // Bottom editorial scrim for badges & smooth sheet transition
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(145.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.58f))
+                        )
+                    )
+            )
+
+            // Hero Floating Badges Row
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(
+                        start = 20.dp,
+                        end = 20.dp,
+                        bottom = if (parallax) 38.dp else 18.dp
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImage(
-                    model = recipe.image,
-                    contentDescription = recipe.name,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            translationY = scrollState.value * 0.38f
-                        },
-                    contentScale = ContentScale.Crop
-                )
-
-                // Top atmospheric scrim for status bar & floating buttons
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .align(Alignment.TopCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Black.copy(alpha = 0.52f), Color.Transparent)
-                            )
-                        )
-                )
-
-                // Bottom editorial scrim for badges & smooth sheet transition
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(145.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.58f))
-                            )
-                        )
-                )
-
-                // Hero Floating Badges Row
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .fillMaxWidth()
-                        .padding(start = 20.dp, end = 20.dp, bottom = 38.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    shape = ExpressivePillShape,
+                    color = palette.sheet.copy(alpha = 0.94f),
+                    shadowElevation = 4.dp
                 ) {
-                    Surface(
-                        shape = ExpressivePillShape,
-                        color = palette.sheet.copy(alpha = 0.94f),
-                        shadowElevation = 4.dp
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = StarGold,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(Modifier.width(5.dp))
-                            Text(
-                                text = String.format(Locale.FRENCH, "%.1f", recipe.rating),
-                                color = palette.ink,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text(
-                                text = "  ·  ${recipe.category}",
-                                color = palette.muted,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = StarGold,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            text = String.format(Locale.FRENCH, "%.1f", recipe.rating),
+                            color = palette.ink,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            text = "  ·  ${recipe.category}",
+                            color = palette.muted,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
+                }
 
-                    Surface(
-                        shape = ExpressivePillShape,
-                        color = Color.Black.copy(alpha = 0.52f)
+                Surface(
+                    shape = ExpressivePillShape,
+                    color = Color.Black.copy(alpha = 0.52f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(difficultyColor)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = recipe.difficulty,
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(difficultyColor)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = recipe.difficulty,
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
+        }
+    }
 
-            // 2. MAIN EDITORIAL SHEET
+    val headerInfoAndMetricsSection: @Composable () -> Unit = {
+        // Optional Dish Alias Tag
+        if (!recipe.alias.isNullOrBlank()) {
+            Text(
+                text = recipe.alias.uppercase(Locale.FRENCH),
+                color = AfroOrange,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.1.sp
+            )
+            Spacer(Modifier.height(5.dp))
+        }
+
+        // Dish Title
+        Text(
+            text = recipe.name,
+            color = palette.ink,
+            fontSize = 27.sp,
+            lineHeight = 33.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.5).sp,
+            modifier = Modifier.nexaTitleEmphasis()
+        )
+        Spacer(Modifier.height(6.dp))
+
+        Text(
+            text = "${recipe.region.ifBlank { "Cuisine africaine" }}  ·  Préparation ${recipe.prepTime}  ·  Cuisson ${recipe.cookTime}",
+            color = palette.muted,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
+        )
+
+        // Expandable Story / Description
+        if (!recipe.description.isNullOrBlank()) {
+            Spacer(Modifier.height(12.dp))
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-28).dp)
-                    .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                    .background(palette.sheet)
-                    .padding(horizontal = 22.dp)
-            ) {
-                Spacer(Modifier.height(12.dp))
-                Box(
-                    Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .width(40.dp)
-                        .height(4.dp)
-                        .clip(CircleShape)
-                        .background(palette.border)
-                )
-                Spacer(Modifier.height(18.dp))
-
-                // Optional Dish Alias Tag
-                if (!recipe.alias.isNullOrBlank()) {
-                    Text(
-                        text = recipe.alias.uppercase(Locale.FRENCH),
-                        color = AfroOrange,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 1.1.sp
-                    )
-                    Spacer(Modifier.height(5.dp))
-                }
-
-                // Dish Title
-                Text(
-                    text = recipe.name,
-                    color = palette.ink,
-                    fontSize = 27.sp,
-                    lineHeight = 33.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.5).sp,
-                    modifier = Modifier.nexaTitleEmphasis()
-                )
-                Spacer(Modifier.height(6.dp))
-
-                Text(
-                    text = "${recipe.region.ifBlank { "Cuisine africaine" }}  ·  Préparation ${recipe.prepTime}  ·  Cuisson ${recipe.cookTime}",
-                    color = palette.muted,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
-
-                // Expandable Story / Description
-                if (!recipe.description.isNullOrBlank()) {
-                    Spacer(Modifier.height(12.dp))
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                )
-                            )
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { isDescriptionExpanded = !isDescriptionExpanded }
-                    ) {
-                        Text(
-                            text = recipe.description,
-                            color = palette.secondary,
-                            fontSize = 14.sp,
-                            lineHeight = 21.sp,
-                            maxLines = if (isDescriptionExpanded) 12 else 2,
-                            overflow = TextOverflow.Ellipsis
+                    .animateContentSize(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow
                         )
-                        if (recipe.description.length > 95) {
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                text = if (isDescriptionExpanded) "Voir moins" else "Lire l'histoire du plat",
-                                color = AfroOrange,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { isDescriptionExpanded = !isDescriptionExpanded }
+            ) {
+                Text(
+                    text = recipe.description,
+                    color = palette.secondary,
+                    fontSize = 14.sp,
+                    lineHeight = 21.sp,
+                    maxLines = if (isDescriptionExpanded || isTablet) 12 else 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!isTablet && recipe.description.length > 95) {
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = if (isDescriptionExpanded) "Voir moins" else "Lire l'histoire du plat",
+                        color = AfroOrange,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+            }
+        }
 
-                Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(20.dp))
 
-                // 3. DYNAMIC METRICS & ANIMATED PORTIONS SCALER
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    color = palette.warmSurface,
-                    border = BorderStroke(1.dp, palette.warmBorder)
-                ) {
+        // 3. DYNAMIC METRICS & ANIMATED PORTIONS SCALER
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            color = palette.warmSurface,
+            border = BorderStroke(1.dp, palette.warmBorder)
+        ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -771,9 +753,9 @@ fun RecipeDetailScreen(
                         }
                     }
                 }
+            }
 
-                Spacer(Modifier.height(28.dp))
-
+    val ingredientsSection: @Composable () -> Unit = {
                 // 4. DYNAMIC INGREDIENTS CHECKLIST & CART INTEGRATION
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1172,9 +1154,9 @@ fun RecipeDetailScreen(
                         }
                     }
                 }
+    }
 
-                Spacer(Modifier.height(30.dp))
-
+    val preparationStepsSection: @Composable () -> Unit = {
                 if (!showBelowFold) {
                     Spacer(Modifier.height(520.dp))
                 } else {
@@ -1310,15 +1292,19 @@ fun RecipeDetailScreen(
                         val isLastStep = activeStep == recipe.steps.lastIndex
                         Button(
                             onClick = {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                completedSteps = completedSteps + activeStep
-                                if (!isLastStep) {
+                                if (isLastStep) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    completedSteps = recipe.steps.indices.toSet()
+                                    showSuccessCelebration = true
+                                } else {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    completedSteps = completedSteps + activeStep
                                     activeStep = (activeStep + 1).coerceAtMost(recipe.steps.lastIndex)
                                 }
                             },
                             shape = RoundedCornerShape(28.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isLastStep && completedSteps.size == recipe.steps.size) AccentEmerald else AfroOrange,
+                                containerColor = if (isLastStep) AccentEmerald else AfroOrange,
                                 contentColor = Color.White
                             ),
                             modifier = Modifier
@@ -1326,7 +1312,7 @@ fun RecipeDetailScreen(
                                 .height(48.dp)
                         ) {
                             Text(
-                                text = if (isLastStep) "Terminer l'étape" else "Étape suivante",
+                                text = if (isLastStep) "Terminé" else "Étape suivante",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1334,9 +1320,12 @@ fun RecipeDetailScreen(
                     }
                 }
 
+                } // end showBelowFold
+    }
+
+    val chefSecretsSection: @Composable () -> Unit = {
                 // 6. CHEF SECRETS, SUBSTITUTES & SUGGESTED SIDES
                 if (hasChefNotes) {
-                    Spacer(Modifier.height(28.dp))
                     val chevronRotation by animateFloatAsState(
                         targetValue = if (isChefSecretExpanded) 180f else 0f,
                         animationSpec = tween(220),
@@ -1490,31 +1479,140 @@ fun RecipeDetailScreen(
                         }
                     }
                 }
+    }
 
-                } // end showBelowFold
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(palette.sheet)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .verticalScroll(
+                    state = scrollState,
+                    flingBehavior = rememberSmoothFlingBehavior()
+                )
+        ) {
+            if (isTablet) {
+                // TABLET: 2-Column Editorial Split (Hero + Meta on top, Ingredients + Steps below)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(start = 28.dp, end = 28.dp, top = 74.dp),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    heroMediaSection(
+                        Modifier
+                            .weight(0.45f)
+                            .height(360.dp)
+                            .clip(RoundedCornerShape(28.dp)),
+                        false
+                    )
+                    Column(modifier = Modifier.weight(0.55f)) {
+                        headerInfoAndMetricsSection()
+                    }
+                }
 
-                Spacer(Modifier.height(8.dp))
-            } // end MAIN EDITORIAL SHEET
+                Spacer(Modifier.height(28.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 28.dp),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(0.45f)) {
+                        ingredientsSection()
+                        if (hasChefNotes) {
+                            Spacer(Modifier.height(24.dp))
+                            chefSecretsSection()
+                        }
+                        Spacer(Modifier.height(24.dp))
+                        RecipeCookingVideoSection(
+                            recipe = recipe,
+                            isDark = isDark
+                        )
+                    }
+                    Column(modifier = Modifier.weight(0.55f)) {
+                        preparationStepsSection()
+                        Spacer(Modifier.height(24.dp))
+                        RecipeRatingAndNoteSection(
+                            recipe = recipe,
+                            isDark = isDark,
+                            onInputFocusChanged = { isNoteInputFocused = it }
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+            } else {
+                // PHONE: Original Parallax Hero + Overlapping Editorial Sheet (100% unchanged)
+                heroMediaSection(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(380.dp),
+                    true
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = (-28).dp)
+                        .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+                        .background(palette.sheet)
+                        .padding(horizontal = 22.dp)
+                ) {
+                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .width(40.dp)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(palette.border)
+                    )
+                    Spacer(Modifier.height(18.dp))
+
+                    headerInfoAndMetricsSection()
+                    Spacer(Modifier.height(28.dp))
+                    ingredientsSection()
+                    Spacer(Modifier.height(30.dp))
+                    preparationStepsSection()
+                    if (hasChefNotes) {
+                        Spacer(Modifier.height(28.dp))
+                        chefSecretsSection()
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(palette.sheet)
-                    .padding(horizontal = 22.dp)
+                    .padding(horizontal = if (isTablet) 28.dp else 22.dp)
             ) {
-                RecipeCookingVideoSection(
-                    recipe = recipe,
-                    isDark = isDark
-                )
+                if (!isTablet) {
+                    RecipeCookingVideoSection(
+                        recipe = recipe,
+                        isDark = isDark
+                    )
 
-                Spacer(Modifier.height(24.dp))
-                RecipeRatingAndNoteSection(
-                    recipe = recipe,
-                    isDark = isDark,
-                    onInputFocusChanged = { isNoteInputFocused = it }
-                )
+                    Spacer(Modifier.height(24.dp))
+                    RecipeRatingAndNoteSection(
+                        recipe = recipe,
+                        isDark = isDark,
+                        onInputFocusChanged = { isNoteInputFocused = it }
+                    )
 
-                Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(24.dp))
+                }
                 RecipeSuggestionsSection(
                     currentRecipe = recipe,
                     allRecipes = allRecipes,
@@ -1646,7 +1744,8 @@ fun RecipeDetailScreen(
                     )
                 )
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center
         ) {
             val dockMode = when {
                 checkedCount > 0 -> "cart_selection"
@@ -1656,6 +1755,7 @@ fun RecipeDetailScreen(
 
             AnimatedContent(
                 targetState = dockMode,
+                modifier = if (isTablet) Modifier.widthIn(max = 520.dp) else Modifier.fillMaxWidth(),
                 transitionSpec = {
                     (slideInVertically { it / 2 } + fadeIn(tween(220))).togetherWith(
                         slideOutVertically { it / 2 } + fadeOut(tween(160))
@@ -1890,6 +1990,12 @@ fun RecipeDetailScreen(
             }
         }
         }
+
+        HighResCongratulationsOverlay(
+            visible = showSuccessCelebration,
+            durationMillis = 5000,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 

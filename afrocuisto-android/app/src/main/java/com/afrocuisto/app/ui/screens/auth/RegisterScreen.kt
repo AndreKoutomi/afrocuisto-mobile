@@ -73,6 +73,7 @@ import com.afrocuisto.app.data.security.GoogleSignInOutcome
 import com.afrocuisto.app.ui.components.AfroHapticKind
 import com.afrocuisto.app.ui.components.afroSpringClickable
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
+import com.afrocuisto.app.ui.components.rememberIsTablet
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
 import com.afrocuisto.app.ui.theme.AccentEmerald
 import com.afrocuisto.app.ui.theme.AfroOrange
@@ -245,6 +246,7 @@ fun RegisterScreen(
         // Fixed background that never scrolls with the page content
         AuthFixedBackground()
 
+        val isTablet = rememberIsTablet()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -254,7 +256,8 @@ fun RegisterScreen(
                 )
                 .imePadding()
                 .navigationBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = if (isTablet) Arrangement.Center else Arrangement.Top
         ) {
             AuthHeroHeader(
                 palette = palette,

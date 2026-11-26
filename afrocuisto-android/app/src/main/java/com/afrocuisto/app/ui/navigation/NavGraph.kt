@@ -19,7 +19,9 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -49,6 +51,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.afrocuisto.app.data.network.NetworkMonitor
 import com.afrocuisto.app.data.repository.AiChefRepository
 import com.afrocuisto.app.data.repository.AuthRepository
 import com.afrocuisto.app.data.repository.AuthResult
@@ -59,8 +62,11 @@ import com.afrocuisto.app.data.repository.ShoppingRepository
 import com.afrocuisto.app.data.repository.UserPreferencesRepository
 import com.afrocuisto.app.data.repository.UserPreferencesState
 import com.afrocuisto.app.service.CookingTimerService
+import com.afrocuisto.app.ui.components.AdaptiveCenteredContainer
+import com.afrocuisto.app.ui.components.ConnectivityBanner
 import com.afrocuisto.app.ui.components.InteractiveTimerPill
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
+import com.afrocuisto.app.ui.components.rememberIsTablet
 import com.afrocuisto.app.ui.screens.aichef.AiChefScreen
 import com.afrocuisto.app.ui.screens.aichef.GeminiVoiceCatalog
 import com.afrocuisto.app.ui.screens.aichef.GeminiVoicePreferences
@@ -111,12 +117,43 @@ fun NavGraph(
     val marketCurrency by shoppingRepository.currency.collectAsState()
     val timerState by CookingTimerService.timerState.collectAsState()
     val pendingMarketCount = remember(shoppingItems) { shoppingItems.count { !it.isChecked } }
+    val isOnline by NetworkMonitor.isOnline.collectAsState()
+    var wasOfflineForSync by remember { mutableStateOf(!isOnline) }
 
     var hydratedUserId by remember { mutableStateOf<String?>(null) }
     var lastSyncedFavorites by remember { mutableStateOf<Set<String>?>(null) }
     var lastSyncedCooked by remember { mutableStateOf<Set<String>?>(null) }
     var lastSyncedPrefsKey by remember { mutableStateOf<Pair<UserPreferencesState, String>?>(null) }
     var lastSyncedShoppingKey by remember { mutableStateOf<Triple<List<com.afrocuisto.app.data.model.ShoppingItem>, List<com.afrocuisto.app.data.model.ShoppingItem>, com.afrocuisto.app.data.model.MarketCurrency>?>(null) }
+
+    LaunchedEffect(isOnline) {
+        if (!isOnline) {
+            wasOfflineForSync = true
+        } else if (wasOfflineForSync) {
+            wasOfflineForSync = false
+            recipeRepository.refreshFromSupabaseAsync()
+            if (authSession.isAuthenticated && authSession.userId.isNotBlank() && hydratedUserId == null) {
+                val hydrated = authRepository.hydrateUserBundle(
+                    recipeRepository = recipeRepository,
+                    shoppingRepository = shoppingRepository,
+                    voicePreferences = voicePrefs
+                )
+                if (hydrated) {
+                    val latestPrefs = prefsRepo.preferencesFlow.first()
+                    val latestVoice = voicePrefs.selectedVoiceId.first()
+                    lastSyncedFavorites = recipeRepository.currentFavorites()
+                    lastSyncedCooked = latestPrefs.cookedRecipeIds
+                    lastSyncedPrefsKey = latestPrefs to latestVoice
+                    lastSyncedShoppingKey = Triple(
+                        shoppingRepository.items.value,
+                        shoppingRepository.archivedItems.value,
+                        shoppingRepository.currency.value
+                    )
+                    hydratedUserId = authSession.userId
+                }
+            }
+        }
+    }
 
     LaunchedEffect(authSession.isAuthenticated, authSession.userId) {
         if (authSession.isAuthenticated && authSession.userId.isNotBlank()) {
@@ -344,11 +381,18 @@ fun NavGraph(
         ),
         label = "recipeOverlayParallax"
     )
-    val tabScreenModifier = Modifier
-        .fillMaxSize()
-        .statusBarsPadding()
-        .navigationBarsPadding()
-        .padding(bottom = 63.dp)
+    val isTablet = rememberIsTablet()
+    val tabScreenModifier = if (isTablet) {
+        Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    } else {
+        Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(bottom = 63.dp)
+    }
     val standardPushModifier = Modifier
         .fillMaxSize()
         .statusBarsPadding()
@@ -476,13 +520,13 @@ fun NavGraph(
                     }
 
                     composable(Screen.Market.route) {
-                        Box(tabScreenModifier) {
+                        AdaptiveCenteredContainer(modifier = tabScreenModifier, maxWidth = 960.dp) {
                             MarketScreen(repository = shoppingRepository)
                         }
                     }
 
                     composable(Screen.Community.route) {
-                        Box(tabScreenModifier) {
+                        AdaptiveCenteredContainer(modifier = tabScreenModifier, maxWidth = 820.dp) {
                             CommunityScreen(
                                 onNavigateToRecipeDetail = { recipeId ->
                                     openRecipeDetail(recipeId)
@@ -516,7 +560,7 @@ fun NavGraph(
                     }
 
                     composable(Screen.AiChef.route) {
-                        Box(Modifier.fillMaxSize()) {
+                        AdaptiveCenteredContainer(maxWidth = 860.dp) {
                             AiChefScreen(
                                 onBack = ::popWithHaptic,
                                 repository = aiChefRepository,
@@ -595,7 +639,7 @@ fun NavGraph(
                     }
 
                     composable(Screen.Profile.route) {
-                        Box(standardPushModifier) {
+                        AdaptiveCenteredContainer(modifier = standardPushModifier, maxWidth = 860.dp) {
                             ProfileScreen(
                                 onBack = ::popWithHaptic,
                                 onNavigateToRecipeDetail = { recipeId ->
@@ -639,14 +683,20 @@ fun NavGraph(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
-                            .padding(bottom = if (showBottomBar) 73.dp else 12.dp),
+                            .padding(
+                                bottom = when {
+                                    showBottomBar && isTablet -> 88.dp
+                                    showBottomBar -> 73.dp
+                                    else -> 12.dp
+                                }
+                            ),
                         onOpenRecipe = { id ->
                             if (id.isNotBlank()) openRecipeDetail(id)
                         }
                     )
                 }
 
-                // Permanently composed bottom bar animated strictly on GPU (zero mount/unmount/reflow jank)
+                // Permanently composed navigation bar animated strictly on GPU (zero mount/unmount/reflow jank)
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -655,14 +705,25 @@ fun NavGraph(
                             alpha = 1f - bottomBarHideProgress
                         }
                 ) {
-                    CustomBottomNavBar(
-                        currentRoute = currentRoute,
-                        onNavigate = { route -> if (showBottomBar && !isRecipeDetailOpen) switchBottomTab(route) },
-                        onOpenAiChef = {
-                            if (showBottomBar && !isRecipeDetailOpen) navController.navigate(Screen.AiChef.route)
-                        },
-                        marketBadgeCount = pendingMarketCount
-                    )
+                    if (isTablet) {
+                        TabletFloatingNavBar(
+                            currentRoute = currentRoute,
+                            onNavigate = { route -> if (showBottomBar && !isRecipeDetailOpen) switchBottomTab(route) },
+                            onOpenAiChef = {
+                                if (showBottomBar && !isRecipeDetailOpen) navController.navigate(Screen.AiChef.route)
+                            },
+                            marketBadgeCount = pendingMarketCount
+                        )
+                    } else {
+                        CustomBottomNavBar(
+                            currentRoute = currentRoute,
+                            onNavigate = { route -> if (showBottomBar && !isRecipeDetailOpen) switchBottomTab(route) },
+                            onOpenAiChef = {
+                                if (showBottomBar && !isRecipeDetailOpen) navController.navigate(Screen.AiChef.route)
+                            },
+                            marketBadgeCount = pendingMarketCount
+                        )
+                    }
                 }
             }
 
@@ -699,6 +760,11 @@ fun NavGraph(
                     )
                 }
             }
+
+            ConnectivityBanner(
+                isOnline = isOnline,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
 
         AnimatedVisibility(

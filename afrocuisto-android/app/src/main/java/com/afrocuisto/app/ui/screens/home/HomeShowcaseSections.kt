@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -82,7 +83,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.afrocuisto.app.R
 import com.afrocuisto.app.data.model.Recipe
+import com.afrocuisto.app.ui.components.AfroWindowWidthClass
 import com.afrocuisto.app.ui.components.ProductLikeButton
+import com.afrocuisto.app.ui.components.rememberAfroWindowWidthClass
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
 import com.afrocuisto.app.ui.theme.AfroOrange
 import com.afrocuisto.app.ui.theme.AfroOrangeLight
@@ -165,9 +168,9 @@ fun HomeDailyMenuSection(
             DAILY_MENUS
         } else {
             val tabMeta = listOf(
-                Triple("midi", "Déjeuner", "MENU DU MIDI"),
-                Triple("soir", "Dîner", "TABLE DU SOIR"),
-                Triple("weekend", "Convivial", "PARTAGE & GRILL")
+                Triple("midi", "Déjeuner", "DÉJEUNER"),
+                Triple("soir", "Dîner", "DÎNER"),
+                Triple("weekend", "Convivial", "CONVIVIAL")
             )
             tabMeta.mapIndexed { idx, (tabId, tabLabel, badge) ->
                 val recipe = recipes[idx % recipes.size]
@@ -179,11 +182,10 @@ fun HomeDailyMenuSection(
                     subtitle = recipe.description?.takeIf { it.isNotBlank() }
                         ?: "Spécialité ${recipe.region.ifBlank { "africaine" }} sélectionnée pour votre table.",
                     mainRecipeId = recipe.id,
-                    pairingNote = recipe.suggestedSides?.firstOrNull()?.let { "Accord : $it" }
-                        ?: listOfNotNull(
-                            recipe.region.takeIf { it.isNotBlank() },
-                            recipe.category.takeIf { it.isNotBlank() }
-                        ).joinToString(" • ").ifBlank { "Suggestion du Chef" },
+                    pairingNote = listOfNotNull(
+                        recipe.region.takeIf { it.isNotBlank() },
+                        recipe.category.takeIf { it.isNotBlank() }
+                    ).joinToString(" • ").ifBlank { "Sélection du jour" },
                     totalMinutesLabel = recipe.prepTime.ifBlank { "20 min" },
                     servingsLabel = "4 pers."
                 )
@@ -204,18 +206,26 @@ fun HomeDailyMenuSection(
     val mainRecipe = remember(recipes, activeMenu.mainRecipeId) {
         recipes.firstOrNull { it.id == activeMenu.mainRecipeId } ?: recipes.firstOrNull()
     }
-    val drinkRecipe = remember(recipes) {
-        recipes.firstOrNull { it.id == "J01" } ?: recipes.lastOrNull()
+    val todayLabel = remember {
+        java.text.SimpleDateFormat("EEE d MMM", java.util.Locale.FRENCH)
+            .format(java.util.Date())
+            .replaceFirstChar { it.uppercase() }
     }
 
     val cardBg = if (isDark) colorScheme.surface else Color.White
+    val widthClass = rememberAfroWindowWidthClass()
+    val isTablet = widthClass != AfroWindowWidthClass.COMPACT
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp)
@@ -234,87 +244,207 @@ fun HomeDailyMenuSection(
                     modifier = Modifier.nexaTitleEmphasis()
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Clean full-width equal-weight 3-tab moment selector (zero text wrapping)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(50),
-            color = if (isDark) colorScheme.surfaceVariant else Color(0xFFF1EFEA)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = AfroOrange.copy(alpha = 0.12f)
             ) {
-                menus.forEachIndexed { idx, item ->
-                    val active = idx == selectedTab
-                    val tabBg by animateColorAsState(
-                        targetValue = if (active) AfroOrange else Color.Transparent,
-                        animationSpec = tween(220),
-                        label = "dailyMenuTabBg"
-                    )
-                    val tabText by animateColorAsState(
-                        targetValue = if (active) Color.White else subtitleColor,
-                        animationSpec = tween(220),
-                        label = "dailyMenuTabText"
-                    )
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(50))
-                            .background(tabBg)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                selectedTab = idx
-                            }
-                            .padding(vertical = 7.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = item.tabLabel,
-                            fontSize = 12.sp,
-                            fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
-                            color = tabText,
-                            maxLines = 1,
-                            softWrap = false,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+                Text(
+                    text = todayLabel,
+                    color = AfroOrange,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        AnimatedContent(
-            targetState = activeMenu,
-            transitionSpec = { fadeIn(tween(240)) togetherWith fadeOut(tween(180)) },
-            label = "dailyMenuCardTransition"
-        ) { menu ->
-            val targetRecipe = recipes.firstOrNull { it.id == menu.mainRecipeId } ?: mainRecipe
-            Card(
-                onClick = { targetRecipe?.let { onNavigateToRecipeDetail(it.id) } },
+        if (widthClass == AfroWindowWidthClass.EXPANDED) {
+            // Landscape tablet: all 3 moments side-by-side with zero stretching and zero side gaps
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = cardBg),
-                border = BorderStroke(1.dp, borderColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                menus.forEachIndexed { idx, menu ->
+                    val targetRecipe = recipes.firstOrNull { it.id == menu.mainRecipeId } ?: mainRecipe
+                    val companionRecipes = remember(recipes, targetRecipe?.id) {
+                        recipes.filter { it.id != targetRecipe?.id }.take(2)
+                    }
+                    DailyMenuCard(
+                        menu = menu,
+                        targetRecipe = targetRecipe,
+                        companionRecipes = companionRecipes,
+                        favoriteIds = favoriteIds,
+                        isHighlighted = idx == defaultIndex,
+                        cardBg = cardBg,
+                        titleColor = titleColor,
+                        subtitleColor = subtitleColor,
+                        borderColor = borderColor,
+                        isDark = isDark,
+                        onToggleFavorite = onToggleFavorite,
+                        onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                        onNavigateToAiChef = onNavigateToAiChef,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        } else if (isTablet) {
+            // Portrait tablet: horizontal strip of full-proportion cards
+            val cardData = remember(menus, recipes, mainRecipe) {
+                menus.map { menu ->
+                    val targetRecipe = recipes.firstOrNull { it.id == menu.mainRecipeId } ?: mainRecipe
+                    val companionRecipes = recipes.filter { it.id != targetRecipe?.id }.take(2)
+                    Triple(menu, targetRecipe, companionRecipes)
+                }
+            }
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                itemsIndexed(cardData, key = { _, (m, _, _) -> m.tabId }) { idx, (menu, targetRecipe, companionRecipes) ->
+                    DailyMenuCard(
+                        menu = menu,
+                        targetRecipe = targetRecipe,
+                        companionRecipes = companionRecipes,
+                        favoriteIds = favoriteIds,
+                        isHighlighted = idx == defaultIndex,
+                        cardBg = cardBg,
+                        titleColor = titleColor,
+                        subtitleColor = subtitleColor,
+                        borderColor = borderColor,
+                        isDark = isDark,
+                        onToggleFavorite = onToggleFavorite,
+                        onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                        onNavigateToAiChef = onNavigateToAiChef,
+                        modifier = Modifier.width(320.dp)
+                    )
+                }
+            }
+        } else {
+            // Mobile phone: original 3-tab selector + animated single card (unchanged)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(50),
+                color = if (isDark) colorScheme.surfaceVariant else Color(0xFFF1EFEA)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    menus.forEachIndexed { idx, item ->
+                        val active = idx == selectedTab
+                        val tabBg by animateColorAsState(
+                            targetValue = if (active) AfroOrange else Color.Transparent,
+                            animationSpec = tween(220),
+                            label = "dailyMenuTabBg"
+                        )
+                        val tabText by animateColorAsState(
+                            targetValue = if (active) Color.White else subtitleColor,
+                            animationSpec = tween(220),
+                            label = "dailyMenuTabText"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(50))
+                                .background(tabBg)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedTab = idx
+                                }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = item.tabLabel,
+                                fontSize = 12.sp,
+                                fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
+                                color = tabText,
+                                maxLines = 1,
+                                softWrap = false,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            AnimatedContent(
+                targetState = activeMenu,
+                transitionSpec = { fadeIn(tween(240)) togetherWith fadeOut(tween(180)) },
+                label = "dailyMenuCardTransition"
+            ) { menu ->
+                val targetRecipe = recipes.firstOrNull { it.id == menu.mainRecipeId } ?: mainRecipe
+                val companionRecipes = remember(recipes, targetRecipe?.id) {
+                    recipes.filter { it.id != targetRecipe?.id }.take(2)
+                }
+                DailyMenuCard(
+                    menu = menu,
+                    targetRecipe = targetRecipe,
+                    companionRecipes = companionRecipes,
+                    favoriteIds = favoriteIds,
+                    isHighlighted = false,
+                    cardBg = cardBg,
+                    titleColor = titleColor,
+                    subtitleColor = subtitleColor,
+                    borderColor = borderColor,
+                    isDark = isDark,
+                    onToggleFavorite = onToggleFavorite,
+                    onNavigateToRecipeDetail = onNavigateToRecipeDetail,
+                    onNavigateToAiChef = onNavigateToAiChef,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailyMenuCard(
+    menu: DailyMenuPairing,
+    targetRecipe: Recipe?,
+    companionRecipes: List<Recipe>,
+    favoriteIds: Set<String>,
+    isHighlighted: Boolean,
+    cardBg: Color,
+    titleColor: Color,
+    subtitleColor: Color,
+    borderColor: Color,
+    isDark: Boolean,
+    onToggleFavorite: (String) -> Unit,
+    onNavigateToRecipeDetail: (String) -> Unit,
+    onNavigateToAiChef: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Card(
+        onClick = { targetRecipe?.let { onNavigateToRecipeDetail(it.id) } },
+        modifier = modifier,
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = if (isHighlighted) {
+            BorderStroke(1.5.dp, AfroOrange.copy(alpha = 0.55f))
+        } else {
+            BorderStroke(1.dp, borderColor)
+        },
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Top hero media strip with dual-dish pairing badge
+                    // Top hero media strip
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(158.dp)
+                            .height(166.dp)
                             .padding(10.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(22.dp))
                     ) {
                         AsyncImage(
                             model = targetRecipe?.image,
@@ -329,20 +459,61 @@ fun HomeDailyMenuSection(
                                 .background(
                                     Brush.verticalGradient(
                                         colorStops = arrayOf(
-                                            0.0f to Color.Black.copy(alpha = 0.25f),
+                                            0.0f to Color.Black.copy(alpha = 0.20f),
                                             0.5f to Color.Transparent,
-                                            1.0f to Color.Black.copy(alpha = 0.80f)
+                                            1.0f to Color.Black.copy(alpha = 0.72f)
                                         )
                                     )
                                 )
                         )
 
-                        // Top-left editorial badge
+                        // Top-left time & servings pill
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color.Black.copy(alpha = 0.56f),
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_solar_stopwatch_linear),
+                                    contentDescription = null,
+                                    tint = AfroOrange,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "${menu.totalMinutesLabel} • ${menu.servingsLabel}",
+                                    color = Color.White,
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Top-right unified ProductLikeButton
+                        if (targetRecipe != null) {
+                            ProductLikeButton(
+                                isLiked = favoriteIds.contains(targetRecipe.id),
+                                onClick = { onToggleFavorite(targetRecipe.id) },
+                                buttonSize = 32.dp,
+                                iconSize = 17.dp,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(10.dp)
+                            )
+                        }
+
+                        // Bottom-left clear dish origin/category
                         Surface(
                             shape = RoundedCornerShape(50),
                             color = AfroOrange,
                             modifier = Modifier
-                                .align(Alignment.TopStart)
+                                .align(Alignment.BottomStart)
                                 .padding(10.dp)
                         ) {
                             Text(
@@ -354,93 +525,17 @@ fun HomeDailyMenuSection(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
-
-                        // Top-right unified ProductLikeButton
-                        if (targetRecipe != null) {
-                            ProductLikeButton(
-                                isLiked = favoriteIds.contains(targetRecipe.id),
-                                onClick = { onToggleFavorite(targetRecipe.id) },
-                                buttonSize = 30.dp,
-                                iconSize = 16.dp,
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(10.dp)
-                            )
-                        }
-
-                        // Bottom pairing thumbnail + label (weighted left + single-line pill right)
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(end = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (drinkRecipe != null) {
-                                    AsyncImage(
-                                        model = drinkRecipe.image,
-                                        contentDescription = drinkRecipe.name,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(26.dp)
-                                            .clip(CircleShape)
-                                            .border(1.5.dp, Color.White, CircleShape)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                }
-                                Text(
-                                    text = menu.pairingNote,
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = Color.Black.copy(alpha = 0.58f)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_solar_stopwatch_linear),
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Text(
-                                        text = "${menu.totalMinutesLabel} • ${menu.servingsLabel}",
-                                        color = Color.White,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        softWrap = false
-                                    )
-                                }
-                            }
-                        }
                     }
 
-                    // Bottom Editorial Text + Dual Actions
+                    // Bottom Editorial Text + Clear Actions
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 14.dp)
+                            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp)
                     ) {
                         Text(
                             text = menu.title,
-                            fontSize = 16.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = titleColor,
                             maxLines = 1,
@@ -449,25 +544,25 @@ fun HomeDailyMenuSection(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = menu.subtitle,
-                            fontSize = 12.sp,
-                            lineHeight = 16.5.sp,
+                            fontSize = 12.5.sp,
+                            lineHeight = 17.5.sp,
                             color = subtitleColor,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(50),
+                                shape = RoundedCornerShape(28.dp),
                                 color = AfroOrange,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(50))
+                                    .clip(RoundedCornerShape(28.dp))
                                     .clickable {
                                         targetRecipe?.let { onNavigateToRecipeDetail(it.id) }
                                     }
@@ -475,7 +570,7 @@ fun HomeDailyMenuSection(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 10.dp),
+                                        .padding(vertical = 11.dp),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -487,24 +582,24 @@ fun HomeDailyMenuSection(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Cuisiner ce menu",
+                                        text = "Voir la recette",
                                         color = Color.White,
-                                        fontSize = 12.5.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
 
                             Surface(
-                                shape = RoundedCornerShape(50),
+                                shape = RoundedCornerShape(28.dp),
                                 color = if (isDark) colorScheme.surfaceVariant else Color(0xFFF4F1EA),
                                 border = BorderStroke(1.dp, borderColor),
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(50))
+                                    .clip(RoundedCornerShape(28.dp))
                                     .clickable(onClick = onNavigateToAiChef)
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
@@ -517,16 +612,74 @@ fun HomeDailyMenuSection(
                                     Text(
                                         text = "Adapter",
                                         color = titleColor,
-                                        fontSize = 12.5.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
                         }
+
+                        if (companionRecipes.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            HorizontalDivider(color = borderColor.copy(alpha = 0.7f))
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "Également au menu aujourd'hui",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = subtitleColor
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                companionRecipes.forEach { companion ->
+                                    Surface(
+                                        shape = RoundedCornerShape(18.dp),
+                                        color = if (isDark) colorScheme.surfaceVariant else Color(0xFFF8F7F4),
+                                        border = BorderStroke(1.dp, borderColor),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .clickable { onNavigateToRecipeDetail(companion.id) }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            AsyncImage(
+                                                model = companion.image,
+                                                contentDescription = companion.name,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .clip(RoundedCornerShape(10.dp))
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = companion.name,
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = titleColor,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = companion.prepTime.ifBlank { "20 min" },
+                                                    fontSize = 10.sp,
+                                                    color = subtitleColor,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
     }
 }
 
