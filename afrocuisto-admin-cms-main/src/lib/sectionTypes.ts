@@ -80,6 +80,14 @@ export const APP_SECTION_TYPES: AppSectionTypeSpec[] = [
         color: '#fb5607',
         bg: 'rgba(251, 86, 7, 0.12)',
     },
+    {
+        value: 'title',
+        label: 'Titre',
+        description: 'Affiche un titre de section sur la page d’accueil de l’app',
+        icon: AlignJustify,
+        color: '#6366f1',
+        bg: 'rgba(99, 102, 241, 0.12)',
+    },
 ];
 
 export function getAppSectionTypeMeta(type: string): AppSectionTypeSpec {

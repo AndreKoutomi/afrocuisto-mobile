@@ -625,6 +625,14 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.height(22.dp))
                         }
 
+                        "title" -> {
+                            HomeCmsTitleSection(
+                                section = section,
+                                defaultTitleColor = titleColor,
+                                defaultSubtitleColor = subtitleColor
+                            )
+                        }
+
                         else -> {
                             // "popular_grid" ou toute autre section grille de recettes
                             if (sectionRecipes.isNotEmpty()) {

@@ -242,10 +242,11 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
-    const authorizedEmails = ['andre.koutomi98@gmail.com', 'deodadefassinou@gmail.com'];
+    const authorizedEmails = ['andre.koutomi98@gmail.com'];
 
     const checkSession = async (currentSession: any) => {
-      if (currentSession?.user?.email && !authorizedEmails.includes(currentSession.user.email)) {
+      const email = currentSession?.user?.email?.trim().toLowerCase();
+      if (email && !authorizedEmails.includes(email)) {
         await supabase.auth.signOut();
         setSession(null);
       } else {

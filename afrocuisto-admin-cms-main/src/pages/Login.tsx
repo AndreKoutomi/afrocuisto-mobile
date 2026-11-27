@@ -19,24 +19,25 @@ export function Login() {
 
         try {
             const { error: authError } = await supabase.auth.signInWithPassword({
-                email: email.trim(),
-                password: password.trim(),
+                email: email.trim().toLowerCase(),
+                password,
             });
 
             if (authError) throw authError;
 
             const { data: { user } } = await supabase.auth.getUser();
-            const authorizedEmails = ['andre.koutomi98@gmail.com', 'deodadefassinou@gmail.com'];
+            const authorizedEmails = ['andre.koutomi98@gmail.com'];
+            const normalizedEmail = (user?.email || '').trim().toLowerCase();
 
-            if (!user || !authorizedEmails.includes(user.email || '')) {
+            if (!user || !authorizedEmails.includes(normalizedEmail)) {
                 await supabase.auth.signOut();
-                throw new Error('Accès refusé : seuls les administrateurs autorisés peuvent se connecter.');
+                throw new Error('Accès refusé : seul l’administrateur autorisé peut se connecter.');
             }
 
             navigate('/dashboard');
         } catch (err: any) {
             console.error('Login error:', err);
-            setError(err.message || 'Une erreur est survenue lors de la connexion.');
+            setError(err?.message || 'Une erreur est survenue lors de la connexion.');
         } finally {
             setLoading(false);
         }

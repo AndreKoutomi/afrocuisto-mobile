@@ -4,6 +4,13 @@ import { AdminSelect } from '../components/AdminSelect';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Search, Utensils, CheckCircle2 } from '../components/SolarIcons';
 import { APP_SECTION_TYPES, getAppSectionTypeMeta } from '../lib/sectionTypes';
+import { TitleStyleEditor } from '../components/TitleStyleEditor';
+import {
+    DEFAULT_TITLE_STYLE,
+    decodeTitleStyleItems,
+    encodeTitleStyleItem,
+} from '../lib/titleSectionStyle';
+import type { TitleStyleConfig } from '../lib/titleSectionStyle';
 
 interface RecipeSummary {
     id: string;
@@ -23,6 +30,7 @@ export function SectionForm() {
     const [orderIndex, setOrderIndex] = useState(0);
     const [isActive, setIsActive] = useState(true);
     const [itemIds, setItemIds] = useState<string[]>([]);
+    const [titleStyle, setTitleStyle] = useState<TitleStyleConfig>({ ...DEFAULT_TITLE_STYLE });
 
     const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -50,6 +58,9 @@ export function SectionForm() {
                         setOrderIndex(sectionData.order_index ?? 0);
                         setIsActive(sectionData.is_active ?? true);
                         setItemIds(sectionData.item_ids || []);
+                        if (sectionData.section_type === 'title') {
+                            setTitleStyle(decodeTitleStyleItems(sectionData.item_ids));
+                        }
                     }
                 }
             } catch (err) {
@@ -78,7 +89,7 @@ export function SectionForm() {
             const payload = {
                 title: title.trim(),
                 section_type: sectionType,
-                item_ids: itemIds,
+                item_ids: sectionType === 'title' ? encodeTitleStyleItem(titleStyle) : itemIds,
                 order_index: Number(orderIndex) || 0,
                 is_active: isActive,
             };
@@ -182,6 +193,15 @@ export function SectionForm() {
                     </div>
                 </div>
 
+                {sectionType === 'title' && (
+                    <TitleStyleEditor
+                        title={title}
+                        value={titleStyle}
+                        onChange={setTitleStyle}
+                    />
+                )}
+
+                {sectionType !== 'title' && (
                 <div style={{ marginTop: '24px', borderTop: '1px solid #f0f0f0', paddingTop: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
                         <div>
@@ -251,6 +271,7 @@ export function SectionForm() {
                         </div>
                     )}
                 </div>
+                )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '28px' }}>
                     <Link
