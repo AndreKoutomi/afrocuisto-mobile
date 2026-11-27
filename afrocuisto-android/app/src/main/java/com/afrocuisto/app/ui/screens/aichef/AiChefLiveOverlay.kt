@@ -355,16 +355,11 @@ fun AiChefLiveOverlay(
                 .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Pure Android 17 Gemini Live Top Bar (Non-selectable "Live" mark + Voice + CC)
+            // Pure Android 17 Gemini Live Top Bar (Non-selectable "Live" mark + CC)
             GoogleGeminiLiveTopBar(
                 timeSeconds = elapsedClock,
                 isActive = !uiState.isPaused,
                 elapsedSeconds = uiState.elapsedSeconds,
-                selectedVoiceName = uiState.selectedVoice.displayName,
-                onOpenVoicePicker = {
-                    afroHaptics.selectionTick()
-                    controller.openVoiceSheet()
-                },
                 showCaptions = uiState.showCaptions,
                 onToggleCaptions = {
                     afroHaptics.selectionTick()
@@ -536,25 +531,6 @@ fun AiChefLiveOverlay(
                 modifier = Modifier.padding(bottom = 20.dp)
             )
         }
-
-        // Gemini Live Voice & Studio API Key Bottom Sheet
-        if (uiState.showVoiceSheet) {
-            GeminiLiveVoicePickerSheet(
-                selectedVoice = uiState.selectedVoice,
-                voiceBadge = uiState.voiceBadge,
-                isRealtimeConnected = uiState.isRealtimeWebSocketConnected,
-                hasApiKey = uiState.hasGeminiApiKey,
-                onSelectVoice = { profile ->
-                    afroHaptics.selectionTick()
-                    controller.selectAndPreviewVoice(profile)
-                },
-                onSaveApiKey = { key ->
-                    afroHaptics.actionSuccess()
-                    controller.saveGeminiApiKey(key)
-                },
-                onDismiss = { controller.dismissVoiceSheet() }
-            )
-        }
     }
 }
 
@@ -699,8 +675,6 @@ private fun GoogleGeminiLiveTopBar(
     timeSeconds: Float,
     isActive: Boolean,
     elapsedSeconds: Int,
-    selectedVoiceName: String,
-    onOpenVoicePicker: () -> Unit,
     showCaptions: Boolean,
     onToggleCaptions: () -> Unit,
     modifier: Modifier = Modifier
@@ -756,36 +730,6 @@ private fun GoogleGeminiLiveTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = Color.White.copy(alpha = 0.09f),
-                modifier = Modifier
-                    .afroSpringClickable(
-                        pressedScale = 0.92f,
-                        haptic = AfroHapticKind.NONE,
-                        onClick = onOpenVoicePicker
-                    )
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.RecordVoiceOver,
-                        contentDescription = "Changer la voix Gemini Live",
-                        tint = GeminiSkyCyan,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = selectedVoiceName,
-                        color = Color(0xFFE8EAED),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
             Box(
                 modifier = Modifier
                     .size(40.dp)

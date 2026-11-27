@@ -1389,6 +1389,7 @@ class AuthRepository(
             prefs.remove(Keys.PKCE_CREATED_AT_MS)
             prefs[Keys.AUTH_GATE_COMPLETED] = false
         }
+        userPreferencesRepository.resetIdentityOnSignOut()
     }
 
     private fun extractMetadataAvatar(bodyStr: String): String? {
@@ -1504,9 +1505,9 @@ class AuthRepository(
                     ?.takeIf { it.startsWith("https://") }
 
                 val currentPrefs = userPreferencesRepository.preferencesFlow.first()
-                val resolvedAvatar = currentPrefs.avatarUrl.takeIf { it.isNotBlank() }
-                    ?: remoteAvatar
-                    ?: fallbackAvatarUrl?.takeIf { it.startsWith("https://") }.orEmpty()
+                val resolvedAvatar = remoteAvatar
+                    ?: fallbackAvatarUrl?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+                    ?: ""
 
                 userPreferencesRepository.updateIdentity(
                     displayName = remoteName ?: session.displayName,

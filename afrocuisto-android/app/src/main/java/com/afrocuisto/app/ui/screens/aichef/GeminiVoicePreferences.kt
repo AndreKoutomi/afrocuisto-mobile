@@ -122,6 +122,10 @@ class GeminiVoicePreferences(private val context: Context) {
         prefs[keyVoiceId] ?: GeminiVoiceCatalog.voices.first().id
     }
 
+    val customApiKey: Flow<String> = context.geminiVoiceDataStore.data.map { prefs ->
+        prefs[keyApiKey]?.trim().orEmpty()
+    }
+
     val effectiveApiKey: Flow<String> = context.geminiVoiceDataStore.data.map { prefs ->
         val stored = prefs[keyApiKey]?.trim().orEmpty()
         if (stored.isNotEmpty()) stored else BuildConfig.GEMINI_API_KEY.trim()

@@ -291,6 +291,8 @@ fun ProfileScreen(
 
     val userPrefs by prefsRepo.preferencesFlow.collectAsState(initial = UserPreferencesState())
     val selectedVoiceId by voicePrefs.selectedVoiceId.collectAsState(initial = GeminiVoiceCatalog.voices.first().id)
+    val customGeminiKey by voicePrefs.customApiKey.collectAsState(initial = "")
+    val effectiveGeminiKey by voicePrefs.effectiveApiKey.collectAsState(initial = "")
 
     val recipes by recipeRepository.recipes.collectAsState(initial = emptyList())
     val favoriteIds by recipeRepository.favoriteIds.collectAsState(initial = emptySet())
@@ -1144,6 +1146,169 @@ fun ProfileScreen(
                                     color = if (active) palette.card.copy(alpha = 0.78f) else palette.muted,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                SectionDivider(palette)
+
+                var showGeminiKeyEditor by remember { mutableStateOf(false) }
+                var geminiKeyDraft by remember(customGeminiKey) { mutableStateOf(customGeminiKey) }
+                val geminiResetMsg = tr(
+                    "Clé Gemini réinitialisée",
+                    "Gemini key reset",
+                    "Clave Gemini restablecida"
+                )
+                val geminiSavedMsg = tr(
+                    "Clé API Gemini enregistrée",
+                    "Gemini API key saved",
+                    "Clave API Gemini guardada"
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            afroHaptics.selectionTick()
+                            showGeminiKeyEditor = !showGeminiKeyEditor
+                        },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        SettingLeadingIcon(R.drawable.ic_solar_shield_check_linear, palette)
+                        Column {
+                            Text(
+                                text = tr("Clé API Gemini", "Gemini API Key", "Clave API Gemini"),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = palette.title
+                            )
+                            Text(
+                                text = when {
+                                    customGeminiKey.isNotBlank() -> tr(
+                                        "Clé personnalisée active",
+                                        "Custom key active",
+                                        "Clave personalizada activa"
+                                    )
+                                    effectiveGeminiKey.isNotBlank() -> tr(
+                                        "Clé intégrée par défaut",
+                                        "Default built-in key",
+                                        "Clave integrada predeterminada"
+                                    )
+                                    else -> tr(
+                                        "Non configurée · Appuyer pour ajouter",
+                                        "Not configured · Tap to add",
+                                        "Sin configurar · Toca para añadir"
+                                    )
+                                },
+                                fontSize = 11.5.sp,
+                                color = if (effectiveGeminiKey.isNotBlank()) AccentEmerald else AfroOrange,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = ExpressivePillShape,
+                        color = palette.subtleSurface,
+                        border = BorderStroke(1.dp, palette.border)
+                    ) {
+                        Text(
+                            text = if (showGeminiKeyEditor) tr("Fermer", "Close", "Cerrar") else tr("Modifier", "Edit", "Editar"),
+                            color = palette.title,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                AnimatedVisibility(visible = showGeminiKeyEditor) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = geminiKeyDraft,
+                            onValueChange = { geminiKeyDraft = it },
+                            singleLine = true,
+                            placeholder = {
+                                Text(
+                                    text = "AIza...",
+                                    color = palette.muted,
+                                    fontSize = 13.sp
+                                )
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = palette.title,
+                                unfocusedTextColor = palette.title,
+                                focusedBorderColor = AfroOrange,
+                                unfocusedBorderColor = palette.border,
+                                cursorColor = AfroOrange
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (customGeminiKey.isNotBlank()) {
+                                Surface(
+                                    shape = ExpressivePillShape,
+                                    color = palette.subtleSurface,
+                                    border = BorderStroke(1.dp, palette.border),
+                                    modifier = Modifier
+                                        .clip(ExpressivePillShape)
+                                        .clickable {
+                                            afroHaptics.selectionTick()
+                                            coroutineScope.launch {
+                                                voicePrefs.setCustomApiKey("")
+                                                geminiKeyDraft = ""
+                                                showGeminiKeyEditor = false
+                                                statusBannerMessage = geminiResetMsg
+                                            }
+                                        }
+                                ) {
+                                    Text(
+                                        text = tr("Réinitialiser", "Reset", "Restablecer"),
+                                        color = palette.muted,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                                    )
+                                }
+                            }
+                            Surface(
+                                shape = ExpressivePillShape,
+                                color = AfroOrange,
+                                modifier = Modifier
+                                    .clip(ExpressivePillShape)
+                                    .clickable {
+                                        afroHaptics.actionSuccess()
+                                        coroutineScope.launch {
+                                            voicePrefs.setCustomApiKey(geminiKeyDraft)
+                                            showGeminiKeyEditor = false
+                                            statusBannerMessage = geminiSavedMsg
+                                        }
+                                    }
+                            ) {
+                                Text(
+                                    text = tr("Enregistrer", "Save", "Guardar"),
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
                                 )
                             }
                         }

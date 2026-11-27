@@ -121,9 +121,9 @@ fun SplashScreen(
         }
         val wordmarkFontSize = with(LocalDensity.current) { (widthUnit * 72f).toSp() }
 
-        // 1. Full-bleed Culinary Photography (FigCraft node 17179869270)
+        // 1. Full-bleed Culinary Photography
         Image(
-            painter = painterResource(id = R.drawable.img_splash_bg),
+            painter = painterResource(id = R.drawable.bg_auth_splash),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

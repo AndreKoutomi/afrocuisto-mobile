@@ -225,7 +225,7 @@ fun AuthFixedBackground(
                 .height(276.dp)
         ) {
             Image(
-                painter = painterResource(id = R.drawable.img_splash_bg),
+                painter = painterResource(id = R.drawable.bg_auth_splash),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -271,7 +271,7 @@ fun AuthHeroHeader(
     ) {
         if (showBackground) {
             Image(
-                painter = painterResource(id = R.drawable.img_splash_bg),
+                painter = painterResource(id = R.drawable.bg_auth_splash),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()

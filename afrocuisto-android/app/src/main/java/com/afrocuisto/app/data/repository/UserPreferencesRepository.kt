@@ -316,6 +316,17 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
+    suspend fun resetIdentityOnSignOut() {
+        context.afroUserPrefsDataStore.edit { prefs ->
+            prefs.remove(Keys.DISPLAY_NAME)
+            prefs.remove(Keys.ROLE_TITLE)
+            prefs.remove(Keys.BIO)
+            prefs.remove(Keys.AVATAR_URL)
+            prefs.remove(Keys.FAVORITE_TERROIR)
+            prefs.remove(Keys.COOKED_RECIPE_IDS)
+        }
+    }
+
     companion object {
         private const val SYNC_PREFS_NAME = "afrocuisto_sync_flags"
         private const val SYNC_KEY_TIMER_VIBRATION = "timer_vibration_enabled"
