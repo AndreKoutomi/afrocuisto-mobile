@@ -20,6 +20,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,6 +33,7 @@ import com.afrocuisto.app.data.repository.AuthRepository
 import com.afrocuisto.app.data.repository.UserPreferencesRepository
 import com.afrocuisto.app.data.repository.UserPreferencesState
 import com.afrocuisto.app.service.CookingTimerService
+import com.afrocuisto.app.ui.i18n.LocalAppLanguage
 import com.afrocuisto.app.ui.navigation.NavGraph
 import com.afrocuisto.app.ui.theme.AfrocuistoTheme
 
@@ -110,23 +112,25 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            AfrocuistoTheme(
-                darkTheme = useDarkTheme,
-                forceDarkSystemBars = forceDarkSystemBars
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+            CompositionLocalProvider(LocalAppLanguage provides userPrefs.language) {
+                AfrocuistoTheme(
+                    darkTheme = useDarkTheme,
+                    forceDarkSystemBars = forceDarkSystemBars
                 ) {
-                    NavGraph(
-                        userPreferencesRepository = userPreferencesRepository,
-                        externalRecipeId = deepLinkRecipeId,
-                        onExternalRecipeConsumed = { deepLinkRecipeId = null },
-                        externalOAuthUri = oauthCallbackUri,
-                        onExternalOAuthConsumed = { oauthCallbackUri = null },
-                        onForceDarkSystemBarsChange = { forceDarkSystemBars = it },
-                        onReadyForPermissions = { requestStartupPermissionsIfNeeded() }
-                    )
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        NavGraph(
+                            userPreferencesRepository = userPreferencesRepository,
+                            externalRecipeId = deepLinkRecipeId,
+                            onExternalRecipeConsumed = { deepLinkRecipeId = null },
+                            externalOAuthUri = oauthCallbackUri,
+                            onExternalOAuthConsumed = { oauthCallbackUri = null },
+                            onForceDarkSystemBarsChange = { forceDarkSystemBars = it },
+                            onReadyForPermissions = { requestStartupPermissionsIfNeeded() }
+                        )
+                    }
                 }
             }
         }

@@ -44,7 +44,7 @@ export function Dashboard() {
                     supabaseAdmin.from('home_sections').select('*', { count: 'exact', head: true }).eq('is_active', true),
                     supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }),
                     supabaseAdmin.from('dish_suggestions').select('*', { count: 'exact', head: true }),
-                    supabaseAdmin.from('bug_reports').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+                    supabaseAdmin.from('bug_reports').select('*', { count: 'exact', head: true }).in('status', ['Nouveau', 'En cours', 'open', 'in_progress']),
                     supabaseAdmin.from('app_releases').select('*', { count: 'exact', head: true }),
                     supabaseAdmin.from('recipes').select('id, name, created_at, updated_at').order('updated_at', { ascending: false }).limit(5),
                     supabaseAdmin.from('dish_suggestions').select('id, dish_name, created_at').order('created_at', { ascending: false }).limit(5),

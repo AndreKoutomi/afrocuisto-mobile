@@ -1,5 +1,12 @@
 package com.afrocuisto.app.ui.screens.recipe
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -127,8 +134,14 @@ import com.afrocuisto.app.data.repository.UserPreferencesState
 import com.afrocuisto.app.service.CookingTimerService
 import com.afrocuisto.app.ui.components.CookingTimerDockCard
 import com.afrocuisto.app.ui.components.HighResCongratulationsOverlay
+import com.afrocuisto.app.ui.components.RecipeImageOrSkeleton
 import com.afrocuisto.app.ui.components.rememberIsTablet
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
+import com.afrocuisto.app.ui.i18n.LocalAppLanguage
+import com.afrocuisto.app.ui.i18n.tr
+import com.afrocuisto.app.ui.i18n.trLang
+import com.afrocuisto.app.ui.i18n.translateCategory
+import com.afrocuisto.app.ui.i18n.translateDifficulty
 import com.afrocuisto.app.ui.theme.AccentEmerald
 import com.afrocuisto.app.ui.theme.AfroOrange
 import com.afrocuisto.app.ui.theme.DifficultyEasy
@@ -248,6 +261,7 @@ fun RecipeDetailScreen(
     val haptics = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     val isDark = isAfroDarkTheme()
+    val currentLang = LocalAppLanguage.current
     val palette = rememberRecipePalette(isDark)
     val prefsRepo = userPreferencesRepository ?: remember { UserPreferencesRepository(context.applicationContext) }
     val userPrefs by prefsRepo.preferencesFlow.collectAsState(initial = initialUserPrefs)
@@ -336,11 +350,32 @@ fun RecipeDetailScreen(
         mutableIntStateOf((defaultCookDuration.seconds / 60).coerceIn(1, 240))
     }
 
+    var showLiveUpdatePermissionDialog by remember { mutableStateOf(false) }
+    var promptedLiveUpdateThisSession by remember { mutableStateOf(false) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && timerState.isActive) {
+                CookingTimerService.refreshNotification(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
             CookingTimerService.refreshNotification(context)
+            if (Build.VERSION.SDK_INT >= 36 &&
+                !promptedLiveUpdateThisSession &&
+                !CookingTimerService.canPostPromotedNotifications(context)
+            ) {
+                promptedLiveUpdateThisSession = true
+                showLiveUpdatePermissionDialog = true
+            }
         }
     }
 
@@ -353,15 +388,67 @@ fun RecipeDetailScreen(
             seconds = seconds,
             recipeId = recipe.id
         )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val hasPerm = ContextCompat.checkSelfPermission(
+        val hasPostNotif = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
-            if (!hasPerm) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+        } else {
+            true
         }
+        if (!hasPostNotif && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (Build.VERSION.SDK_INT >= 36 &&
+            !promptedLiveUpdateThisSession &&
+            !CookingTimerService.canPostPromotedNotifications(context)
+        ) {
+            promptedLiveUpdateThisSession = true
+            showLiveUpdatePermissionDialog = true
+        }
+    }
+
+    if (showLiveUpdatePermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showLiveUpdatePermissionDialog = false },
+            title = {
+                Text(
+                    text = tr(
+                        "Chrono en direct sur l'écran de verrouillage",
+                        "Live timer on lock screen",
+                        "Temporizador en vivo en pantalla de bloqueo"
+                    ),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = tr(
+                        "Activez « Mises à jour en direct » dans les paramètres de l'application pour afficher le compte à rebours en temps réel sur l'écran de verrouillage et dans la barre d'état.",
+                        "Enable \"Live updates\" in app settings to show the real-time countdown on your lock screen and status bar.",
+                        "Activa \"Actualizaciones en vivo\" en los ajustes de la app para mostrar la cuenta regresiva en tiempo real en la pantalla de bloqueo."
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLiveUpdatePermissionDialog = false
+                        runCatching {
+                            context.startActivity(
+                                CookingTimerService.buildPromotedNotificationSettingsIntent(context)
+                            )
+                        }
+                    }
+                ) {
+                    Text(tr("Activer", "Enable", "Activar"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLiveUpdatePermissionDialog = false }) {
+                    Text(tr("Plus tard", "Later", "Más tarde"))
+                }
+            }
+        )
     }
 
     val isTimerActive = timerState.isActive
@@ -445,9 +532,10 @@ fun RecipeDetailScreen(
 
     val heroMediaSection: @Composable (Modifier, Boolean) -> Unit = { heroModifier, parallax ->
         Box(modifier = heroModifier) {
-            AsyncImage(
+            RecipeImageOrSkeleton(
                 model = recipe.image,
                 contentDescription = recipe.name,
+                iconSize = 44.dp,
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
@@ -520,7 +608,7 @@ fun RecipeDetailScreen(
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            text = "  ·  ${recipe.category}",
+                            text = "  ·  ${translateCategory(recipe.category, currentLang)}",
                             color = palette.muted,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
@@ -546,7 +634,7 @@ fun RecipeDetailScreen(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = recipe.difficulty,
+                            text = translateDifficulty(recipe.difficulty, currentLang),
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
@@ -583,7 +671,7 @@ fun RecipeDetailScreen(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = "${recipe.region.ifBlank { "Cuisine africaine" }}  ·  Préparation ${recipe.prepTime}  ·  Cuisson ${recipe.cookTime}",
+            text = "${recipe.region.ifBlank { tr("Cuisine africaine", "African cuisine", "Cocina africana") }}  ·  ${tr("Préparation", "Prep", "Prep.")} ${recipe.prepTime}  ·  ${tr("Cuisson", "Cook", "Cocción")} ${recipe.cookTime}",
             color = palette.muted,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
@@ -617,7 +705,11 @@ fun RecipeDetailScreen(
                 if (!isTablet && recipe.description.length > 95) {
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = if (isDescriptionExpanded) "Voir moins" else "Lire l'histoire du plat",
+                        text = if (isDescriptionExpanded) {
+                            tr("Voir moins", "See less", "Ver menos")
+                        } else {
+                            tr("Lire l'histoire du plat", "Read the dish story", "Leer la historia del plato")
+                        },
                         color = AfroOrange,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -645,7 +737,7 @@ fun RecipeDetailScreen(
                         RecipeFact(
                             icon = Icons.Default.Timer,
                             value = recipe.cookTime.ifBlank { recipe.prepTime },
-                            label = "Cuisson",
+                            label = tr("Cuisson", "Cook time", "Cocción"),
                             palette = palette
                         )
 
@@ -707,7 +799,7 @@ fun RecipeDetailScreen(
                                 )
                             }
                             Spacer(Modifier.height(5.dp))
-                            Text("Portions", color = palette.muted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            Text(tr("Portions", "Servings", "Porciones"), color = palette.muted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                         }
 
                         FactDivider(palette.warmBorder)
@@ -715,7 +807,7 @@ fun RecipeDetailScreen(
                         RecipeFact(
                             icon = Icons.Default.LocalFireDepartment,
                             value = "380 kcal",
-                            label = "Par portion",
+                            label = tr("Par portion", "Per serving", "Por porción"),
                             palette = palette
                         )
                     }
@@ -765,7 +857,7 @@ fun RecipeDetailScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "Ingrédients",
+                                text = tr("Ingrédients", "Ingredients", "Ingredientes"),
                                 color = palette.ink,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.ExtraBold
@@ -776,7 +868,7 @@ fun RecipeDetailScreen(
                                 color = if (checkedCount > 0) AfroOrange.copy(alpha = 0.14f) else palette.elevatedCard
                             ) {
                                 Text(
-                                    text = if (checkedCount > 0) "$checkedCount/${recipe.ingredients.size} cochés" else "${recipe.ingredients.size}",
+                                    text = if (checkedCount > 0) "$checkedCount/${recipe.ingredients.size} ${tr("cochés", "checked", "marcados")}" else "${recipe.ingredients.size}",
                                     color = if (checkedCount > 0) AfroOrange else palette.muted,
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
@@ -786,7 +878,7 @@ fun RecipeDetailScreen(
                         }
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = "Cochez les ingrédients à ajouter à votre panier",
+                            text = tr("Cochez les ingrédients à ajouter à votre panier", "Check ingredients to add to your basket", "Marca los ingredientes para añadirlos a tu carrito"),
                             color = palette.muted,
                             fontSize = 12.sp
                         )
@@ -1946,7 +2038,7 @@ fun RecipeDetailScreen(
 
                                         Spacer(Modifier.height(2.dp))
                                         Text(
-                                            text = "Minuteur cuisson",
+                                            text = tr("Minuteur cuisson", "Cooking timer", "Temporizador"),
                                             color = palette.muted,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Medium
@@ -1957,7 +2049,7 @@ fun RecipeDetailScreen(
                                 Button(
                                     onClick = {
                                         startRecipeTimer(
-                                            stepTitle = "Cuisson · $customTimerMinutes min",
+                                            stepTitle = "${trLang(currentLang, "Cuisson", "Cooking", "Cocción")} · $customTimerMinutes min",
                                             seconds = customTimerMinutes * 60
                                         )
                                     },
@@ -1977,7 +2069,7 @@ fun RecipeDetailScreen(
                                     )
                                     Spacer(Modifier.width(5.dp))
                                     Text(
-                                        text = "Démarrer",
+                                        text = tr("Démarrer", "Start", "Iniciar"),
                                         color = Color.White,
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 13.5.sp

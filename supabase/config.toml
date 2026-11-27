@@ -1,0 +1,43 @@
+# Configuration Supabase — AfroCuisto
+project_id = "ewoiqbhqtcdatpzhdaef"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "com.afrocuisto.app://auth-callback"
+additional_redirect_urls = ["https://afrocuisto.app", "com.afrocuisto.app://auth-callback"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enabled = true
+double_confirm_changes = true
+enable_confirmations = true
+
+[auth.email.smtp]
+enabled = true
+host = "smtp.gmail.com"
+port = 465
+user = "afrocuisto@gmail.com"
+pass = "env(SUPABASE_AUTH_SMTP_PASS)"
+admin_email = "afrocuisto@gmail.com"
+sender_name = "AfroCuisto"
+
+[auth.email.template.recovery]
+subject = "AfroCuisto — Code de réinitialisation de votre mot de passe"
+content_path = "./supabase/templates/recovery.html"

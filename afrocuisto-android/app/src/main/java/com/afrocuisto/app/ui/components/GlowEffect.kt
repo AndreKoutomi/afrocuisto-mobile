@@ -194,6 +194,7 @@ fun AppleAiGlowCard(
     cornerRadius: Dp = 22.dp,
     containerColor: Color = Color.White,
     isDark: Boolean = false,
+    showInternalAurora: Boolean = true,
     content: @Composable BoxScope.() -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "appleAiGlow")
@@ -299,40 +300,42 @@ fun AppleAiGlowCard(
             val h = size.height
             val radiusPx = cornerRadius.toPx()
 
-            // Animated flowing aurora light plumes along bottom & edge
-            AppleAiPlumes.forEach { plume ->
-                val cx = w * (plume.baseX + plume.ampX * cos(phase * plume.freqX + plume.phaseOffset))
-                val cy = h * (plume.baseY + plume.ampY * sin(phase * plume.freqY + plume.phaseOffset))
-                val r = w * plume.radiusFactor * (0.94f + 0.08f * sin(phase + plume.phaseOffset))
-                val peakAlpha = (basePlumeAlpha * plume.alphaMultiplier * (0.86f + 0.14f * pulse))
-                    .coerceIn(0f, 0.55f)
+            if (showInternalAurora) {
+                // Animated flowing aurora light plumes along bottom & edge
+                AppleAiPlumes.forEach { plume ->
+                    val cx = w * (plume.baseX + plume.ampX * cos(phase * plume.freqX + plume.phaseOffset))
+                    val cy = h * (plume.baseY + plume.ampY * sin(phase * plume.freqY + plume.phaseOffset))
+                    val r = w * plume.radiusFactor * (0.94f + 0.08f * sin(phase + plume.phaseOffset))
+                    val peakAlpha = (basePlumeAlpha * plume.alphaMultiplier * (0.86f + 0.14f * pulse))
+                        .coerceIn(0f, 0.55f)
 
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            plume.color.copy(alpha = peakAlpha),
-                            plume.color.copy(alpha = peakAlpha * 0.42f),
-                            Color.Transparent
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                plume.color.copy(alpha = peakAlpha),
+                                plume.color.copy(alpha = peakAlpha * 0.42f),
+                                Color.Transparent
+                            ),
+                            center = Offset(cx, cy),
+                            radius = r
                         ),
-                        center = Offset(cx, cy),
-                        radius = r
-                    ),
-                    radius = r,
-                    center = Offset(cx, cy)
-                )
-            }
+                        radius = r,
+                        center = Offset(cx, cy)
+                    )
+                }
 
-            // Soft luminous bottom-edge sheen matching the glowing base in Apple AI cards
-            drawRect(
-                brush = Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0.0f to Color.Transparent,
-                        0.68f to Color.Transparent,
-                        0.90f to Color(0xFFFF2E93).copy(alpha = if (isDark) 0.14f else 0.07f),
-                        1.0f to Color(0xFF6366F1).copy(alpha = if (isDark) 0.22f else 0.11f)
+                // Soft luminous bottom-edge sheen matching the glowing base in Apple AI cards
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color.Transparent,
+                            0.68f to Color.Transparent,
+                            0.90f to Color(0xFFFF2E93).copy(alpha = if (isDark) 0.14f else 0.07f),
+                            1.0f to Color(0xFF6366F1).copy(alpha = if (isDark) 0.22f else 0.11f)
+                        )
                     )
                 )
-            )
+            }
 
             // Crisp animated rotating Apple AI gradient rim border
             shaderMatrix.reset()

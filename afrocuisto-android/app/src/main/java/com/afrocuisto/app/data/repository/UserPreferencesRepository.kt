@@ -30,6 +30,17 @@ enum class AppThemeMode(val id: String, val label: String) {
     }
 }
 
+enum class AppLanguage(val id: String, val label: String) {
+    FR("fr", "Français"),
+    EN("en", "English"),
+    ES("es", "Español");
+
+    companion object {
+        fun fromId(id: String?): AppLanguage =
+            entries.firstOrNull { it.id == id } ?: FR
+    }
+}
+
 enum class SpiceTolerance(val id: String, val label: String, val description: String) {
     MILD("mild", "Doux", "Aromates doux sans piment fort"),
     FRAGRANT("fragrant", "Parfumé", "Épices torréfiées & chaleur légère"),
@@ -79,6 +90,7 @@ data class UserPreferencesState(
     val dietaryTags: Set<String> = emptySet(),
     val cookedRecipeIds: Set<String> = emptySet(),
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    val language: AppLanguage = AppLanguage.FR,
     val carouselAutoScroll: Boolean = true,
     val timerVibrationEnabled: Boolean = true
 )
@@ -132,6 +144,7 @@ class UserPreferencesRepository(private val context: Context) {
         val DIETARY_TAGS = stringSetPreferencesKey("dietary_tags")
         val COOKED_RECIPE_IDS = stringSetPreferencesKey("cooked_recipe_ids")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val APP_LANGUAGE = stringPreferencesKey("app_language")
         val CAROUSEL_AUTO_SCROLL = booleanPreferencesKey("carousel_auto_scroll")
         val TIMER_VIBRATION = booleanPreferencesKey("timer_vibration_enabled")
     }
@@ -153,6 +166,7 @@ class UserPreferencesRepository(private val context: Context) {
             dietaryTags = prefs[Keys.DIETARY_TAGS] ?: emptySet(),
             cookedRecipeIds = prefs[Keys.COOKED_RECIPE_IDS] ?: emptySet(),
             themeMode = AppThemeMode.fromId(prefs[Keys.THEME_MODE]),
+            language = AppLanguage.fromId(prefs[Keys.APP_LANGUAGE]),
             carouselAutoScroll = prefs[Keys.CAROUSEL_AUTO_SCROLL] ?: true,
             timerVibrationEnabled = prefs[Keys.TIMER_VIBRATION] ?: true
         )
@@ -221,6 +235,10 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setThemeMode(mode: AppThemeMode) {
         context.afroUserPrefsDataStore.edit { it[Keys.THEME_MODE] = mode.id }
+    }
+
+    suspend fun setLanguage(language: AppLanguage) {
+        context.afroUserPrefsDataStore.edit { it[Keys.APP_LANGUAGE] = language.id }
     }
 
     suspend fun setCarouselAutoScroll(enabled: Boolean) {

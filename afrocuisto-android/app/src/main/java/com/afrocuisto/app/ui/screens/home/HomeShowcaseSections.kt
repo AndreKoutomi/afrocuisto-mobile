@@ -78,6 +78,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import com.afrocuisto.app.ui.components.RecipeImageOrSkeleton
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -933,10 +934,11 @@ fun HomeTerroirAtlasSection(
                                     .clickable { onNavigateToRecipeDetail(recipe.id) },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                AsyncImage(
+                                RecipeImageOrSkeleton(
                                     model = recipe.image,
                                     contentDescription = recipe.name,
                                     contentScale = ContentScale.Crop,
+                                    iconSize = 20.dp,
                                     modifier = Modifier
                                         .size(54.dp)
                                         .clip(RoundedCornerShape(16.dp))
@@ -1067,10 +1069,11 @@ fun HomeExpressRecipesSection(
                                 .size(86.dp)
                                 .clip(RoundedCornerShape(20.dp))
                         ) {
-                            AsyncImage(
+                            RecipeImageOrSkeleton(
                                 model = recipe.image,
                                 contentDescription = recipe.name,
                                 contentScale = ContentScale.Crop,
+                                iconSize = 24.dp,
                                 modifier = Modifier.fillMaxSize()
                             )
                             ProductLikeButton(

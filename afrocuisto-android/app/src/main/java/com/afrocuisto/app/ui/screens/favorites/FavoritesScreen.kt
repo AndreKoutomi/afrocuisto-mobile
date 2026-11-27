@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import com.afrocuisto.app.ui.components.EditorialPageHeader
 import com.afrocuisto.app.ui.components.EditorialSearchBar
 import com.afrocuisto.app.ui.components.afroStaggeredEntrance
+import com.afrocuisto.app.ui.i18n.tr
 import com.afrocuisto.app.ui.screens.home.SunRecipeCard
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -83,11 +84,11 @@ fun FavoritesScreen(
             .fillMaxSize()
             .background(canvasBg)
     ) {
-        EditorialPageHeader(title = "Mes favoris") {
+        EditorialPageHeader(title = tr("Mes favoris", "My Favorites", "Mis favoritos")) {
             EditorialSearchBar(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = "Rechercher un favori..."
+                placeholder = tr("Rechercher un favori...", "Search a favorite...", "Buscar un favorito...")
             )
         }
 
@@ -115,9 +116,9 @@ fun FavoritesScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = if (searchQuery.isBlank()) {
-                            "Aucun favori enregistré"
+                            tr("Aucun favori enregistré", "No favorites saved", "No hay favoritos guardados")
                         } else {
-                            "Aucun favori trouvé"
+                            tr("Aucun favori trouvé", "No favorites found", "No se encontraron favoritos")
                         },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
@@ -125,7 +126,7 @@ fun FavoritesScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Enregistrez vos plats préférés pour les retrouver ici",
+                        text = tr("Enregistrez vos plats préférés pour les retrouver ici", "Save your favorite dishes to find them here", "Guarda tus platos favoritos para encontrarlos aquí"),
                         fontSize = 12.5.sp,
                         color = placeholderColor
                     )

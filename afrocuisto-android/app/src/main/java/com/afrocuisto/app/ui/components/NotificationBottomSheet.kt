@@ -285,7 +285,6 @@ private fun SwipeableNotificationCard(
     val density = LocalDensity.current
     val offsetX = remember(notification.id) { Animatable(0f) }
     var rawOffset by remember(notification.id) { mutableFloatStateOf(0f) }
-    var lastDelta by remember(notification.id) { mutableFloatStateOf(0f) }
     var removed by remember(notification.id) { mutableStateOf(false) }
 
     val revealWidthPx = with(density) { 142.dp.toPx() }
@@ -301,44 +300,32 @@ private fun SwipeableNotificationCard(
                 .clip(RoundedCornerShape(20.dp))
         ) {
             val cardWidthPx = with(density) { maxWidth.toPx() }
-            val fullDismissPx = cardWidthPx * 0.40f
+            val halfCardPx = cardWidthPx * 0.5f
+            val clampedRevealPx = minOf(revealWidthPx, halfCardPx)
             val swipingRight = offsetX.value > 0f
             val absOffset = abs(offsetX.value)
-            val revealProgress = (absOffset / revealWidthPx).coerceIn(0f, 1f)
+            val revealProgress = (absOffset / clampedRevealPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
 
             val handleSwipeRelease: () -> Unit = {
                 val current = rawOffset
                 val absX = abs(current)
                 val dir = if (current >= 0f) 1f else -1f
-                val isFastFlick = abs(lastDelta) >= 28f && absX >= snapTriggerPx && (lastDelta * dir > 0f)
                 scope.launch {
-                    when {
-                        absX >= fullDismissPx || isFastFlick -> {
-                            haptics.actionSuccess()
-                            val exitTarget = dir * cardWidthPx * 1.15f
-                            rawOffset = exitTarget
-                            offsetX.animateTo(exitTarget, tween(170))
-                            removed = true
-                            onDelete()
-                        }
-                        absX >= snapTriggerPx -> {
-                            haptics.selectionTick()
-                            val snapTarget = dir * revealWidthPx
-                            rawOffset = snapTarget
-                            offsetX.animateTo(
-                                snapTarget,
-                                spring(dampingRatio = 0.78f, stiffness = 360f)
-                            )
-                        }
-                        else -> {
-                            rawOffset = 0f
-                            offsetX.animateTo(
-                                0f,
-                                spring(dampingRatio = 0.82f, stiffness = 380f)
-                            )
-                        }
+                    if (absX >= snapTriggerPx) {
+                        haptics.selectionTick()
+                        val snapTarget = dir * clampedRevealPx
+                        rawOffset = snapTarget
+                        offsetX.animateTo(
+                            snapTarget,
+                            spring(dampingRatio = 0.78f, stiffness = 360f)
+                        )
+                    } else {
+                        rawOffset = 0f
+                        offsetX.animateTo(
+                            0f,
+                            spring(dampingRatio = 0.82f, stiffness = 380f)
+                        )
                     }
-                    lastDelta = 0f
                 }
             }
 
@@ -350,8 +337,7 @@ private fun SwipeableNotificationCard(
                         detectHorizontalDragGestures(
                             onHorizontalDrag = { change, dragAmount ->
                                 change.consume()
-                                lastDelta = dragAmount
-                                rawOffset = (rawOffset + dragAmount).coerceIn(-cardWidthPx, cardWidthPx)
+                                rawOffset = (rawOffset + dragAmount).coerceIn(-halfCardPx, halfCardPx)
                                 val target = rawOffset
                                 scope.launch { offsetX.snapTo(target) }
                             },

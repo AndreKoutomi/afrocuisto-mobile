@@ -1,5 +1,13 @@
 package com.afrocuisto.app.ui.components
 
+import android.os.Build
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -145,6 +153,26 @@ fun CookingTimerDockCard(
 
     val accentColor = if (timerState.isCompleted) AccentEmerald else AfroOrange
 
+    var canPostPromoted by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < 36 || CookingTimerService.canPostPromotedNotifications(context)
+        )
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                canPostPromoted = Build.VERSION.SDK_INT < 36 ||
+                    CookingTimerService.canPostPromotedNotifications(context)
+                if (canPostPromoted && timerState.isActive) {
+                    CookingTimerService.refreshNotification(context)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val subtitleText = buildString {
         val cleanRecipe = timerState.recipeName.trim()
         val cleanStep = timerState.stepTitle.trim()
@@ -166,8 +194,9 @@ fun CookingTimerDockCard(
         border = BorderStroke(1.dp, borderColor),
         shadowElevation = 10.dp
     ) {
-        Row(
-            modifier = Modifier
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
                 .fillMaxWidth()
                 .then(
                     if (onCardClick != null) {
@@ -362,6 +391,31 @@ fun CookingTimerDockCard(
                     }
                 }
             }
+        }
+        if (Build.VERSION.SDK_INT >= 36 && !canPostPromoted && !timerState.isCompleted) {
+            Surface(
+                color = AfroOrange.copy(alpha = if (isDark) 0.16f else 0.10f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        runCatching {
+                            context.startActivity(
+                                CookingTimerService.buildPromotedNotificationSettingsIntent(context)
+                            )
+                        }
+                    }
+            ) {
+                Text(
+                    text = "Activer « Mises à jour en direct » pour l'écran de verrouillage →",
+                    color = AfroOrange,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                )
+            }
+        }
         }
     }
 }

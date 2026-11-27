@@ -72,6 +72,14 @@ export const APP_SECTION_TYPES: AppSectionTypeSpec[] = [
         color: '#ec4899',
         bg: 'rgba(236, 72, 153, 0.12)',
     },
+    {
+        value: 'categories',
+        label: 'Catégories (Page Recettes)',
+        description: 'Ajoute des catégories personnalisées affichées sur la page Recettes de l’app',
+        icon: LayoutGrid,
+        color: '#fb5607',
+        bg: 'rgba(251, 86, 7, 0.12)',
+    },
 ];
 
 export function getAppSectionTypeMeta(type: string): AppSectionTypeSpec {

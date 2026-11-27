@@ -82,6 +82,17 @@ sealed interface AuthResult {
     data class Error(val message: String) : AuthResult
 }
 
+sealed interface OtpVerifyResult {
+    data class Verified(val accessToken: String) : OtpVerifyResult
+    data class Error(val message: String) : OtpVerifyResult
+}
+
+sealed interface PasswordResetRequestResult {
+    data class OtpSent(val message: String) : PasswordResetRequestResult
+    data object AccountNotFound : PasswordResetRequestResult
+    data class Error(val message: String) : PasswordResetRequestResult
+}
+
 enum class PasswordStrength(val level: Int, val label: String) {
     EMPTY(0, ""),
     WEAK(1, "Faible"),
@@ -114,6 +125,28 @@ object AuthValidation {
     )
 
     fun normalizeEmail(email: String): String = email.trim().lowercase(Locale.ROOT)
+
+    fun sanitizeEmailInput(raw: String): String =
+        raw.filterNot { it.isWhitespace() || it.isISOControl() }.take(254)
+
+    fun sanitizePasswordInput(raw: String): String =
+        raw.filterNot { it.isWhitespace() || it.isISOControl() }.take(128)
+
+    fun validateLoginPassword(password: String): String? {
+        if (password.isBlank()) {
+            return "Veuillez saisir votre mot de passe."
+        }
+        if (password.any { it.isWhitespace() }) {
+            return "Le mot de passe ne doit pas contenir d'espaces."
+        }
+        if (password.length < 6) {
+            return "Format attendu : 6 caractères minimum."
+        }
+        if (password.length > 128) {
+            return "Le mot de passe ne doit pas dépasser 128 caractères."
+        }
+        return null
+    }
 
     fun sanitizeDisplayName(name: String): String =
         name.replace(controlOrHtmlRegex, "").trim().take(60)
@@ -497,21 +530,52 @@ class AuthRepository(
         }
     }
 
-    suspend fun sendPasswordReset(email: String): AuthResult = withContext(Dispatchers.IO) {
+    suspend fun sendPasswordReset(email: String): PasswordResetRequestResult = withContext(Dispatchers.IO) {
         val cleanEmail = AuthValidation.normalizeEmail(email)
         if (!AuthValidation.isValidEmail(cleanEmail)) {
-            return@withContext AuthResult.Error("Veuillez saisir une adresse e-mail valide.")
+            return@withContext PasswordResetRequestResult.Error("Veuillez saisir une adresse e-mail valide.")
         }
         val baseUrl = secureBaseUrl()
-            ?: return@withContext AuthResult.Error("Service momentanément indisponible.")
+            ?: return@withContext PasswordResetRequestResult.Error("Service momentanément indisponible.")
 
         val prefs = appContext.afroAuthDataStore.data.catch { emit(emptyPreferences()) }.first()
         val lastReset = prefs[Keys.LAST_RESET_MS] ?: 0L
         val elapsedSec = (System.currentTimeMillis() - lastReset) / 1000L
         if (elapsedSec in 0..59) {
-            return@withContext AuthResult.Error(
-                "Veuillez patienter ${60 - elapsedSec}s avant de demander un nouveau lien."
+            return@withContext PasswordResetRequestResult.Error(
+                "Veuillez patienter ${60 - elapsedSec}s avant de demander un nouveau code."
             )
+        }
+
+        // Vérifie d'abord si un compte existe pour cet e-mail
+        val checkPayload = buildJsonObject {
+            put("p_email", cleanEmail)
+        }.toString()
+        val checkReq = Request.Builder()
+            .url("$baseUrl/rest/v1/rpc/check_account_exists")
+            .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Cache-Control", "no-store")
+            .post(checkPayload.toRequestBody(jsonMediaType))
+            .build()
+
+        try {
+            val accountExists = httpClient.newCall(checkReq).execute().use { resp ->
+                if (!resp.isSuccessful) {
+                    return@withContext PasswordResetRequestResult.Error(
+                        "Impossible de vérifier l'adresse e-mail pour le moment."
+                    )
+                }
+                resp.body?.string()?.trim()?.equals("true", ignoreCase = true) == true
+            }
+            if (!accountExists) {
+                return@withContext PasswordResetRequestResult.AccountNotFound
+            }
+        } catch (_: IOException) {
+            return@withContext PasswordResetRequestResult.Error("Hors ligne")
+        } catch (_: Exception) {
+            return@withContext PasswordResetRequestResult.Error("Impossible de vérifier l'adresse e-mail pour le moment.")
         }
 
         val payload = buildJsonObject {
@@ -529,23 +593,144 @@ class AuthRepository(
         try {
             httpClient.newCall(request).execute().use { response ->
                 if (response.code == 429) {
-                    return@withContext AuthResult.Error(
+                    return@withContext PasswordResetRequestResult.Error(
                         "Trop de demandes de réinitialisation. Réessayez dans quelques minutes."
+                    )
+                }
+                if (response.code in 500..599) {
+                    return@withContext PasswordResetRequestResult.Error(
+                        "Le service est momentanément indisponible. Réessayez dans un instant."
                     )
                 }
                 appContext.afroAuthDataStore.edit { p ->
                     p[Keys.LAST_RESET_MS] = System.currentTimeMillis()
                 }
-                // Anti-enumeration response: identical message whether account exists or not
+                PasswordResetRequestResult.OtpSent(
+                    message = "Un code OTP à 6 chiffres vient d'être envoyé à $cleanEmail."
+                )
+            }
+        } catch (_: IOException) {
+            PasswordResetRequestResult.Error("Hors ligne")
+        } catch (_: Exception) {
+            PasswordResetRequestResult.Error("Impossible d'envoyer le code OTP pour le moment.")
+        }
+    }
+
+    suspend fun verifyPasswordResetOtp(email: String, otpCode: String): OtpVerifyResult = withContext(Dispatchers.IO) {
+        val cleanEmail = AuthValidation.normalizeEmail(email)
+        val cleanToken = otpCode.filter { it.isDigit() }
+        if (!AuthValidation.isValidEmail(cleanEmail)) {
+            return@withContext OtpVerifyResult.Error("Adresse e-mail invalide.")
+        }
+        if (cleanToken.length !in 6..8) {
+            return@withContext OtpVerifyResult.Error("Saisissez le code à 6 chiffres reçu par e-mail.")
+        }
+        val baseUrl = secureBaseUrl()
+            ?: return@withContext OtpVerifyResult.Error("Service momentanément indisponible.")
+
+        suspend fun attemptVerify(verifyType: String): Pair<Int, String?> {
+            val payload = buildJsonObject {
+                put("type", verifyType)
+                put("email", cleanEmail)
+                put("token", cleanToken)
+            }.toString()
+
+            val request = Request.Builder()
+                .url("$baseUrl/auth/v1/verify")
+                .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Cache-Control", "no-store")
+                .addHeader("Pragma", "no-cache")
+                .post(payload.toRequestBody(jsonMediaType))
+                .build()
+
+            return httpClient.newCall(request).execute().use { resp ->
+                resp.code to resp.body?.string()
+            }
+        }
+
+        try {
+            var (code, bodyStr) = attemptVerify("recovery")
+            if (code in listOf(400, 401, 403, 422)) {
+                val (fallbackCode, fallbackBody) = attemptVerify("email")
+                if (fallbackCode in 200..299) {
+                    code = fallbackCode
+                    bodyStr = fallbackBody
+                }
+            }
+
+            if (code !in 200..299 || bodyStr.isNullOrBlank()) {
+                val lower = bodyStr.orEmpty().lowercase(Locale.ROOT)
+                val msg = when {
+                    "expired" in lower -> "Ce code OTP a expiré. Demandez un nouveau code."
+                    "rate limit" in lower || code == 429 -> "Trop de tentatives. Patientez une minute."
+                    else -> "Code OTP invalide ou expiré. Vérifiez votre e-mail."
+                }
+                return@withContext OtpVerifyResult.Error(msg)
+            }
+
+            val root = runCatching { json.parseToJsonElement(bodyStr).jsonObject }.getOrNull()
+            val accessToken = root?.get("access_token")?.jsonPrimitive?.contentOrNull.orEmpty()
+            if (accessToken.isBlank()) {
+                return@withContext OtpVerifyResult.Error("Jeton de vérification manquant. Demandez un nouveau code.")
+            }
+            OtpVerifyResult.Verified(accessToken)
+        } catch (_: IOException) {
+            OtpVerifyResult.Error("Hors ligne")
+        } catch (_: Exception) {
+            OtpVerifyResult.Error("Impossible de vérifier le code OTP pour le moment.")
+        }
+    }
+
+    suspend fun completePasswordResetWithToken(
+        accessToken: String,
+        newPassword: String,
+        email: String
+    ): AuthResult = withContext(Dispatchers.IO) {
+        if (accessToken.isBlank()) {
+            return@withContext AuthResult.Error("Session de réinitialisation expirée. Recommencez.")
+        }
+        val pwError = AuthValidation.validateRegistrationPassword(
+            password = newPassword,
+            email = email,
+            displayName = ""
+        )
+        if (pwError != null) {
+            return@withContext AuthResult.Error(pwError)
+        }
+        val baseUrl = secureBaseUrl()
+            ?: return@withContext AuthResult.Error("Service momentanément indisponible.")
+
+        val payload = buildJsonObject {
+            put("password", newPassword)
+        }.toString()
+
+        val request = Request.Builder()
+            .url("$baseUrl/auth/v1/user")
+            .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            .addHeader("Authorization", "Bearer $accessToken")
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Cache-Control", "no-store")
+            .put(payload.toRequestBody(jsonMediaType))
+            .build()
+
+        try {
+            httpClient.newCall(request).execute().use { response ->
+                val bodyStr = response.body?.string()
+                if (!response.isSuccessful) {
+                    return@withContext AuthResult.Error(
+                        AuthValidation.mapSupabaseError(bodyStr, response.code)
+                    )
+                }
                 AuthResult.Success(
                     session = sessionFlow.first(),
-                    message = "Si un compte est associé à $cleanEmail, un lien sécurisé de réinitialisation vient d'être envoyé."
+                    message = "Mot de passe mis à jour ! Vous pouvez vous connecter."
                 )
             }
         } catch (_: IOException) {
             AuthResult.Error("Hors ligne")
         } catch (_: Exception) {
-            AuthResult.Error("Impossible d'envoyer la demande pour le moment.")
+            AuthResult.Error("Impossible de mettre à jour le mot de passe pour le moment.")
         }
     }
 

@@ -116,9 +116,11 @@ import com.afrocuisto.app.data.model.Recipe
 import com.afrocuisto.app.data.ota.OtaStatus
 import com.afrocuisto.app.data.ota.OtaUiState
 import com.afrocuisto.app.data.ota.OtaUpdateManager
+import com.afrocuisto.app.data.repository.AppLanguage
 import com.afrocuisto.app.data.repository.AppThemeMode
 import com.afrocuisto.app.data.repository.AuthRepository
 import com.afrocuisto.app.data.repository.AuthSessionState
+import com.afrocuisto.app.data.repository.BugReportRepository
 import com.afrocuisto.app.data.repository.CulinaryLevel
 import com.afrocuisto.app.data.repository.MeasurementMode
 import com.afrocuisto.app.data.repository.RecipeRepository
@@ -127,8 +129,13 @@ import com.afrocuisto.app.data.repository.SpiceTolerance
 import com.afrocuisto.app.data.repository.UserPreferencesRepository
 import com.afrocuisto.app.data.repository.UserPreferencesState
 import com.afrocuisto.app.service.CookingTimerService
+import com.afrocuisto.app.ui.components.RecipeImageOrSkeleton
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
+import com.afrocuisto.app.ui.components.rememberKeyboardDismisser
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
+import com.afrocuisto.app.ui.i18n.LocalAppLanguage
+import com.afrocuisto.app.ui.i18n.tr
+import com.afrocuisto.app.ui.i18n.translateThemeLabel
 import com.afrocuisto.app.ui.screens.aichef.GeminiVoiceCatalog
 import com.afrocuisto.app.ui.screens.aichef.GeminiVoicePreferences
 import com.afrocuisto.app.ui.theme.AccentEmerald
@@ -270,6 +277,7 @@ fun ProfileScreen(
     val authRepo = authRepository ?: remember { AuthRepository(context.applicationContext, prefsRepo) }
     val authSession by authRepo.sessionFlow.collectAsState(initial = AuthSessionState())
     val voicePrefs = remember { GeminiVoicePreferences(context.applicationContext) }
+    val bugReportRepo = remember { BugReportRepository(context.applicationContext) }
     val otaManager = remember { OtaUpdateManager(context.applicationContext) }
     val otaState by otaManager.state.collectAsState()
     var showOtaUpdateSheet by remember { mutableStateOf(false) }
@@ -348,10 +356,16 @@ fun ProfileScreen(
     }
 
     var showEditIdentitySheet by remember { mutableStateOf(false) }
+    var showAccountInfoSheet by remember { mutableStateOf(false) }
     var showCookedHistorySheet by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
     var selectedSettingsGroup by remember { mutableStateOf<String?>(null) }
+    val dismissKeyboard = rememberKeyboardDismisser()
+
+    LaunchedEffect(selectedSettingsGroup) {
+        dismissKeyboard()
+    }
 
     LaunchedEffect(Unit) {
         if (otaState.status == OtaStatus.IDLE) {
@@ -418,43 +432,12 @@ fun ProfileScreen(
                         )
                     }
                     Text(
-                        text = "Mon espace",
+                        text = tr("Mon espace", "My Space", "Mi espacio"),
                         fontSize = 19.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = palette.title,
                         modifier = Modifier.nexaTitleEmphasis()
                     )
-                }
-
-                Surface(
-                    shape = ExpressivePillShape,
-                    color = palette.subtleSurface,
-                    border = BorderStroke(1.dp, palette.border),
-                    modifier = Modifier
-                        .clip(ExpressivePillShape)
-                        .clickable {
-                            afroHaptics.navigationTap()
-                            showEditIdentitySheet = true
-                        }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_solar_pen_linear),
-                            contentDescription = null,
-                            tint = palette.title,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = "Modifier",
-                            color = palette.title,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
                 }
             }
 
@@ -509,223 +492,178 @@ fun ProfileScreen(
                 }
             }
 
-            // A. HERO CULINARY IDENTITY & MASTERY PROGRESSION CARD
+            // A. COMPACT USER PROFILE CARD (Click to view full account info)
+            val animatedMastery by animateFloatAsState(
+                targetValue = masteryRank.progress,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "masteryProgress"
+            )
+
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = palette.card),
-                border = BorderStroke(1.dp, palette.border),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .clickable {
+                        afroHaptics.navigationTap()
+                        showAccountInfoSheet = true
+                    },
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = AfroOrange),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(88.dp)
+                            .size(58.dp)
                             .clip(CircleShape)
-                            .clickable {
-                                afroHaptics.navigationTap()
-                                showEditIdentitySheet = true
-                            }
+                            .background(Color.White.copy(alpha = 0.18f), CircleShape)
+                            .border(1.5.dp, Color.White.copy(alpha = 0.55f), CircleShape)
+                            .padding(3.dp)
                     ) {
-                        Box(
+                        AsyncImage(
+                            model = userPrefs.avatarUrl,
+                            contentDescription = userPrefs.displayName,
+                            contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(palette.subtleSurface, CircleShape)
-                                .border(1.5.dp, palette.border, CircleShape)
-                                .padding(4.dp)
-                        ) {
-                            AsyncImage(
-                                model = userPrefs.avatarUrl,
-                                contentDescription = userPrefs.displayName,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = userPrefs.displayName,
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = palette.title
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Surface(
-                        shape = ExpressivePillShape,
-                        color = palette.subtleSurface,
-                        border = BorderStroke(1.dp, palette.border)
-                    ) {
-                        Text(
-                            text = "${userPrefs.roleTitle} · ${userPrefs.favoriteTerroir}",
-                            color = palette.title,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 13.dp, vertical = 5.dp)
+                                .clip(CircleShape)
                         )
                     }
 
-                    if (userPrefs.bio.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = userPrefs.bio,
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
-                            color = palette.muted,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = palette.border)
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Culinary Mastery Progress Bar
-                    val animatedMastery by animateFloatAsState(
-                        targetValue = masteryRank.progress,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessLow
-                        ),
-                        label = "masteryProgress"
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(AfroOrange)
-                            )
-                            Text(
-                                text = masteryRank.title,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = palette.title
-                            )
-                        }
                         Text(
-                            text = "${masteryRank.points} pts · Prochain : ${masteryRank.nextTitle}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = palette.muted,
+                            text = userPrefs.displayName,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                    }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(CircleShape)
-                            .background(palette.segmentedTrack)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(animatedMastery)
-                                .fillMaxHeight()
-                                .clip(CircleShape)
-                                .background(palette.title)
+                        Text(
+                            text = if (authSession.isAuthenticated && authSession.email.isNotBlank()) {
+                                "${authSession.email} · ${userPrefs.favoriteTerroir}"
+                            } else {
+                                "${userPrefs.roleTitle} · ${userPrefs.favoriteTerroir}"
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White.copy(alpha = 0.88f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    }
-                }
-            }
 
-            // B. LIVE INTERACTIVE DASHBOARD STATS (Clickable shortcuts)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                DashboardMetricCard(
-                    label = "Favoris",
-                    value = "${favoriteIds.size}",
-                    iconRes = R.drawable.ic_solar_heart_linear,
-                    palette = palette,
-                    onClick = {
-                        afroHaptics.navigationTap()
-                        onNavigateToFavorites()
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-                DashboardMetricCard(
-                    label = "Cuisinés",
-                    value = "${userPrefs.cookedRecipeIds.size}",
-                    iconRes = R.drawable.ic_solar_cat_fork_knife_outline,
-                    palette = palette,
-                    onClick = {
-                        afroHaptics.navigationTap()
-                        showCookedHistorySheet = true
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-                DashboardMetricCard(
-                    label = "Au marché",
-                    value = "$pendingMarketCount",
-                    iconRes = R.drawable.ic_solar_bag_linear,
-                    palette = palette,
-                    onClick = {
-                        afroHaptics.navigationTap()
-                        onNavigateToMarket()
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(4.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.26f))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(animatedMastery)
+                                        .fillMaxHeight()
+                                        .clip(CircleShape)
+                                        .background(Color.White)
+                                )
+                            }
+                            Text(
+                                text = "${masteryRank.title} · ${masteryRank.points} pts",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White.copy(alpha = 0.92f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_solar_alt_arrow_right_linear),
+                        contentDescription = tr("Voir les informations du compte", "View account information", "Ver información de la cuenta"),
+                        tint = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
 
             if (selectedSettingsGroup == null) {
                 ProfileSectionCard(
-                    title = "Paramètres",
-                    subtitle = "Vos réglages regroupés par thème",
+                    title = tr("Paramètres", "Settings", "Ajustes"),
+                    subtitle = tr("Vos réglages regroupés par thème", "Your settings grouped by topic", "Tus ajustes agrupados por tema"),
                     palette = palette
                 ) {
-                    ProfileSettingsGroupRow("Apparence & navigation", "Thème et carrousel d'accueil", R.drawable.ic_solar_moon_linear, palette) {
+                    ProfileSettingsGroupRow(
+                        tr("Personnalisation", "Personalization", "Personalización"),
+                        tr("Thème, langue et carrousel d'accueil", "Theme, language and home carousel", "Tema, idioma y carrusel de inicio"),
+                        R.drawable.ic_solar_moon_linear,
+                        palette
+                    ) {
                         afroHaptics.navigationTap()
                         selectedSettingsGroup = "appearance"
                     }
                     SectionDivider(palette)
-                    ProfileSettingsGroupRow("Préférences culinaires", "Portions, mode diaspora et écran actif", R.drawable.ic_solar_cat_fork_knife_outline, palette) {
+                    ProfileSettingsGroupRow(
+                        tr("Préférences culinaires", "Culinary preferences", "Preferencias culinarias"),
+                        tr("Portions, mode diaspora et écran actif", "Servings, diaspora mode and keep screen on", "Porciones, modo diáspora y pantalla activa"),
+                        R.drawable.ic_solar_cat_fork_knife_outline,
+                        palette
+                    ) {
                         afroHaptics.navigationTap()
                         selectedSettingsGroup = "culinary"
                     }
                     SectionDivider(palette)
-                    ProfileSettingsGroupRow("Chef IA & Frigo Magique", "Voix de l'assistant culinaire", R.drawable.ic_solar_microphone_linear, palette) {
+                    ProfileSettingsGroupRow(
+                        tr("Chef IA & Frigo Magique", "AI Chef & Magic Fridge", "Chef IA y Nevera Mágica"),
+                        tr("Voix de l'assistant culinaire", "Culinary assistant voice", "Voz del asistente culinario"),
+                        R.drawable.ic_solar_microphone_linear,
+                        palette
+                    ) {
                         afroHaptics.navigationTap()
                         selectedSettingsGroup = "assistant"
                     }
                     SectionDivider(palette)
-                    ProfileSettingsGroupRow("Minuteur & notifications", "Alertes, vibration et barre de statut", R.drawable.ic_solar_stopwatch_linear, palette) {
+                    ProfileSettingsGroupRow(
+                        tr("Minuteur & notifications", "Timer & notifications", "Temporizador y notificaciones"),
+                        tr("Alertes, vibration et barre de statut", "Alerts, vibration and status bar", "Alertas, vibración y barra de estado"),
+                        R.drawable.ic_solar_stopwatch_linear,
+                        palette
+                    ) {
                         afroHaptics.navigationTap()
                         selectedSettingsGroup = "timer"
                     }
                     SectionDivider(palette)
-                    ProfileSettingsGroupRow("Données & stockage", "Panier, photos et entretien local", R.drawable.ic_solar_broom_linear, palette) {
+                    ProfileSettingsGroupRow(
+                        tr("Données & stockage", "Data & storage", "Datos y almacenamiento"),
+                        tr("Panier, photos et entretien local", "Cart, photos and local maintenance", "Carrito, fotos y mantenimiento local"),
+                        R.drawable.ic_solar_broom_linear,
+                        palette
+                    ) {
                         afroHaptics.navigationTap()
                         selectedSettingsGroup = "storage"
                     }
                     SectionDivider(palette)
                     ProfileSettingsGroupRow(
-                        title = "Confidentialité & à propos",
-                        subtitle = "Données locales, permissions, mentions & version",
+                        title = tr("Confidentialité & à propos", "Privacy & about", "Privacidad y acerca de"),
+                        subtitle = tr("Données locales, permissions, mentions & version", "Local data, permissions, notices & version", "Datos locales, permisos, avisos y versión"),
                         iconRes = R.drawable.ic_solar_shield_check_linear,
                         palette = palette
                     ) {
@@ -733,17 +671,43 @@ fun ProfileScreen(
                         selectedSettingsGroup = "privacy"
                     }
                     SectionDivider(palette)
+                    ProfileSettingsGroupRow(
+                        title = tr("Signaler un bug", "Report a bug", "Reportar un error"),
+                        subtitle = tr("Envoyer un rapport détaillé à l'équipe AfroCuisto", "Send a detailed report to the AfroCuisto team", "Enviar un informe detallado al equipo AfroCuisto"),
+                        iconRes = R.drawable.ic_solar_danger_circle_linear,
+                        palette = palette
+                    ) {
+                        afroHaptics.navigationTap()
+                        selectedSettingsGroup = "bug_report"
+                    }
+                    SectionDivider(palette)
                     val hasOtaUpdate = otaState.status == OtaStatus.UPDATE_AVAILABLE ||
                         otaState.status == OtaStatus.READY_TO_INSTALL
                     val otaRowSubtitle = when (otaState.status) {
-                        OtaStatus.UPDATE_AVAILABLE -> "Version ${otaState.availableRelease?.versionName ?: ""} prête à installer"
-                        OtaStatus.DOWNLOADING -> "Téléchargement ${(otaState.progress * 100).toInt()}% • ${OtaUpdateManager.formatSpeed(otaState.speedBytesPerSec)}"
-                        OtaStatus.READY_TO_INSTALL -> "Prête à être installée"
-                        OtaStatus.UP_TO_DATE -> "AfroCuisto ${BuildConfig.VERSION_NAME} est à jour"
-                        else -> "Version ${BuildConfig.VERSION_NAME} • Rechercher des nouveautés"
+                        OtaStatus.UPDATE_AVAILABLE -> tr(
+                            "Version ${otaState.availableRelease?.versionName ?: ""} prête à installer",
+                            "Version ${otaState.availableRelease?.versionName ?: ""} ready to install",
+                            "Versión ${otaState.availableRelease?.versionName ?: ""} lista para instalar"
+                        )
+                        OtaStatus.DOWNLOADING -> tr(
+                            "Téléchargement ${(otaState.progress * 100).toInt()}% • ${OtaUpdateManager.formatSpeed(otaState.speedBytesPerSec)}",
+                            "Downloading ${(otaState.progress * 100).toInt()}% • ${OtaUpdateManager.formatSpeed(otaState.speedBytesPerSec)}",
+                            "Descargando ${(otaState.progress * 100).toInt()}% • ${OtaUpdateManager.formatSpeed(otaState.speedBytesPerSec)}"
+                        )
+                        OtaStatus.READY_TO_INSTALL -> tr("Prête à être installée", "Ready to install", "Lista para instalar")
+                        OtaStatus.UP_TO_DATE -> tr(
+                            "AfroCuisto ${BuildConfig.VERSION_NAME} est à jour",
+                            "AfroCuisto ${BuildConfig.VERSION_NAME} is up to date",
+                            "AfroCuisto ${BuildConfig.VERSION_NAME} está al día"
+                        )
+                        else -> tr(
+                            "Version ${BuildConfig.VERSION_NAME} • Rechercher des nouveautés",
+                            "Version ${BuildConfig.VERSION_NAME} • Check for updates",
+                            "Versión ${BuildConfig.VERSION_NAME} • Buscar novedades"
+                        )
                     }
                     ProfileSettingsGroupRow(
-                        title = "Mises à jour de l'application",
+                        title = tr("Mises à jour de l'application", "App updates", "Actualizaciones de la app"),
                         subtitle = otaRowSubtitle,
                         iconRes = R.drawable.ic_solar_cloud_download_linear,
                         palette = palette,
@@ -799,7 +763,7 @@ fun ProfileScreen(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = "Déconnexion",
+                            text = tr("Déconnexion", "Sign out", "Cerrar sesión"),
                             color = Color(0xFFEF4444),
                             fontSize = 14.5.sp,
                             fontWeight = FontWeight.ExtraBold
@@ -813,14 +777,15 @@ fun ProfileScreen(
     }
         } else {
             val subPageTitle = when (activeGroup) {
-                "appearance" -> "Apparence & navigation"
-                "culinary" -> "Préférences culinaires"
-                "assistant" -> "Chef IA & Frigo Magique"
-                "timer" -> "Minuteur & notifications"
-                "storage" -> "Données & stockage"
-                "privacy" -> "Confidentialité & à propos"
-                "updates" -> "Mises à jour de l'application"
-                else -> "Paramètres"
+                "appearance" -> tr("Personnalisation", "Personalization", "Personalización")
+                "culinary" -> tr("Préférences culinaires", "Culinary preferences", "Preferencias culinarias")
+                "assistant" -> tr("Chef IA & Frigo Magique", "AI Chef & Magic Fridge", "Chef IA y Nevera Mágica")
+                "timer" -> tr("Minuteur & notifications", "Timer & notifications", "Temporizador y notificaciones")
+                "storage" -> tr("Données & stockage", "Data & storage", "Datos y almacenamiento")
+                "privacy" -> tr("Confidentialité & à propos", "Privacy & about", "Privacidad y acerca de")
+                "bug_report" -> tr("Signaler un bug", "Report a bug", "Reportar un error")
+                "updates" -> tr("Mises à jour de l'application", "App updates", "Actualizaciones de la app")
+                else -> tr("Paramètres", "Settings", "Ajustes")
             }
             val subScrollState = rememberScrollState()
             val showSubDivider by remember { derivedStateOf { subScrollState.value > 6 } }
@@ -873,10 +838,11 @@ fun ProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
             if (activeGroup == "appearance") {
-            // D. APPARENCE & CONFORT DE NAVIGATION (Live App Theme + Carousel Auto-Scroll)
+            val currentLang = LocalAppLanguage.current
+            // D. PERSONNALISATION (Live App Theme + Language + Carousel Auto-Scroll)
             ProfileSectionCard(
-                title = "Apparence & Navigation",
-                subtitle = "Personnalisation visuelle instantanée de l'application",
+                title = tr("Personnalisation", "Personalization", "Personalización"),
+                subtitle = tr("Apparence visuelle et langue de l'application", "Visual appearance and app language", "Apariencia visual e idioma de la aplicación"),
                 palette = palette
             ) {
                 Row(
@@ -886,13 +852,13 @@ fun ProfileScreen(
                     SettingLeadingIcon(R.drawable.ic_solar_moon_linear, palette)
                     Column {
                         Text(
-                            text = "Thème de l'interface",
+                            text = tr("Thème de l'interface", "Interface theme", "Tema de la interfaz"),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = palette.title
                         )
                         Text(
-                            text = "Basculer entre le mode clair, sombre ou système",
+                            text = tr("Basculer entre le mode clair, sombre ou système", "Switch between light, dark or system mode", "Cambiar entre modo claro, oscuro o sistema"),
                             fontSize = 11.5.sp,
                             color = palette.muted
                         )
@@ -903,7 +869,7 @@ fun ProfileScreen(
 
                 // Anti-Slop Clean Neutral Segmented Switcher
                 CleanSegmentedSwitcher(
-                    options = AppThemeMode.entries.map { it.label },
+                    options = AppThemeMode.entries.map { translateThemeLabel(it.id, currentLang) },
                     selectedIndex = AppThemeMode.entries.indexOf(userPrefs.themeMode),
                     palette = palette,
                     onSelect = { idx ->
@@ -915,10 +881,53 @@ fun ProfileScreen(
 
                 SectionDivider(palette)
 
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    SettingLeadingIcon(R.drawable.ic_solar_globe_linear, palette)
+                    Column {
+                        Text(
+                            text = tr("Langue de l'application", "App language", "Idioma de la aplicación"),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = palette.title
+                        )
+                        Text(
+                            text = tr(
+                                "Traduit l'interface tout en gardant les noms authentiques des plats",
+                                "Translates the interface while keeping authentic dish names",
+                                "Traduce la interfaz conservando los nombres auténticos de los platos"
+                            ),
+                            fontSize = 11.5.sp,
+                            color = palette.muted
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                CleanSegmentedSwitcher(
+                    options = AppLanguage.entries.map { it.label },
+                    selectedIndex = AppLanguage.entries.indexOf(userPrefs.language),
+                    palette = palette,
+                    onSelect = { idx ->
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        val lang = AppLanguage.entries[idx]
+                        coroutineScope.launch { prefsRepo.setLanguage(lang) }
+                    }
+                )
+
+                SectionDivider(palette)
+
                 ProfileToggleRow(
                     iconRes = R.drawable.ic_solar_slider_vertical_linear,
-                    title = "Rotation auto du carrousel d'accueil",
-                    subtitle = "Fait défiler doucement les plats vedettes au repos (le swipe infini reste actif)",
+                    title = tr("Rotation auto du carrousel d'accueil", "Auto-rotate home carousel", "Rotación automática del carrusel"),
+                    subtitle = tr(
+                        "Fait défiler doucement les plats vedettes au repos (le swipe infini reste actif)",
+                        "Gently scrolls featured dishes when idle (infinite swipe remains active)",
+                        "Desplaza suavemente los platos destacados en reposo (el deslizamiento sigue activo)"
+                    ),
                     checked = userPrefs.carouselAutoScroll,
                     palette = palette,
                     onCheckedChange = { enabled ->
@@ -1218,8 +1227,12 @@ fun ProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            val settingsIntent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            val settingsIntent = if (notificationsEnabled && !promotedLiveUpdatesEnabled) {
+                                CookingTimerService.buildPromotedNotificationSettingsIntent(context)
+                            } else {
+                                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                }
                             }
                             runCatching { context.startActivity(settingsIntent) }
                         },
@@ -1387,6 +1400,25 @@ fun ProfileScreen(
                         color = palette.muted
                     )
                 }
+            }
+
+            if (activeGroup == "bug_report") {
+                BugReportSubPage(
+                    bugReportRepository = bugReportRepo,
+                    userPrefs = userPrefs,
+                    authSession = authSession,
+                    isDark = isDark,
+                    canvasColor = palette.canvas,
+                    cardColor = palette.card,
+                    subtleSurfaceColor = palette.subtleSurface,
+                    borderColor = palette.border,
+                    titleColor = palette.title,
+                    bodyColor = palette.body,
+                    mutedColor = palette.muted,
+                    onReportSubmitted = { msg ->
+                        statusBannerMessage = msg
+                    }
+                )
             }
 
             if (activeGroup == "updates") {
@@ -1570,6 +1602,24 @@ fun ProfileScreen(
                 }
             },
             onDismiss = { showOtaUpdateSheet = false }
+        )
+    }
+
+    if (showAccountInfoSheet) {
+        AccountDetailsBottomSheet(
+            userPrefs = userPrefs,
+            authSession = authSession,
+            masteryRank = masteryRank,
+            palette = palette,
+            onEditProfile = {
+                showAccountInfoSheet = false
+                showEditIdentitySheet = true
+            },
+            onConnectAccount = {
+                showAccountInfoSheet = false
+                onNavigateToLogin()
+            },
+            onDismiss = { showAccountInfoSheet = false }
         )
     }
 
@@ -1773,6 +1823,219 @@ fun ProfileScreen(
                     Text("Déconnexion", color = Color(0xFFEF4444), fontWeight = FontWeight.ExtraBold)
                 }
             }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AccountDetailsBottomSheet(
+    userPrefs: UserPreferencesState,
+    authSession: AuthSessionState,
+    masteryRank: CulinaryMasteryRank,
+    palette: ProfilePalette,
+    onEditProfile: () -> Unit,
+    onConnectAccount: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = palette.card,
+        scrimColor = Color(0xFF0F172A).copy(alpha = 0.45f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 22.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header with avatar & status
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(palette.subtleSurface, CircleShape)
+                        .border(1.5.dp, palette.border, CircleShape)
+                        .padding(3.dp)
+                ) {
+                    AsyncImage(
+                        model = userPrefs.avatarUrl,
+                        contentDescription = userPrefs.displayName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = userPrefs.displayName,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = palette.title
+                    )
+                    Surface(
+                        shape = ExpressivePillShape,
+                        color = if (authSession.isAuthenticated) {
+                            AccentEmerald.copy(alpha = 0.14f)
+                        } else {
+                            AfroOrange.copy(alpha = 0.14f)
+                        }
+                    ) {
+                        Text(
+                            text = when {
+                                authSession.isAuthenticated && authSession.isEmailVerified -> "Compte vérifié"
+                                authSession.isAuthenticated -> "Compte connecté"
+                                else -> "Session invité"
+                            },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (authSession.isAuthenticated) AccentEmerald else AfroOrange,
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+
+            // Account fields card
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = palette.subtleSurface,
+                border = BorderStroke(1.dp, palette.border),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    AccountInfoDetailRow(
+                        label = "Nom / Pseudo",
+                        value = userPrefs.displayName,
+                        palette = palette
+                    )
+                    HorizontalDivider(color = palette.border)
+                    AccountInfoDetailRow(
+                        label = "Adresse e-mail",
+                        value = authSession.email.ifBlank { "Non renseignée (mode invité)" },
+                        palette = palette
+                    )
+                    HorizontalDivider(color = palette.border)
+                    AccountInfoDetailRow(
+                        label = "Signature culinaire",
+                        value = userPrefs.roleTitle,
+                        palette = palette
+                    )
+                    HorizontalDivider(color = palette.border)
+                    AccountInfoDetailRow(
+                        label = "Terroir favori",
+                        value = userPrefs.favoriteTerroir,
+                        palette = palette
+                    )
+                    HorizontalDivider(color = palette.border)
+                    AccountInfoDetailRow(
+                        label = "Rang & maîtrise",
+                        value = "${masteryRank.title} (${masteryRank.points} pts)",
+                        palette = palette
+                    )
+                    if (userPrefs.bio.isNotBlank()) {
+                        HorizontalDivider(color = palette.border)
+                        AccountInfoDetailRow(
+                            label = "Bio",
+                            value = userPrefs.bio,
+                            palette = palette
+                        )
+                    }
+                    if (authSession.isAuthenticated && authSession.userId.isNotBlank()) {
+                        HorizontalDivider(color = palette.border)
+                        AccountInfoDetailRow(
+                            label = "Identifiant compte",
+                            value = "${authSession.userId.take(8)}…",
+                            palette = palette
+                        )
+                    }
+                }
+            }
+
+            // Action buttons
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = onEditProfile,
+                    shape = RoundedCornerShape(28.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AfroOrange,
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Text(
+                        text = "Modifier mon profil",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 14.sp
+                    )
+                }
+
+                if (!authSession.isAuthenticated) {
+                    Surface(
+                        shape = RoundedCornerShape(28.dp),
+                        color = palette.subtleSurface,
+                        border = BorderStroke(1.dp, palette.border),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .clip(RoundedCornerShape(28.dp))
+                            .clickable(onClick = onConnectAccount)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "Se connecter / Créer un compte",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.5.sp,
+                                color = palette.title
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+        }
+    }
+}
+
+@Composable
+private fun AccountInfoDetailRow(
+    label: String,
+    value: String,
+    palette: ProfilePalette
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = palette.muted
+        )
+        Text(
+            text = value,
+            fontSize = 13.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = palette.title,
+            lineHeight = 19.sp
         )
     }
 }
@@ -2178,10 +2441,11 @@ private fun MiniRecipePreviewCard(
                     .height(86.dp)
                     .clip(RoundedCornerShape(28.dp))
             ) {
-                AsyncImage(
+                RecipeImageOrSkeleton(
                     model = recipe.image,
                     contentDescription = recipe.name,
                     contentScale = ContentScale.Crop,
+                    iconSize = 24.dp,
                     modifier = Modifier.fillMaxSize()
                 )
                 Box(

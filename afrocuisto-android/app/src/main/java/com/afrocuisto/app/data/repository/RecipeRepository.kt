@@ -49,6 +49,13 @@ data class AppNotificationItem(
     val createdAt: String = ""
 )
 
+data class FavoriteAddedEvent(
+    val recipeId: String,
+    val recipeName: String,
+    val recipeImage: String,
+    val eventId: Long = System.nanoTime()
+)
+
 class RecipeRepository {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -69,6 +76,12 @@ class RecipeRepository {
 
     private val _favoriteIds = sharedFavoriteIds
     val favoriteIds: Flow<Set<String>> = sharedFavoriteIds.asStateFlow()
+
+    val favoriteAddedEvents: Flow<FavoriteAddedEvent?> = sharedFavoriteAddedEvent.asStateFlow()
+
+    fun consumeFavoriteAddedEvent() {
+        sharedFavoriteAddedEvent.value = null
+    }
 
     init {
         refreshFromSupabaseAsync()
@@ -226,6 +239,14 @@ class RecipeRepository {
         persistFavorites()
         if (added) {
             preloadRecipeImage(recipeId)
+            val recipe = _recipes.value.find { it.id == recipeId }
+            if (recipe != null) {
+                sharedFavoriteAddedEvent.value = FavoriteAddedEvent(
+                    recipeId = recipe.id,
+                    recipeName = recipe.name,
+                    recipeImage = recipe.image
+                )
+            }
         }
     }
 
@@ -263,6 +284,7 @@ class RecipeRepository {
         private val sharedRecipes = MutableStateFlow<List<Recipe>>(getMockRecipes())
         private val sharedHomeSections = MutableStateFlow<List<HomeSection>>(emptyList())
         private val sharedFavoriteIds = MutableStateFlow<Set<String>>(emptySet())
+        private val sharedFavoriteAddedEvent = MutableStateFlow<FavoriteAddedEvent?>(null)
 
         fun init(context: android.content.Context) {
             if (favPrefs != null) return

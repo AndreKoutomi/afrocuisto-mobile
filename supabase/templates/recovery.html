@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AfroCuisto — Réinitialisation de votre mot de passe</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8f9fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e1e2d;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f8f9fa;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background-color:#ffffff;border-radius:24px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 8px 30px rgba(15,23,42,0.06);">
+          <!-- En-tête AfroCuisto avec Logo officiel -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#121110 0%,#1f1a17 100%);padding:28px 32px;text-align:center;">
+              <img
+                src="https://ewoiqbhqtcdatpzhdaef.supabase.co/storage/v1/object/public/recipe-images/brand/afrocuisto-logo.png"
+                alt="AfroCuisto"
+                width="64"
+                height="64"
+                style="display:block;margin:0 auto 14px;width:64px;height:64px;border-radius:18px;border:1.5px solid rgba(255,255,255,0.22);object-fit:cover;"
+              />
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:800;line-height:1.3;">
+                AfroCuisto
+              </h1>
+              <p style="margin:4px 0 0;color:#fb5607;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;">
+                Réinitialisation du mot de passe
+              </p>
+            </td>
+          </tr>
+
+          <!-- Corps du message -->
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">
+                Bonjour,
+              </p>
+              <p style="margin:0 0 22px;font-size:15px;line-height:1.6;color:#334155;">
+                Vous avez demandé à réinitialiser le mot de passe de votre compte <strong>AfroCuisto</strong>. Saisissez le code de vérification ci-dessous dans l'application :
+              </p>
+
+              <!-- Code OTP 6 chiffres -->
+              <div style="background-color:#fff6ee;border:1.5px solid #fdba74;border-radius:18px;padding:22px 16px;text-align:center;margin:0 0 24px;">
+                <p style="margin:0 0 8px;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#c2410c;">
+                  Votre code de vérification (OTP)
+                </p>
+                <div style="font-family:'Courier New',Courier,monospace;font-size:34px;font-weight:900;letter-spacing:8px;color:#fb5607;line-height:1.2;">
+                  {{ .Token }}
+                </div>
+              </div>
+
+              <p style="margin:0 0 14px;font-size:13.5px;line-height:1.6;color:#64748b;">
+                Ce code est à usage unique. Pour votre sécurité, ne le partagez avec personne.
+              </p>
+              <p style="margin:0;font-size:13.5px;line-height:1.6;color:#64748b;">
+                Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail en toute sécurité : votre mot de passe actuel reste inchangé.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Pied de page AfroCuisto -->
+          <tr>
+            <td style="background-color:#f8fafc;border-top:1px solid #e2e8f0;padding:20px 32px;text-align:center;">
+              <p style="margin:0 0 4px;font-size:12.5px;font-weight:700;color:#1e1e2d;">
+                AfroCuisto — Saveurs d'Afrique &amp; Chef IA
+              </p>
+              <p style="margin:0;font-size:11.5px;color:#94a3b8;">
+                Cet e-mail a été envoyé automatiquement suite à une demande depuis l'application AfroCuisto.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

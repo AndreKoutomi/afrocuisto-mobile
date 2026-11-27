@@ -353,12 +353,15 @@ fun AfroAuthTextField(
     modifier: Modifier = Modifier,
     @DrawableRes leadingIconRes: Int? = null,
     isPassword: Boolean = false,
+    isValid: Boolean = false,
     errorText: String? = null,
+    onFocusLost: (() -> Unit)? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     trailingContent: (@Composable () -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    var hadFocus by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
 
     val hasError = !errorText.isNullOrBlank()
@@ -366,6 +369,7 @@ fun AfroAuthTextField(
         targetValue = when {
             hasError -> LikeRed
             isFocused -> AfroOrange
+            isValid -> AccentEmerald.copy(alpha = 0.72f)
             else -> palette.border
         },
         animationSpec = tween(180),
@@ -375,6 +379,7 @@ fun AfroAuthTextField(
         targetValue = when {
             hasError -> LikeRed
             isFocused -> AfroOrange
+            isValid -> AccentEmerald
             else -> palette.muted
         },
         animationSpec = tween(180),
@@ -448,7 +453,25 @@ fun AfroAuthTextField(
                         keyboardActions = keyboardActions,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .onFocusChanged { isFocused = it.isFocused }
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    hadFocus = true
+                                } else if (hadFocus && isFocused) {
+                                    onFocusLost?.invoke()
+                                }
+                                isFocused = focusState.isFocused
+                            }
+                    )
+                }
+
+                if (isValid && !hasError) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_solar_check_circle_linear),
+                        contentDescription = "Format valide",
+                        tint = AccentEmerald,
+                        modifier = Modifier
+                            .padding(end = if (isPassword) 4.dp else 0.dp)
+                            .size(18.dp)
                     )
                 }
 

@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,7 +58,10 @@ import com.afrocuisto.app.ui.components.EditorialSearchBar
 import com.afrocuisto.app.ui.components.afroStaggeredEntrance
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
+import com.afrocuisto.app.ui.i18n.tr
+import com.afrocuisto.app.ui.screens.home.HomeCategoriesSection
 import com.afrocuisto.app.ui.screens.home.SunRecipeCard
+import com.afrocuisto.app.ui.screens.home.buildAllCategories
 import com.afrocuisto.app.ui.theme.isAfroDarkTheme
 import java.util.Locale
 
@@ -66,13 +70,19 @@ private val RECIPE_FILTER_TABS = listOf("Tout", "Sauces", "Pâtes", "Grillades")
 @Composable
 fun RecipeListScreen(
     onNavigateToRecipeDetail: (String) -> Unit,
+    onNavigateToCategory: (String) -> Unit = {},
     repository: RecipeRepository = remember { RecipeRepository() }
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = isAfroDarkTheme()
     val haptics = rememberAfroHaptics()
     val recipes by repository.recipes.collectAsState(initial = emptyList())
+    val homeSections by repository.homeSections.collectAsState(initial = emptyList())
     val favoriteIds by repository.favoriteIds.collectAsState(initial = emptySet())
+
+    val dynamicCategories = remember(recipes, homeSections) {
+        buildAllCategories(recipes, homeSections)
+    }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf("Tout") }
@@ -110,11 +120,11 @@ fun RecipeListScreen(
             .fillMaxSize()
             .background(canvasBg)
     ) {
-        EditorialPageHeader(title = "Toutes les recettes") {
+        EditorialPageHeader(title = tr("Toutes les recettes", "All Recipes", "Todas las recetas")) {
             EditorialSearchBar(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = "Plat, pays ou ingrédient..."
+                placeholder = tr("Plat, pays ou ingrédient...", "Dish, country or ingredient...", "Plato, país o ingrediente...")
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -151,14 +161,14 @@ fun RecipeListScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Aucune recette trouvée",
+                        text = tr("Aucune recette trouvée", "No recipes found", "No se encontraron recetas"),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = titleColor
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Essayez un autre plat, pays ou ingrédient",
+                        text = tr("Essayez un autre plat, pays ou ingrédient", "Try another dish, country or ingredient", "Prueba otro plato, país o ingrediente"),
                         fontSize = 13.sp,
                         color = placeholderColor
                     )
@@ -174,6 +184,20 @@ fun RecipeListScreen(
                 flingBehavior = rememberSmoothFlingBehavior(),
                 modifier = Modifier.fillMaxSize()
             ) {
+                if (searchQuery.isBlank() && dynamicCategories.isNotEmpty()) {
+                    item(
+                        key = "recipe_categories_section",
+                        span = { GridItemSpan(maxLineSpan) }
+                    ) {
+                        Box(modifier = Modifier.padding(bottom = 8.dp)) {
+                            HomeCategoriesSection(
+                                categories = dynamicCategories,
+                                onCategoryClick = onNavigateToCategory,
+                                titleColor = titleColor
+                            )
+                        }
+                    }
+                }
                 itemsIndexed(
                     items = filteredRecipes,
                     key = { _, recipe -> recipe.id },

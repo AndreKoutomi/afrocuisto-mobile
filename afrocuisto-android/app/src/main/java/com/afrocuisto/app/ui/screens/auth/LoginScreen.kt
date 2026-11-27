@@ -1,7 +1,14 @@
 package com.afrocuisto.app.ui.screens.auth
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +24,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -57,6 +66,8 @@ import com.afrocuisto.app.R
 import com.afrocuisto.app.data.repository.AuthRepository
 import com.afrocuisto.app.data.repository.AuthResult
 import com.afrocuisto.app.data.repository.AuthValidation
+import com.afrocuisto.app.data.repository.OtpVerifyResult
+import com.afrocuisto.app.data.repository.PasswordResetRequestResult
 import com.afrocuisto.app.data.security.GoogleAuthLauncher
 import com.afrocuisto.app.data.security.GoogleSignInOutcome
 import com.afrocuisto.app.ui.components.AfroHapticKind
@@ -64,6 +75,7 @@ import com.afrocuisto.app.ui.components.afroSpringClickable
 import com.afrocuisto.app.ui.components.afroStaggeredEntrance
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
 import com.afrocuisto.app.ui.components.rememberIsTablet
+import com.afrocuisto.app.ui.components.rememberKeyboardDismisser
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
 import com.afrocuisto.app.ui.theme.AfroOrange
 import com.afrocuisto.app.ui.theme.ExpressivePillShape
@@ -89,6 +101,7 @@ fun LoginScreen(
     val haptics = rememberAfroHaptics()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val dismissKeyboard = rememberKeyboardDismisser()
     val coroutineScope = rememberCoroutineScope()
 
     var email by rememberSaveable { mutableStateOf("") }
@@ -141,22 +154,36 @@ fun LoginScreen(
         }
     }
 
+    fun validateEmailField(): Boolean {
+        val clean = AuthValidation.normalizeEmail(email)
+        emailError = when {
+            clean.isEmpty() -> "Saisissez votre adresse e-mail"
+            !AuthValidation.isValidEmail(clean) -> "Format attendu : nom@domaine.com"
+            else -> null
+        }
+        return emailError == null
+    }
+
+    fun validatePasswordField(): Boolean {
+        passwordError = AuthValidation.validateLoginPassword(password)
+        return passwordError == null
+    }
+
+    val isEmailValid = remember(email) {
+        AuthValidation.isValidEmail(AuthValidation.normalizeEmail(email))
+    }
+    val isPasswordFormatValid = remember(password) {
+        AuthValidation.validateLoginPassword(password) == null
+    }
+
     fun submitLogin() {
         if (lockoutSeconds > 0 || isLoading) return
-        focusManager.clearFocus()
+        dismissKeyboard()
         bannerMessage = null
         val cleanEmail = AuthValidation.normalizeEmail(email)
-        emailError = if (!AuthValidation.isValidEmail(cleanEmail)) {
-            "Adresse e-mail invalide"
-        } else {
-            null
-        }
-        passwordError = if (password.isBlank()) {
-            "Saisissez votre mot de passe"
-        } else {
-            null
-        }
-        if (emailError != null || passwordError != null) {
+        val emailOk = validateEmailField()
+        val passwordOk = validatePasswordField()
+        if (!emailOk || !passwordOk) {
             haptics.destructiveTick()
             return
         }
@@ -270,8 +297,8 @@ fun LoginScreen(
 
                         AfroAuthTextField(
                             value = email,
-                            onValueChange = {
-                                email = it
+                            onValueChange = { raw ->
+                                email = AuthValidation.sanitizeEmailInput(raw)
                                 if (emailError != null) emailError = null
                                 if (bannerMessage != null) bannerMessage = null
                             },
@@ -279,30 +306,41 @@ fun LoginScreen(
                             placeholder = "amina@afrocuisto.com",
                             palette = palette,
                             leadingIconRes = R.drawable.ic_solar_letter_linear,
+                            isValid = isEmailValid,
                             errorText = emailError,
+                            onFocusLost = {
+                                if (email.isNotEmpty()) validateEmailField()
+                            },
                             keyboardOptions = KeyboardOptions(
                                 autoCorrectEnabled = false,
                                 keyboardType = KeyboardType.Email,
                                 imeAction = ImeAction.Next
                             ),
                             keyboardActions = KeyboardActions(
-                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                onNext = {
+                                    validateEmailField()
+                                    focusManager.moveFocus(FocusDirection.Down)
+                                }
                             )
                         )
 
                         AfroAuthTextField(
                             value = password,
-                            onValueChange = {
-                                password = it
+                            onValueChange = { raw ->
+                                password = AuthValidation.sanitizePasswordInput(raw)
                                 if (passwordError != null) passwordError = null
                                 if (bannerMessage != null) bannerMessage = null
                             },
                             label = "Mot de passe",
-                            placeholder = "Votre mot de passe",
+                            placeholder = "6 caractères min. sans espace",
                             palette = palette,
                             leadingIconRes = R.drawable.ic_solar_lock_password_linear,
                             isPassword = true,
+                            isValid = isPasswordFormatValid,
                             errorText = passwordError,
+                            onFocusLost = {
+                                if (password.isNotEmpty()) validatePasswordField()
+                            },
                             keyboardOptions = KeyboardOptions(
                                 autoCorrectEnabled = false,
                                 keyboardType = KeyboardType.Password,
@@ -337,7 +375,7 @@ fun LoginScreen(
                         AfroAuthPrimaryButton(
                             text = if (lockoutSeconds > 0) "Verrouillé (${lockoutSeconds}s)" else "Se connecter",
                             isLoading = isLoading,
-                            enabled = lockoutSeconds == 0,
+                            enabled = lockoutSeconds == 0 && isEmailValid && isPasswordFormatValid,
                             onClick = ::submitLogin
                         )
                     }
@@ -422,6 +460,23 @@ fun LoginScreen(
             initialEmail = email,
             palette = palette,
             authRepository = authRepository,
+            onPasswordResetSuccess = { updatedEmail, successMessage ->
+                email = updatedEmail
+                emailError = null
+                password = ""
+                passwordError = null
+                bannerIsError = false
+                bannerMessage = successMessage
+                showForgotPasswordSheet = false
+            },
+            onNavigateToRegister = {
+                showForgotPasswordSheet = false
+                onNavigateToRegister()
+            },
+            onContinueWithGoogle = {
+                showForgotPasswordSheet = false
+                submitGoogleSignIn()
+            },
             onDismiss = { showForgotPasswordSheet = false }
         )
     }
@@ -433,15 +488,175 @@ private fun ForgotPasswordBottomSheet(
     initialEmail: String,
     palette: AuthPalette,
     authRepository: AuthRepository,
+    onPasswordResetSuccess: (email: String, message: String) -> Unit,
+    onNavigateToRegister: () -> Unit,
+    onContinueWithGoogle: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val dismissKeyboard = rememberKeyboardDismisser()
+    val focusManager = LocalFocusManager.current
     val haptics = rememberAfroHaptics()
-    var resetEmail by rememberSaveable { mutableStateOf(initialEmail) }
+
+    // Step 1: Email -> Step 2: 6-digit OTP -> Step 3: New Password
+    var step by rememberSaveable { mutableIntStateOf(1) }
+    var resetEmail by rememberSaveable { mutableStateOf(AuthValidation.sanitizeEmailInput(initialEmail)) }
+    var otpCode by remember { mutableStateOf("") }
+    var recoveryAccessToken by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmNewPassword by remember { mutableStateOf("") }
+
     var emailError by remember { mutableStateOf<String?>(null) }
+    var otpError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmError by remember { mutableStateOf<String?>(null) }
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
     var feedbackIsError by remember { mutableStateOf(false) }
-    var isSending by remember { mutableStateOf(false) }
+    var accountNotFound by remember { mutableStateOf(false) }
+    var isWorking by remember { mutableStateOf(false) }
+    var resendCooldownSec by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(resendCooldownSec) {
+        if (resendCooldownSec > 0) {
+            delay(1000L)
+            resendCooldownSec -= 1
+        }
+    }
+
+    val resetEmailValid = remember(resetEmail) {
+        AuthValidation.isValidEmail(AuthValidation.normalizeEmail(resetEmail))
+    }
+    val newPasswordCriteria = remember(newPassword, resetEmail) {
+        AuthValidation.inspectPasswordCriteria(newPassword, resetEmail, "")
+    }
+    val newPasswordStrength = remember(newPassword, resetEmail) {
+        AuthValidation.evaluatePasswordStrength(newPassword, resetEmail, "")
+    }
+    val newPasswordValid = remember(newPassword, resetEmail) {
+        AuthValidation.validateRegistrationPassword(
+            password = newPassword,
+            email = AuthValidation.normalizeEmail(resetEmail),
+            displayName = ""
+        ) == null
+    }
+    val confirmNewPasswordValid = remember(confirmNewPassword, newPassword) {
+        confirmNewPassword.isNotEmpty() && confirmNewPassword == newPassword
+    }
+
+    fun sendOtp(moveToStepTwo: Boolean) {
+        val clean = AuthValidation.normalizeEmail(resetEmail)
+        if (!AuthValidation.isValidEmail(clean)) {
+            emailError = "Format attendu : nom@domaine.com"
+            haptics.destructiveTick()
+            return
+        }
+        isWorking = true
+        feedbackMessage = null
+        accountNotFound = false
+        coroutineScope.launch {
+            when (val res = authRepository.sendPasswordReset(clean)) {
+                is PasswordResetRequestResult.OtpSent -> {
+                    isWorking = false
+                    feedbackIsError = false
+                    feedbackMessage = res.message
+                    resendCooldownSec = 60
+                    haptics.actionSuccess()
+                    if (moveToStepTwo) {
+                        otpCode = ""
+                        otpError = null
+                        step = 2
+                    }
+                }
+                PasswordResetRequestResult.AccountNotFound -> {
+                    isWorking = false
+                    accountNotFound = true
+                    feedbackIsError = true
+                    feedbackMessage = "Aucun compte AfroCuisto n'existe pour $clean."
+                    haptics.destructiveTick()
+                }
+                is PasswordResetRequestResult.Error -> {
+                    isWorking = false
+                    feedbackIsError = true
+                    feedbackMessage = res.message
+                    haptics.destructiveTick()
+                }
+            }
+        }
+    }
+
+    fun verifyOtp() {
+        val cleanOtp = otpCode.filter { it.isDigit() }
+        if (cleanOtp.length < 6) {
+            otpError = "Saisissez les 6 chiffres du code OTP"
+            haptics.destructiveTick()
+            return
+        }
+        dismissKeyboard()
+        isWorking = true
+        otpError = null
+        feedbackMessage = null
+        coroutineScope.launch {
+            when (val res = authRepository.verifyPasswordResetOtp(resetEmail, cleanOtp)) {
+                is OtpVerifyResult.Verified -> {
+                    isWorking = false
+                    recoveryAccessToken = res.accessToken
+                    feedbackIsError = false
+                    feedbackMessage = "Code vérifié ! Définissez votre nouveau mot de passe."
+                    haptics.actionSuccess()
+                    step = 3
+                }
+                is OtpVerifyResult.Error -> {
+                    isWorking = false
+                    otpError = res.message
+                    haptics.destructiveTick()
+                }
+            }
+        }
+    }
+
+    fun submitNewPassword() {
+        val cleanEmail = AuthValidation.normalizeEmail(resetEmail)
+        passwordError = AuthValidation.validateRegistrationPassword(newPassword, cleanEmail, "")
+        confirmError = if (confirmNewPassword != newPassword) {
+            "Les mots de passe ne correspondent pas"
+        } else {
+            null
+        }
+        if (passwordError != null || confirmError != null) {
+            haptics.destructiveTick()
+            return
+        }
+        dismissKeyboard()
+        isWorking = true
+        feedbackMessage = null
+        coroutineScope.launch {
+            when (val res = authRepository.completePasswordResetWithToken(
+                accessToken = recoveryAccessToken,
+                newPassword = newPassword,
+                email = cleanEmail
+            )) {
+                is AuthResult.Success -> {
+                    isWorking = false
+                    haptics.actionSuccess()
+                    onPasswordResetSuccess(
+                        cleanEmail,
+                        res.message ?: "Mot de passe réinitialisé avec succès ! Connectez-vous."
+                    )
+                }
+                is AuthResult.Error -> {
+                    isWorking = false
+                    feedbackIsError = true
+                    feedbackMessage = res.message
+                    haptics.destructiveTick()
+                }
+                is AuthResult.EmailConfirmationRequired -> {
+                    isWorking = false
+                    feedbackIsError = false
+                    feedbackMessage = res.message
+                }
+            }
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -458,19 +673,53 @@ private fun ForgotPasswordBottomSheet(
                 .padding(horizontal = 22.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                text = "Réinitialiser le mot de passe",
-                fontSize = 19.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = palette.title,
-                modifier = Modifier.nexaTitleEmphasis()
-            )
-            Text(
-                text = "Saisissez l'adresse e-mail associée à votre compte AfroCuisto pour recevoir un lien sécurisé de réinitialisation.",
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                color = palette.muted
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Mot de passe oublié",
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = palette.title,
+                    modifier = Modifier.nexaTitleEmphasis()
+                )
+                Surface(
+                    shape = ExpressivePillShape,
+                    color = AfroOrange.copy(alpha = 0.14f)
+                ) {
+                    Text(
+                        text = "Étape $step / 3",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AfroOrange,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            // 3-step progress bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                repeat(3) { idx ->
+                    val active = idx < step
+                    val barColor by animateColorAsState(
+                        targetValue = if (active) AfroOrange else palette.subtleSurface,
+                        animationSpec = tween(220),
+                        label = "otpStepBar$idx"
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(barColor)
+                    )
+                }
+            }
 
             AuthFeedbackBanner(
                 message = feedbackMessage,
@@ -478,61 +727,305 @@ private fun ForgotPasswordBottomSheet(
                 palette = palette
             )
 
-            AfroAuthTextField(
-                value = resetEmail,
-                onValueChange = {
-                    resetEmail = it
-                    if (emailError != null) emailError = null
-                },
-                label = "Adresse e-mail",
-                placeholder = "amina@afrocuisto.com",
-                palette = palette,
-                leadingIconRes = R.drawable.ic_solar_letter_linear,
-                errorText = emailError,
-                keyboardOptions = KeyboardOptions(
-                    autoCorrectEnabled = false,
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Done
-                )
-            )
+            AnimatedContent(
+                targetState = step,
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
+                label = "forgotPasswordOtpStep"
+            ) { currentStep ->
+                when (currentStep) {
+                    1 -> {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text(
+                                text = "Saisissez l'adresse e-mail de votre compte pour recevoir un code de vérification OTP à 6 chiffres.",
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                color = palette.muted
+                            )
 
-            AfroAuthPrimaryButton(
-                text = "Envoyer le lien sécurisé",
-                isLoading = isSending,
-                onClick = {
-                    val clean = AuthValidation.normalizeEmail(resetEmail)
-                    if (!AuthValidation.isValidEmail(clean)) {
-                        emailError = "Adresse e-mail invalide"
-                        haptics.destructiveTick()
-                        return@AfroAuthPrimaryButton
-                    }
-                    isSending = true
-                    feedbackMessage = null
-                    coroutineScope.launch {
-                        when (val res = authRepository.sendPasswordReset(clean)) {
-                            is AuthResult.Success -> {
-                                isSending = false
-                                feedbackIsError = false
-                                feedbackMessage = res.message
-                                haptics.actionSuccess()
-                            }
-                            is AuthResult.Error -> {
-                                isSending = false
-                                feedbackIsError = true
-                                feedbackMessage = res.message
-                                haptics.destructiveTick()
-                            }
-                            is AuthResult.EmailConfirmationRequired -> {
-                                isSending = false
-                                feedbackIsError = false
-                                feedbackMessage = res.message
+                            AfroAuthTextField(
+                                value = resetEmail,
+                                onValueChange = { raw ->
+                                    resetEmail = AuthValidation.sanitizeEmailInput(raw)
+                                    if (emailError != null) emailError = null
+                                    if (accountNotFound) {
+                                        accountNotFound = false
+                                        feedbackMessage = null
+                                    }
+                                },
+                                label = "Adresse e-mail",
+                                placeholder = "amina@afrocuisto.com",
+                                palette = palette,
+                                leadingIconRes = R.drawable.ic_solar_letter_linear,
+                                isValid = resetEmailValid && !accountNotFound,
+                                errorText = emailError,
+                                onFocusLost = {
+                                    val clean = AuthValidation.normalizeEmail(resetEmail)
+                                    if (clean.isNotEmpty() && !AuthValidation.isValidEmail(clean)) {
+                                        emailError = "Format attendu : nom@domaine.com"
+                                    }
+                                },
+                                keyboardOptions = KeyboardOptions(
+                                    autoCorrectEnabled = false,
+                                    keyboardType = KeyboardType.Email,
+                                    imeAction = ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = { if (resetEmailValid && !accountNotFound && !isWorking) sendOtp(moveToStepTwo = true) }
+                                )
+                            )
+
+                            if (accountNotFound) {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    AfroAuthPrimaryButton(
+                                        text = "Créer un compte",
+                                        isLoading = false,
+                                        onClick = onNavigateToRegister
+                                    )
+
+                                    AfroGoogleAuthButton(
+                                        text = "Continuer avec Google",
+                                        isLoading = false,
+                                        palette = palette,
+                                        onClick = onContinueWithGoogle
+                                    )
+                                }
+                            } else {
+                                AfroAuthPrimaryButton(
+                                    text = "Envoyer le code OTP",
+                                    isLoading = isWorking,
+                                    enabled = resetEmailValid,
+                                    onClick = { sendOtp(moveToStepTwo = true) }
+                                )
                             }
                         }
                     }
+
+                    2 -> {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text(
+                                text = "Entrez le code à 6 chiffres envoyé à ${AuthValidation.normalizeEmail(resetEmail)}.",
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                color = palette.muted
+                            )
+
+                            OtpDigitBoxesField(
+                                code = otpCode,
+                                hasError = !otpError.isNullOrBlank(),
+                                palette = palette,
+                                onCodeChange = { raw ->
+                                    val digits = raw.filter { it.isDigit() }.take(6)
+                                    otpCode = digits
+                                    if (otpError != null) otpError = null
+                                    if (digits.length == 6 && !isWorking) {
+                                        verifyOtp()
+                                    }
+                                },
+                                onDone = { if (otpCode.length == 6 && !isWorking) verifyOtp() }
+                            )
+
+                            if (!otpError.isNullOrBlank()) {
+                                Text(
+                                    text = otpError.orEmpty(),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFEF4444)
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Modifier l'e-mail",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = palette.muted,
+                                    modifier = Modifier
+                                        .clip(ExpressivePillShape)
+                                        .clickable(enabled = !isWorking) {
+                                            feedbackMessage = null
+                                            otpError = null
+                                            step = 1
+                                        }
+                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                )
+
+                                Text(
+                                    text = if (resendCooldownSec > 0) {
+                                        "Renvoyer (${resendCooldownSec}s)"
+                                    } else {
+                                        "Renvoyer le code"
+                                    },
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (resendCooldownSec > 0) palette.muted else AfroOrange,
+                                    modifier = Modifier
+                                        .clip(ExpressivePillShape)
+                                        .clickable(enabled = resendCooldownSec == 0 && !isWorking) {
+                                            sendOtp(moveToStepTwo = false)
+                                        }
+                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                )
+                            }
+
+                            AfroAuthPrimaryButton(
+                                text = "Vérifier le code OTP",
+                                isLoading = isWorking,
+                                enabled = otpCode.length == 6,
+                                onClick = ::verifyOtp
+                            )
+                        }
+                    }
+
+                    else -> {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text(
+                                text = "Choisissez un nouveau mot de passe robuste pour votre compte.",
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                color = palette.muted
+                            )
+
+                            Column {
+                                AfroAuthTextField(
+                                    value = newPassword,
+                                    onValueChange = { raw ->
+                                        newPassword = AuthValidation.sanitizePasswordInput(raw)
+                                        if (passwordError != null) passwordError = null
+                                    },
+                                    label = "Nouveau mot de passe",
+                                    placeholder = "8+ caractères, maj., chiffre, symbole",
+                                    palette = palette,
+                                    leadingIconRes = R.drawable.ic_solar_lock_password_linear,
+                                    isPassword = true,
+                                    isValid = newPasswordValid,
+                                    errorText = passwordError,
+                                    onFocusLost = {
+                                        if (newPassword.isNotEmpty()) {
+                                            passwordError = AuthValidation.validateRegistrationPassword(
+                                                password = newPassword,
+                                                email = AuthValidation.normalizeEmail(resetEmail),
+                                                displayName = ""
+                                            )
+                                        }
+                                    },
+                                    keyboardOptions = KeyboardOptions(
+                                        autoCorrectEnabled = false,
+                                        keyboardType = KeyboardType.Password,
+                                        imeAction = ImeAction.Next
+                                    ),
+                                    keyboardActions = KeyboardActions(
+                                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                    )
+                                )
+                                PasswordStrengthIndicator(
+                                    strength = newPasswordStrength,
+                                    criteria = newPasswordCriteria,
+                                    palette = palette
+                                )
+                            }
+
+                            AfroAuthTextField(
+                                value = confirmNewPassword,
+                                onValueChange = { raw ->
+                                    confirmNewPassword = AuthValidation.sanitizePasswordInput(raw)
+                                    if (confirmError != null) confirmError = null
+                                },
+                                label = "Confirmer le nouveau mot de passe",
+                                placeholder = "Répétez votre mot de passe",
+                                palette = palette,
+                                leadingIconRes = R.drawable.ic_solar_shield_check_linear,
+                                isPassword = true,
+                                isValid = confirmNewPasswordValid,
+                                errorText = confirmError,
+                                onFocusLost = {
+                                    if (confirmNewPassword.isNotEmpty() && confirmNewPassword != newPassword) {
+                                        confirmError = "Les mots de passe ne correspondent pas"
+                                    }
+                                },
+                                keyboardOptions = KeyboardOptions(
+                                    autoCorrectEnabled = false,
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = { if (newPasswordValid && confirmNewPasswordValid && !isWorking) submitNewPassword() }
+                                )
+                            )
+
+                            AfroAuthPrimaryButton(
+                                text = "Enregistrer le mot de passe",
+                                isLoading = isWorking,
+                                enabled = newPasswordValid && confirmNewPasswordValid,
+                                onClick = ::submitNewPassword
+                            )
+                        }
+                    }
                 }
-            )
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
         }
     }
+}
+
+@Composable
+private fun OtpDigitBoxesField(
+    code: String,
+    hasError: Boolean,
+    palette: AuthPalette,
+    onCodeChange: (String) -> Unit,
+    onDone: () -> Unit
+) {
+    BasicTextField(
+        value = code,
+        onValueChange = onCodeChange,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            autoCorrectEnabled = false,
+            keyboardType = KeyboardType.NumberPassword,
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(onDone = { onDone() }),
+        decorationBox = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                repeat(6) { index ->
+                    val char = code.getOrNull(index)?.toString().orEmpty()
+                    val isCurrent = index == code.length.coerceAtMost(5) && code.length < 6
+                    val boxBorder = when {
+                        hasError -> Color(0xFFEF4444)
+                        isCurrent || char.isNotEmpty() -> AfroOrange
+                        else -> palette.border
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(palette.inputSurface)
+                            .border(
+                                width = if (isCurrent || hasError) 1.5.dp else 1.dp,
+                                color = boxBorder,
+                                shape = RoundedCornerShape(16.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = char.ifEmpty { "•" },
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (char.isNotEmpty()) palette.title else palette.placeholder
+                        )
+                    }
+                }
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
+    )
 }

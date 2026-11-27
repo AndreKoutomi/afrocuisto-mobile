@@ -17,6 +17,7 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import com.afrocuisto.app.MainActivity
@@ -890,6 +891,28 @@ class CookingTimerService : Service() {
                 action = ACTION_STOP
             }
             runCatching { context.startService(intent) }
+        }
+
+        fun canPostPromotedNotifications(context: Context): Boolean {
+            if (Build.VERSION.SDK_INT < 36) return true
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            return runCatching {
+                nm.javaClass.getMethod("canPostPromotedNotifications").invoke(nm) as? Boolean ?: false
+            }.getOrDefault(false)
+        }
+
+        fun buildPromotedNotificationSettingsIntent(context: Context): Intent {
+            if (Build.VERSION.SDK_INT >= 36) {
+                val promoIntent = Intent("android.settings.APP_NOTIFICATION_PROMOTION_SETTINGS").apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                }
+                if (promoIntent.resolveActivity(context.packageManager) != null) {
+                    return promoIntent
+                }
+            }
+            return Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
         }
     }
 }

@@ -74,6 +74,7 @@ import com.afrocuisto.app.ui.components.AfroHapticKind
 import com.afrocuisto.app.ui.components.afroSpringClickable
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
 import com.afrocuisto.app.ui.components.rememberIsTablet
+import com.afrocuisto.app.ui.components.rememberKeyboardDismisser
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
 import com.afrocuisto.app.ui.theme.AccentEmerald
 import com.afrocuisto.app.ui.theme.AfroOrange
@@ -99,6 +100,7 @@ fun RegisterScreen(
     val haptics = rememberAfroHaptics()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val dismissKeyboard = rememberKeyboardDismisser()
     val coroutineScope = rememberCoroutineScope()
 
     // Step 1: Credentials (passwords kept strictly in RAM via remember, never SavedState Bundle)
@@ -159,6 +161,23 @@ fun RegisterScreen(
     val passwordStrength = remember(password, email, fullName) {
         AuthValidation.evaluatePasswordStrength(password, email, fullName)
     }
+    val isNameValid = remember(fullName) {
+        AuthValidation.sanitizeDisplayName(fullName).length >= 2
+    }
+    val isEmailValid = remember(email) {
+        AuthValidation.isValidEmail(AuthValidation.normalizeEmail(email))
+    }
+    val isPasswordValid = remember(password, email, fullName) {
+        AuthValidation.validateRegistrationPassword(
+            password = password,
+            email = AuthValidation.normalizeEmail(email),
+            displayName = AuthValidation.sanitizeDisplayName(fullName)
+        ) == null
+    }
+    val isConfirmValid = remember(confirmPassword, password) {
+        confirmPassword.isNotEmpty() && confirmPassword == password
+    }
+    val isStepOneReady = isNameValid && isEmailValid && isPasswordValid && isConfirmValid
 
     BackHandler(enabled = currentStep == 2 && pendingConfirmationEmail == null) {
         haptics.navigationTap()
@@ -166,7 +185,7 @@ fun RegisterScreen(
     }
 
     fun validateStepOne(): Boolean {
-        focusManager.clearFocus()
+        dismissKeyboard()
         bannerMessage = null
         val cleanName = AuthValidation.sanitizeDisplayName(fullName)
         val cleanEmail = AuthValidation.normalizeEmail(email)
@@ -373,7 +392,13 @@ fun RegisterScreen(
                                             placeholder = "Ex : Amina Diallo",
                                             palette = palette,
                                             leadingIconRes = R.drawable.ic_solar_user_circle_linear,
+                                            isValid = isNameValid,
                                             errorText = nameError,
+                                            onFocusLost = {
+                                                if (fullName.isNotEmpty() && !isNameValid) {
+                                                    nameError = "Saisissez votre nom ou pseudo (2 caractères min.)"
+                                                }
+                                            },
                                             keyboardOptions = KeyboardOptions(
                                                 capitalization = KeyboardCapitalization.Words,
                                                 autoCorrectEnabled = false,
@@ -386,15 +411,21 @@ fun RegisterScreen(
 
                                         AfroAuthTextField(
                                             value = email,
-                                            onValueChange = {
-                                                email = it
+                                            onValueChange = { raw ->
+                                                email = AuthValidation.sanitizeEmailInput(raw)
                                                 if (emailError != null) emailError = null
                                             },
                                             label = "Adresse e-mail",
                                             placeholder = "amina@afrocuisto.com",
                                             palette = palette,
                                             leadingIconRes = R.drawable.ic_solar_letter_linear,
+                                            isValid = isEmailValid,
                                             errorText = emailError,
+                                            onFocusLost = {
+                                                if (email.isNotEmpty() && !isEmailValid) {
+                                                    emailError = "Format attendu : nom@domaine.com"
+                                                }
+                                            },
                                             keyboardOptions = KeyboardOptions(
                                                 autoCorrectEnabled = false,
                                                 keyboardType = KeyboardType.Email,
@@ -408,8 +439,8 @@ fun RegisterScreen(
                                         Column {
                                             AfroAuthTextField(
                                                 value = password,
-                                                onValueChange = {
-                                                    password = it
+                                                onValueChange = { raw ->
+                                                    password = AuthValidation.sanitizePasswordInput(raw)
                                                     if (passwordError != null) passwordError = null
                                                 },
                                                 label = "Mot de passe robuste",
@@ -417,7 +448,17 @@ fun RegisterScreen(
                                                 palette = palette,
                                                 leadingIconRes = R.drawable.ic_solar_lock_password_linear,
                                                 isPassword = true,
+                                                isValid = isPasswordValid,
                                                 errorText = passwordError,
+                                                onFocusLost = {
+                                                    if (password.isNotEmpty()) {
+                                                        passwordError = AuthValidation.validateRegistrationPassword(
+                                                            password = password,
+                                                            email = AuthValidation.normalizeEmail(email),
+                                                            displayName = AuthValidation.sanitizeDisplayName(fullName)
+                                                        )
+                                                    }
+                                                },
                                                 keyboardOptions = KeyboardOptions(
                                                     autoCorrectEnabled = false,
                                                     keyboardType = KeyboardType.Password,
@@ -436,8 +477,8 @@ fun RegisterScreen(
 
                                         AfroAuthTextField(
                                             value = confirmPassword,
-                                            onValueChange = {
-                                                confirmPassword = it
+                                            onValueChange = { raw ->
+                                                confirmPassword = AuthValidation.sanitizePasswordInput(raw)
                                                 if (confirmError != null) confirmError = null
                                             },
                                             label = "Confirmer le mot de passe",
@@ -445,7 +486,13 @@ fun RegisterScreen(
                                             palette = palette,
                                             leadingIconRes = R.drawable.ic_solar_shield_check_linear,
                                             isPassword = true,
+                                            isValid = isConfirmValid,
                                             errorText = confirmError,
+                                            onFocusLost = {
+                                                if (confirmPassword.isNotEmpty() && confirmPassword != password) {
+                                                    confirmError = "Les mots de passe ne correspondent pas"
+                                                }
+                                            },
                                             keyboardOptions = KeyboardOptions(
                                                 autoCorrectEnabled = false,
                                                 keyboardType = KeyboardType.Password,
@@ -466,6 +513,7 @@ fun RegisterScreen(
                                         AfroAuthPrimaryButton(
                                             text = "Continuer · Mon identité culinaire",
                                             isLoading = false,
+                                            enabled = isStepOneReady,
                                             onClick = {
                                                 if (validateStepOne()) {
                                                     haptics.navigationTap()

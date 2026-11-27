@@ -17,19 +17,33 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,9 +55,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -51,12 +71,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import coil.compose.AsyncImage
+import com.afrocuisto.app.R
 import com.afrocuisto.app.data.network.NetworkMonitor
 import com.afrocuisto.app.data.repository.AiChefRepository
 import com.afrocuisto.app.data.repository.AuthRepository
 import com.afrocuisto.app.data.repository.AuthResult
 import com.afrocuisto.app.data.repository.AuthSessionState
 import com.afrocuisto.app.data.repository.CommunityRepository
+import com.afrocuisto.app.data.repository.FavoriteAddedEvent
 import com.afrocuisto.app.data.repository.RecipeRepository
 import com.afrocuisto.app.data.repository.ShoppingRepository
 import com.afrocuisto.app.data.repository.UserPreferencesRepository
@@ -67,6 +90,7 @@ import com.afrocuisto.app.ui.components.ConnectivityBanner
 import com.afrocuisto.app.ui.components.InteractiveTimerPill
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
 import com.afrocuisto.app.ui.components.rememberIsTablet
+import com.afrocuisto.app.ui.components.rememberKeyboardDismisser
 import com.afrocuisto.app.ui.screens.aichef.AiChefScreen
 import com.afrocuisto.app.ui.screens.aichef.GeminiVoiceCatalog
 import com.afrocuisto.app.ui.screens.aichef.GeminiVoicePreferences
@@ -81,6 +105,10 @@ import com.afrocuisto.app.ui.screens.recipe.CategoryRecipesScreen
 import com.afrocuisto.app.ui.screens.recipe.RecipeDetailScreen
 import com.afrocuisto.app.ui.screens.recipe.RecipeListScreen
 import com.afrocuisto.app.ui.screens.splash.SplashScreen
+import com.afrocuisto.app.ui.theme.AfroOrange
+import com.afrocuisto.app.ui.theme.ExpressivePillShape
+import com.afrocuisto.app.ui.theme.isAfroDarkTheme
+import com.afrocuisto.app.ui.i18n.tr
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
@@ -111,7 +139,9 @@ fun NavGraph(
     val favoriteIds by recipeRepository.favoriteIds.collectAsState(initial = emptySet())
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val dismissKeyboard = rememberKeyboardDismisser()
     val homeScrollState = rememberScrollState()
+    val favoriteAddedEvent by recipeRepository.favoriteAddedEvents.collectAsState(initial = null)
     val shoppingItems by shoppingRepository.items.collectAsState()
     val archivedShoppingItems by shoppingRepository.archivedItems.collectAsState()
     val marketCurrency by shoppingRepository.currency.collectAsState()
@@ -245,17 +275,20 @@ fun NavGraph(
     }
 
     fun closeRecipeDetail(withHaptic: Boolean = true) {
+        dismissKeyboard()
         if (withHaptic) haptics.navigationTap()
         activeRecipeId = null
     }
 
     fun openRecipeDetail(recipeId: String, withHaptic: Boolean = true) {
         if (recipeId.isBlank()) return
+        dismissKeyboard()
         if (withHaptic) haptics.navigationTap()
         activeRecipeId = recipeId
     }
 
     fun switchBottomTab(route: String) {
+        dismissKeyboard()
         activeRecipeId = null
         navController.navigate(route) {
             popUpTo(Screen.Home.route) { saveState = true }
@@ -265,14 +298,27 @@ fun NavGraph(
     }
 
     fun navigateToMarketTab() {
+        dismissKeyboard()
         haptics.navigationTap()
         activeRecipeId = null
         switchBottomTab(Screen.Market.route)
     }
 
     fun popWithHaptic() {
+        dismissKeyboard()
         haptics.navigationTap()
         navController.popBackStack()
+    }
+
+    LaunchedEffect(favoriteAddedEvent?.eventId) {
+        if (favoriteAddedEvent != null) {
+            delay(2800L)
+            recipeRepository.consumeFavoriteAddedEvent()
+        }
+    }
+
+    LaunchedEffect(currentRoute, activeRecipeId) {
+        dismissKeyboard()
     }
 
     val skipInitialSplash = remember {
@@ -502,6 +548,11 @@ fun NavGraph(
                             RecipeListScreen(
                                 onNavigateToRecipeDetail = { recipeId ->
                                     openRecipeDetail(recipeId)
+                                },
+                                onNavigateToCategory = { categoryId ->
+                                    dismissKeyboard()
+                                    haptics.navigationTap()
+                                    navController.navigate(Screen.CategoryRecipes.createRoute(categoryId))
                                 },
                                 repository = recipeRepository
                             )
@@ -765,6 +816,46 @@ fun NavGraph(
                 isOnline = isOnline,
                 modifier = Modifier.align(Alignment.TopCenter)
             )
+
+            // Non-generic custom Favorite Toast above the bottom navbar (and above RecipeDetail when open)
+            AnimatedVisibility(
+                visible = favoriteAddedEvent != null,
+                enter = slideInVertically(
+                    initialOffsetY = { it / 2 },
+                    animationSpec = tween(240, easing = appleEaseOut)
+                ) + fadeIn(tween(200)) + scaleIn(initialScale = 0.94f),
+                exit = slideOutVertically(
+                    targetOffsetY = { it / 2 },
+                    animationSpec = tween(200, easing = appleEaseOut)
+                ) + fadeOut(tween(160)),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(
+                        start = 18.dp,
+                        end = 18.dp,
+                        bottom = when {
+                            isRecipeDetailOpen -> 18.dp
+                            showBottomBar && isTablet -> 90.dp
+                            showBottomBar -> 74.dp
+                            else -> 16.dp
+                        }
+                    )
+            ) {
+                favoriteAddedEvent?.let { event ->
+                    FavoriteAddedToast(
+                        event = event,
+                        onOpenFavorites = {
+                            haptics.navigationTap()
+                            recipeRepository.consumeFavoriteAddedEvent()
+                            if (isRecipeDetailOpen) {
+                                closeRecipeDetail(withHaptic = false)
+                            }
+                            switchBottomTab(Screen.Favorites.route)
+                        }
+                    )
+                }
+            }
         }
 
         AnimatedVisibility(
@@ -776,6 +867,60 @@ fun NavGraph(
         ) {
             SplashScreen(
                 onFinished = { showSplash = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun FavoriteAddedToast(
+    event: FavoriteAddedEvent,
+    onOpenFavorites: () -> Unit
+) {
+    val isDark = isAfroDarkTheme()
+    val containerColor = if (isDark) Color(0xFF282522).copy(alpha = 0.94f) else Color(0xFF1E2220).copy(alpha = 0.92f)
+    val borderColor = Color.White.copy(alpha = 0.10f)
+
+    Surface(
+        shape = ExpressivePillShape,
+        color = containerColor,
+        border = BorderStroke(0.8.dp, borderColor),
+        shadowElevation = 4.dp,
+        modifier = Modifier
+            .widthIn(max = 320.dp)
+            .clip(ExpressivePillShape)
+            .clickable(onClick = onOpenFavorites)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_solar_heart_liked),
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(15.dp)
+            )
+            Text(
+                text = if (event.recipeName.isNotBlank()) {
+                    "${event.recipeName} · ${tr("Ajouté aux favoris", "Added to favorites", "Añadido a favoritos")}"
+                } else {
+                    tr("Ajouté aux favoris", "Added to favorites", "Añadido a favoritos")
+                },
+                color = Color.White.copy(alpha = 0.94f),
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            Text(
+                text = tr("Voir", "View", "Ver"),
+                color = AfroOrange,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1
             )
         }
     }

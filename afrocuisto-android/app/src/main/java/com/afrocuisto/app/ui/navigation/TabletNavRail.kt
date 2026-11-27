@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afrocuisto.app.R
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
+import com.afrocuisto.app.ui.i18n.tr
 import com.afrocuisto.app.ui.theme.AfroOrange
 import com.afrocuisto.app.ui.theme.isAfroDarkTheme
 
@@ -168,8 +169,16 @@ fun TabletFloatingNavBar(
 
                         Spacer(modifier = Modifier.width(6.dp))
 
+                        val localizedTitle = when (item.route) {
+                            Screen.Home.route -> tr("Accueil", "Home", "Inicio")
+                            Screen.Recipes.route -> tr("Recettes", "Recipes", "Recetas")
+                            Screen.Favorites.route -> tr("Favoris", "Favorites", "Favoritos")
+                            Screen.Market.route -> tr("Marché", "Market", "Mercado")
+                            Screen.Community.route -> tr("Communauté", "Community", "Comunidad")
+                            else -> item.title
+                        }
                         Text(
-                            text = item.title,
+                            text = localizedTitle,
                             color = itemColor,
                             fontSize = 12.5.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,

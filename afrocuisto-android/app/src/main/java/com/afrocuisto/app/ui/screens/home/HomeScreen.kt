@@ -100,6 +100,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import com.afrocuisto.app.ui.components.AfroWindowWidthClass
+import com.afrocuisto.app.ui.components.RecipeImageOrSkeleton
 import com.afrocuisto.app.ui.components.adaptiveGridColumns
 import com.afrocuisto.app.ui.components.rememberAfroWindowWidthClass
 import com.afrocuisto.app.ui.components.rememberIsTablet
@@ -115,6 +116,10 @@ import androidx.compose.ui.util.lerp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.afrocuisto.app.R
+import com.afrocuisto.app.ui.i18n.LocalAppLanguage
+import com.afrocuisto.app.ui.i18n.tr
+import com.afrocuisto.app.ui.i18n.translateCategory
+import com.afrocuisto.app.ui.i18n.translateDifficulty
 import com.afrocuisto.app.data.model.Recipe
 import com.afrocuisto.app.data.repository.AppNotificationCenter
 import com.afrocuisto.app.data.repository.HomeSection
@@ -425,29 +430,6 @@ fun HomeScreen(
                     onToggleFavorite = { repository.toggleFavorite(it) },
                     onRecipeClick = onNavigateToRecipeDetail
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // 4. Frigo Magique Card (exact FigCraft geometry + Apple AI Glow)
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Home1FridgeBanner(
-                        onClick = onNavigateToAiChef,
-                        modifier = Modifier
-                            .then(if (isTablet) Modifier.widthIn(max = 720.dp) else Modifier)
-                            .padding(horizontal = 20.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(22.dp))
-
-                // 5. Horizontal Categories Carousel (28dp colored cards with Solar outlined icons)
-                HomeCategoriesSection(
-                    onCategoryClick = { clickedId -> onNavigateToCategory(clickedId) },
-                    titleColor = titleColor
-                )
             }
 
             Spacer(modifier = Modifier.height(22.dp))
@@ -672,7 +654,7 @@ fun HomeScreen(
                                         )
                                     }
                                     Text(
-                                        text = "Tout voir",
+                                        text = tr("Tout voir", "See all", "Ver todo"),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = AfroOrange,
@@ -734,7 +716,7 @@ fun HomeScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "Les Plus Populaires",
+                            text = tr("Les Plus Populaires", "Most Popular", "Los más populares"),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = titleColor,
@@ -742,7 +724,7 @@ fun HomeScreen(
                         )
                     }
                     Text(
-                        text = "Tout voir",
+                        text = tr("Tout voir", "See all", "Ver todo"),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = AfroOrange,
@@ -836,6 +818,23 @@ fun HomeScreen(
                         titleColor = titleColor,
                         subtitleColor = subtitleColor,
                         borderColor = borderColor
+                    )
+                }
+            }
+
+            if (!isSearching) {
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Frigo Magique Card en dernière section de la page d'accueil
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Home1FridgeBanner(
+                        onClick = onNavigateToAiChef,
+                        modifier = Modifier
+                            .then(if (isTablet) Modifier.widthIn(max = 720.dp) else Modifier)
+                            .padding(horizontal = 20.dp)
                     )
                 }
             }
@@ -1132,12 +1131,12 @@ private fun PortraitDishCarouselCard(
         interactionSource = interactionSource,
         modifier = modifier
             .fillMaxWidth()
-            .height(352.dp)
+            .height(212.dp)
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
             },
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(24.dp),
         border = BorderStroke(2.5.dp, frameBorderColor),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isDark) 6.dp else 7.dp,
@@ -1146,10 +1145,11 @@ private fun PortraitDishCarouselCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // 1. Full-bleed dish photo with GPU counter-parallax on horizontal drag
-            AsyncImage(
-                model = imageRequest,
+            RecipeImageOrSkeleton(
+                model = if (recipe.image.isNotBlank()) imageRequest else null,
                 contentDescription = recipe.name,
                 contentScale = ContentScale.Crop,
+                iconSize = 36.dp,
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
@@ -1169,10 +1169,10 @@ private fun PortraitDishCarouselCard(
                     .background(
                         Brush.verticalGradient(
                             colorStops = arrayOf(
-                                0.0f to Color.Black.copy(alpha = 0.30f),
-                                0.24f to Color.Transparent,
-                                0.48f to Color.Black.copy(alpha = 0.14f),
-                                0.72f to Color.Black.copy(alpha = 0.72f),
+                                0.0f to Color.Transparent,
+                                0.38f to Color.Transparent,
+                                0.56f to Color.Black.copy(alpha = 0.16f),
+                                0.76f to Color.Black.copy(alpha = 0.72f),
                                 1.0f to Color.Black.copy(alpha = 0.92f)
                             )
                         )
@@ -1184,7 +1184,7 @@ private fun PortraitDishCarouselCard(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1244,7 +1244,7 @@ private fun PortraitDishCarouselCard(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 16.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
                     .graphicsLayer {
                         val offset = pageOffsetProvider().coerceIn(-1f, 1f)
                         translationX = -offset * 8.dp.toPx()
@@ -1255,79 +1255,37 @@ private fun PortraitDishCarouselCard(
                     Text(
                         text = subtitleTag,
                         color = Color(0xFFFDBA74),
-                        fontSize = 10.sp,
+                        fontSize = 9.5.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 1.0.sp,
+                        letterSpacing = 0.8.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                 }
 
                 Text(
                     text = recipe.name,
                     modifier = Modifier.nexaTitleEmphasis(),
                     color = Color.White,
-                    fontSize = 20.5.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    lineHeight = 25.sp,
-                    maxLines = 2,
+                    lineHeight = 20.sp,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(5.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
                     text = descriptionText,
                     color = Color.White.copy(alpha = 0.86f),
-                    fontSize = 12.sp,
+                    fontSize = 11.5.sp,
                     fontWeight = FontWeight.Normal,
-                    lineHeight = 16.sp,
+                    lineHeight = 15.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-
-                Spacer(modifier = Modifier.height(13.dp))
-
-                // Non-intercepting visual CTA pill (Card handles click & lets horizontal gestures pass cleanly)
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(42.dp),
-                    shape = RoundedCornerShape(21.dp),
-                    color = Color.White,
-                    shadowElevation = 2.dp
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(start = 18.dp, end = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Découvrir la recette",
-                            color = Color(0xFF19221D),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(AfroOrange),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -1338,11 +1296,10 @@ private fun Home1FridgeBanner(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     val isDark = isAfroDarkTheme()
-    val cardBg = if (isDark) colorScheme.surface else Color.White
-    val titleColor = if (isDark) colorScheme.onSurface else Color(0xFF000000)
-    val bodyColor = if (isDark) colorScheme.onSurfaceVariant else Color(0xFF111827)
+    val cardBg = Color.White
+    val titleColor = Color(0xFF000000)
+    val bodyColor = Color(0xFF111827)
 
     // Outer container reserves 17.dp top space so the 3D fridge pops above the card just like FigCraft
     Box(
@@ -1356,7 +1313,8 @@ private fun Home1FridgeBanner(
                 .heightIn(min = 124.dp),
             cornerRadius = 28.dp,
             containerColor = cardBg,
-            isDark = isDark
+            isDark = isDark,
+            showInternalAurora = false
         ) {
             Box(
                 modifier = Modifier
@@ -1389,7 +1347,7 @@ private fun Home1FridgeBanner(
                         .padding(top = 6.dp)
                 ) {
                     Text(
-                        text = "Frigo Magique",
+                        text = tr("Frigo Magique", "Magic Fridge", "Nevera Mágica"),
                         color = titleColor,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
@@ -1399,7 +1357,7 @@ private fun Home1FridgeBanner(
                     Spacer(modifier = Modifier.height(5.dp))
 
                     Text(
-                        text = "Que cuisiner avec vos restes ?",
+                        text = tr("Que cuisiner avec vos restes ?", "What to cook with your leftovers?", "¿Qué cocinar con tus sobras?"),
                         color = AfroOrange,
                         fontSize = 14.sp,
                         lineHeight = 17.sp,
@@ -1412,7 +1370,11 @@ private fun Home1FridgeBanner(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Trouvez à l'aide de l'IA des recettes toutes adaptées à ce que vous avez dans votre frigo. Ici tout s'utilise et votre frigo ne s'en plaint pas.",
+                        text = tr(
+                            "Trouvez à l'aide de l'IA des recettes toutes adaptées à ce que vous avez dans votre frigo. Ici tout s'utilise et votre frigo ne s'en plaint pas.",
+                            "Use AI to find recipes tailored to what is in your fridge. Everything gets used and nothing goes to waste.",
+                            "Encuentra con IA recetas adaptadas a lo que tienes en tu nevera. Aquí todo se aprovecha."
+                        ),
                         color = bodyColor,
                         fontSize = 9.5.sp,
                         lineHeight = 13.sp,
@@ -1437,7 +1399,8 @@ private fun Home1FridgeBanner(
 }
 
 @Composable
-private fun HomeCategoriesSection(
+internal fun HomeCategoriesSection(
+    categories: List<DishCategorySpec> = HOME_CATEGORIES,
     onCategoryClick: (String) -> Unit,
     titleColor: Color
 ) {
@@ -1460,7 +1423,7 @@ private fun HomeCategoriesSection(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Catégories",
+                    text = tr("Catégories", "Categories", "Categorías"),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = titleColor,
@@ -1477,7 +1440,7 @@ private fun HomeCategoriesSection(
             flingBehavior = rememberSmoothFlingBehavior()
         ) {
             items(
-                items = HOME_CATEGORIES,
+                items = categories,
                 key = { it.id },
                 contentType = { "category_card" }
             ) { category ->
@@ -1620,9 +1583,10 @@ fun SunRecipeCard(
                     .height(122.dp)
                     .clip(RoundedCornerShape(18.dp))
             ) {
-                AsyncImage(
+                RecipeImageOrSkeleton(
                     model = recipe.image,
                     contentDescription = recipe.name,
+                    iconSize = 28.dp,
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {

@@ -108,6 +108,7 @@ import com.afrocuisto.app.ui.components.afroSpringClickable
 import com.afrocuisto.app.ui.components.afroStaggeredEntrance
 import com.afrocuisto.app.ui.components.rememberAfroHaptics
 import com.afrocuisto.app.ui.components.rememberSmoothFlingBehavior
+import com.afrocuisto.app.ui.i18n.tr
 import com.afrocuisto.app.ui.theme.AccentEmerald
 import com.afrocuisto.app.ui.theme.AfroOrange
 import com.afrocuisto.app.ui.theme.isAfroDarkTheme
@@ -798,9 +799,13 @@ private fun ActiveMarketContent(
     if (items.isEmpty()) {
         MarketEmptyState(
             icon = R.drawable.ic_solar_bag_linear,
-            title = "Votre liste de marché est vide",
-            subtitle = "Ajoutez vos ingrédients avec leur montant ou importez-les directement depuis une fiche recette.",
-            actionLabel = "Ajouter un ingrédient",
+            title = tr("Votre liste de marché est vide", "Your market list is empty", "Tu lista de compras está vacía"),
+            subtitle = tr(
+                "Ajoutez vos ingrédients avec leur montant ou importez-les directement depuis une fiche recette.",
+                "Add your ingredients with their price or import them directly from a recipe.",
+                "Añade tus ingredientes con su importe o impórtalos directamente desde una receta."
+            ),
+            actionLabel = tr("Ajouter un ingrédient", "Add an ingredient", "Añadir un ingrediente"),
             onAction = onOpenAddSheet
         )
         return
@@ -1074,8 +1079,12 @@ private fun ArchivedMarketContent(
     if (archivedItems.isEmpty()) {
         MarketEmptyState(
             icon = R.drawable.ic_solar_clipboard_list_linear,
-            title = "Aucune archive pour le moment",
-            subtitle = "Marquez vos produits achetés puis appuyez sur Archiver pour conserver votre historique et vos montants.",
+            title = tr("Aucune archive pour le moment", "No archives yet", "No hay archivos por ahora"),
+            subtitle = tr(
+                "Marquez vos produits achetés puis appuyez sur Archiver pour conserver votre historique et vos montants.",
+                "Mark your purchased items then tap Archive to keep your history and totals.",
+                "Marca tus productos comprados y pulsa Archivar para guardar tu historial."
+            ),
             actionLabel = null,
             onAction = {}
         )
